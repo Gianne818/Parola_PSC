@@ -1,0 +1,43 @@
+@import "tailwindcss";
+
+@theme {
+  --font-sans: "General Sans", sans-serif;
+  --font-display: "Inter Tight", sans-serif;
+
+  --color-brand-green: #00B37E;
+  --color-brand-black: #12211E;
+  --color-brand-offwhite: #F7FAF9;
+  --color-brand-red: #D32F2F;
+  --color-gray-150: #EEF2F6;
+}
+
+@layer base {
+  body {
+    @apply bg-[var(--color-brand-offwhite)] text-[var(--color-brand-black)] font-sans antialiased;
+  }
+  
+  h1, h2, h3, h4, h5, h6 {
+    @apply font-display tracking-tight;
+  }
+}
+
+@keyframes ripple-effect {
+  0% {
+    transform: translate(-50%, -50%) scale(0);
+    opacity: 0.8;
+  }
+  100% {
+    transform: translate(-50%, -50%) scale(6);
+    opacity: 0;
+  }
+}
+
+.ripple-circle {
+  position: absolute;
+  border-radius: 50%;
+  background: rgba(0, 179, 126, 0.25);
+  pointer-events: none;
+  width: 40px;
+  height: 40px;
+  animation: ripple-effect 0.8s cubic-bezier(0.1, 0.8, 0.3, 1) forwards;
+}

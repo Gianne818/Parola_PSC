@@ -1,0 +1,6 @@
+{
+  "name": "Parola",
+  "description": "Maritime app providing fishing hotspots, safety warnings, co-op fuel pools, and emergency SOS for Filipino fishermen.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
