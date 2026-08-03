@@ -1,0 +1,202 @@
+@import "tailwindcss";
+
+@theme {
+  --color-marine-900: #0F172A;
+  --color-marine-800: #1E293B;
+  --color-teal-500: #0D9488;
+  --color-teal-600: #0D9488;
+  --color-teal-700: #0F766E;
+  --color-emerald-500: #10B981;
+  --color-emerald-600: #059669;
+  
+  --color-ocean-light: #f0f9ff;
+  --color-ocean-main: #0ea5e9;
+  --color-ocean-deep: #0369a1;
+  --color-navy-deep: #1e1b4b;
+}
+
+/* ─── Light mode (default) ─── */
+:root {
+  --bg-surface:   #F8FAFC;
+  --bg-card:      #FFFFFF;
+  --bg-card-rgb:  255,255,255;
+  --text-primary: #0F172A;
+  --text-secondary: #64748B;
+  --text-muted:   #94A3B8;
+  --border:       rgba(226,232,240,1);
+  --nav-bg:       #FFFFFF;
+  --nav-border:   rgba(226,232,240,1);
+  --sidebar-bg:   #FFFFFF;
+}
+
+@layer base {
+  body {
+    background-color: var(--bg-surface);
+    color: var(--text-primary);
+    @apply font-sans antialiased;
+    transition: background-color 0.4s ease, color 0.4s ease;
+  }
+}
+
+/* ─── Dark mode overrides ─── */
+.dark-mode {
+  --bg-surface:   transparent;
+  --bg-card:      rgba(255,255,255,0.07);
+  --bg-card-rgb:  15,32,39;
+  --text-primary: #F1F5F9;
+  --text-secondary: #CBD5E1;
+  --text-muted:   #94A3B8;
+  --border:       rgba(255,255,255,0.12);
+  --nav-bg:       rgba(15,32,39,0.7);
+  --nav-border:   rgba(255,255,255,0.08);
+  --sidebar-bg:   rgba(15,32,39,0.6);
+}
+
+/* Dark mode element overrides */
+.dark-mode .bg-slate-50,
+.dark-mode .bg-slate-100 {
+  background-color: rgba(255,255,255,0.04) !important;
+}
+
+.dark-mode .bg-white {
+  background-color: rgba(255,255,255,0.07) !important;
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+}
+
+.dark-mode .bg-white\/80,
+.dark-mode .bg-white\/90,
+.dark-mode .bg-white\/95 {
+  background-color: rgba(15,32,39,0.7) !important;
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+}
+
+.dark-mode .text-slate-900,
+.dark-mode .text-slate-800 {
+  color: #f1f5f9 !important;
+}
+
+.dark-mode .text-slate-700,
+.dark-mode .text-slate-600 {
+  color: #cbd5e1 !important;
+}
+
+.dark-mode .text-slate-500,
+.dark-mode .text-slate-400 {
+  color: #94a3b8 !important;
+}
+
+.dark-mode .border-slate-200,
+.dark-mode .border-slate-100,
+.dark-mode .border-slate-300 {
+  border-color: rgba(255,255,255,0.1) !important;
+}
+
+.dark-mode .shadow-sm,
+.dark-mode .shadow-md {
+  box-shadow: 0 4px 16px rgba(0,0,0,0.35) !important;
+}
+
+/* Sidebar / Nav */
+.dark-mode aside {
+  background-color: rgba(15,32,39,0.75) !important;
+  backdrop-filter: blur(24px);
+  -webkit-backdrop-filter: blur(24px);
+  border-color: rgba(255,255,255,0.08) !important;
+}
+
+.dark-mode header {
+  background-color: rgba(15,32,39,0.8) !important;
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border-color: rgba(255,255,255,0.08) !important;
+}
+
+.dark-mode nav.fixed {
+  background-color: rgba(15,32,39,0.8) !important;
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border-color: rgba(255,255,255,0.08) !important;
+}
+
+/* Inputs */
+.dark-mode input,
+.dark-mode select,
+.dark-mode textarea {
+  background-color: rgba(255,255,255,0.06) !important;
+  border-color: rgba(255,255,255,0.12) !important;
+  color: #f1f5f9 !important;
+}
+
+.dark-mode input::placeholder,
+.dark-mode textarea::placeholder {
+  color: rgba(255,255,255,0.3) !important;
+}
+
+/* Teal tones (keep them vibrant in both modes) */
+.dark-mode .bg-teal-50 { background-color: rgba(13,148,136,0.15) !important; }
+.dark-mode .bg-blue-50 { background-color: rgba(59,130,246,0.12) !important; }
+.dark-mode .bg-emerald-50 { background-color: rgba(16,185,129,0.12) !important; }
+.dark-mode .bg-red-50 { background-color: rgba(239,68,68,0.12) !important; }
+.dark-mode .bg-slate-50\/50 { background-color: rgba(255,255,255,0.04) !important; }
+
+.dark-mode .text-teal-700,
+.dark-mode .text-teal-800 { color: #5eead4 !important; }
+.dark-mode .text-blue-800 { color: #93c5fd !important; }
+.dark-mode .text-emerald-800 { color: #6ee7b7 !important; }
+
+/* Active nav in dark mode */
+.dark-mode .bg-teal-50.text-teal-700 {
+  background-color: rgba(13,148,136,0.18) !important;
+}
+
+/* ─── Shared utility ─── */
+@utility scrollbar-hide {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+  &::-webkit-scrollbar {
+    display: none;
+  }
+}
+
+/* ─── Water ripple animation ─── */
+@keyframes waterRipple {
+  0% {
+    transform: translate(-50%, -50%) scale(0);
+    opacity: 0.7;
+  }
+  40% {
+    opacity: 0.35;
+  }
+  100% {
+    transform: translate(-50%, -50%) scale(1);
+    opacity: 0;
+  }
+}
+
+/* ─── Ocean blob animations ─── */
+@keyframes blob1 {
+  0%,100% { transform: translate(0,0) scale(1); }
+  25%      { transform: translate(8vw,6vh) scale(1.08); }
+  50%      { transform: translate(4vw,12vh) scale(0.94); }
+  75%      { transform: translate(-4vw,4vh) scale(1.04); }
+}
+@keyframes blob2 {
+  0%,100% { transform: translate(0,0) scale(1); }
+  30%      { transform: translate(-6vw,-8vh) scale(1.1); }
+  60%      { transform: translate(-10vw,4vh) scale(0.92); }
+  80%      { transform: translate(-4vw,8vh) scale(1.06); }
+}
+@keyframes blob3 {
+  0%,100% { transform: translate(0,0) scale(1); }
+  20%      { transform: translate(4vw,10vh) scale(0.9); }
+  55%      { transform: translate(-8vw,5vh) scale(1.12); }
+  80%      { transform: translate(2vw,-6vh) scale(0.96); }
+}
+@keyframes blob4 {
+  0%,100% { transform: translate(0,0) scale(1); }
+  35%      { transform: translate(6vw,-10vh) scale(1.08); }
+  65%      { transform: translate(-4vw,-6vh) scale(0.9); }
+  85%      { transform: translate(8vw,6vh) scale(1.05); }
+}
