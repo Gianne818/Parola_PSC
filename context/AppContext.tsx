@@ -130,6 +130,7 @@ const DEFAULT_POOLS: FuelPool[] = [
 ];
 
 interface AppContextType {
+  isInitialized: boolean;
   isAuthenticated: boolean;
   language: 'en' | 'tl' | 'ceb' | 'hil';
   fontScale: number; // -2 to 4
@@ -182,6 +183,7 @@ const DEFAULT_WEATHER: WeatherTelemetry = {
 };
 
 export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+  const [isInitialized, setIsInitialized] = useState<boolean>(false);
   const [isAuthenticated, setIsAuthenticated] = useState<boolean>(false);
   const [language, setLanguage] = useState<'en' | 'tl' | 'ceb' | 'hil'>('en');
   const [fontScale, setFontScale] = useState<number>(0);
@@ -200,11 +202,12 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       setIsAuthenticated(storageService.getItem("parola-auth", false));
       setLanguage(storageService.getItem("parola-language", "en"));
       setFontScale(storageService.getItem("parola-font-scale", 0));
-      setTheme(storageService.getItem("parola-theme", "light"));
+      setTheme("light");
       setUserProfile(storageService.getItem("parola-profile", DEFAULT_PROFILE));
       setNotifications(storageService.getItem("parola-notifications-clean", INITIAL_NOTIFICATIONS));
       setFuelPools(storageService.getItem("parola-fuelpools", DEFAULT_POOLS));
       setManualOverrideHold(storageService.getItem("parola-manual-override-hold", false));
+      setIsInitialized(true);
     }, 0);
   }, []);
 
@@ -212,15 +215,9 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   useEffect(() => {
     if (typeof document !== "undefined") {
       const html = document.documentElement;
-      
-      // Update theme classes
-      if (theme === "dark") {
-        html.classList.add("dark");
-      } else {
-        html.classList.remove("dark");
-      }
+      html.classList.remove("dark");
     }
-  }, [theme]);
+  }, []);
 
   // Handle weather loading and update whenever active profile port changes
   useEffect(() => {
@@ -285,9 +282,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   };
 
   const toggleTheme = () => {
-    const next = theme === "light" ? "dark" : "light";
-    setTheme(next);
-    storageService.setItem("parola-theme", next);
+    setTheme("light");
+    storageService.setItem("parola-theme", "light");
   };
 
   const addFuelCommit = (poolId: string, liters: number) => {
@@ -429,6 +425,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   return (
     <AppContext.Provider
       value={{
+        isInitialized,
         isAuthenticated,
         language,
         fontScale,

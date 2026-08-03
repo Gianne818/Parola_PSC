@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useEffect } from "react";
-import { MapContainer, TileLayer, Marker, Popup, useMap, useMapEvents } from "react-leaflet";
+import { MapContainer, TileLayer, Marker, Popup, useMap, useMapEvents, Circle, Rectangle } from "react-leaflet";
 import "leaflet/dist/leaflet.css";
 import L from "leaflet";
 import { Hotspot } from "../../../types";
@@ -34,6 +34,21 @@ const homePortIcon = typeof window !== "undefined" ? L.divIcon({
   html: `<div style="width: 32px; height: 32px; background-color: rgba(0, 179, 126, 0.15); border-radius: 50%; display: flex; justify-content: center; align-items: center; border: 2px dashed #00B37E;" class="animate-pulse"><div style="width: 14px; height: 14px; background-color: #00B37E; border-radius: 50%; border: 2.5px solid white; box-shadow: 0 2px 4px rgba(0,0,0,0.2);"></div></div>`,
   iconSize: [32, 32],
   iconAnchor: [16, 16],
+}) : null;
+
+const vesselIcon = typeof window !== "undefined" ? L.divIcon({
+  className: "custom-vessel-marker",
+  html: `
+    <div style="position: relative; display: flex; align-items: center; justify-content: center; width: 40px; height: 40px;">
+      <div class="animate-radar-ping" style="position: absolute; width: 40px; height: 40px; border-radius: 50%; border: 2px solid #00B37E; box-sizing: border-box; left: 0; top: 0; pointer-events: none;"></div>
+      <div class="animate-pulse" style="position: absolute; width: 24px; height: 24px; border-radius: 50%; border: 1.5px solid #00B37E; background-color: rgba(0, 179, 126, 0.1); left: 8px; top: 8px; pointer-events: none;"></div>
+      <div style="position: relative; width: 16px; height: 16px; background-color: #00B37E; border-radius: 50%; border: 2px solid white; display: flex; align-items: center; justify-content: center; box-shadow: 0 2px 5px rgba(0,0,0,0.3); z-index: 10;">
+        <svg viewBox="0 0 24 24" width="8" height="8" fill="white" stroke="white"><path d="M12 2L2 22h20L12 2z"/></svg>
+      </div>
+    </div>
+  `,
+  iconSize: [40, 40],
+  iconAnchor: [20, 20],
 }) : null;
 
 const customWaypointIcon = typeof window !== "undefined" ? L.divIcon({
@@ -219,6 +234,18 @@ export default function MapInner({
           url="https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png"
         />
 
+        {/* Geofence Dashed Borders (border-emerald-600/20) */}
+        <Rectangle
+          bounds={[[4.5, 116.0], [21.5, 127.0]]}
+          pathOptions={{
+            color: "#059669",
+            fill: false,
+            weight: 2,
+            opacity: 0.2,
+            dashArray: "6, 6"
+          }}
+        />
+
         {/* Home Port Anchorage Marker */}
         {homePortIcon && isValidLatLng(homeLat, homeLng) && (
           <Marker position={[homeLat, homeLng]} icon={homePortIcon}>
@@ -233,6 +260,51 @@ export default function MapInner({
               </div>
             </Popup>
           </Marker>
+        )}
+
+        {/* Green Vessel Marker with animated radar pulses */}
+        {vesselIcon && isValidLatLng(homeLat, homeLng) && (
+          <Marker position={[homeLat + 0.008, homeLng + 0.006]} icon={vesselIcon}>
+            <Popup>
+              <div className="font-sans text-brand-black p-1">
+                <div className="font-black text-xs uppercase tracking-wide text-brand-green">
+                  ⛵ {userProfile?.vesselName || "My Vessel"}
+                </div>
+                <div className="text-[10px] text-gray-500 font-bold mt-1">
+                  Status: Active Fishing Voyage
+                </div>
+                <div className="text-[9px] text-gray-400 mt-0.5">
+                  Coordinates: {(homeLat + 0.008).toFixed(4)}°N, {(homeLng + 0.006).toFixed(4)}°E
+                </div>
+              </div>
+            </Popup>
+          </Marker>
+        )}
+
+        {/* PAGASA Gale Warning / Extreme Weather Hazard Zone */}
+        {manualOverrideHold && isValidLatLng(homeLat, homeLng) && (
+          <Circle
+            center={[homeLat + 0.02, homeLng - 0.03]}
+            radius={4000}
+            pathOptions={{
+              color: "#D32F2F",
+              fillColor: "#D32F2F",
+              fillOpacity: 0.15,
+              weight: 2.5,
+              dashArray: "6, 6"
+            }}
+          >
+            <Popup>
+              <div className="font-sans text-brand-red p-1 max-w-[180px]">
+                <div className="font-black text-xs uppercase tracking-wide">
+                  ⚠️ PAGASA GALE WARNING
+                </div>
+                <div className="text-[10px] text-gray-600 font-bold mt-1 leading-relaxed">
+                  Severe wind gusts and unsafe swells {"(>2.0m)"} detected in this coordinates quadrant.
+                </div>
+              </div>
+            </Popup>
+          </Circle>
         )}
 
         {/* Custom Clicked Waypoint Marker */}

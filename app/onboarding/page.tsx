@@ -2,15 +2,15 @@
 
 import React, { useState, useEffect, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { 
-  MapPin, 
-  Navigation, 
-  ArrowLeft, 
-  Check, 
-  Volume2, 
-  AlertTriangle, 
-  Anchor, 
-  Compass, 
+import {
+  MapPin,
+  Navigation,
+  ArrowLeft,
+  Check,
+  Volume2,
+  AlertTriangle,
+  Anchor,
+  Compass,
   Info,
   X,
   Map as MapIcon
@@ -51,23 +51,30 @@ function getDistanceInKm(lat1: number, lon1: number, lat2: number, lon2: number)
 function OnboardingContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const { isAuthenticated, userProfile, updateProfile, hotspots, showToast } = useApp();
-  
+  const { isInitialized, isAuthenticated, userProfile, updateProfile, hotspots, showToast } = useApp();
+
   const fromProfile = searchParams.get('from') === 'profile';
-  
+
   // Security check: Redirect to login if not authenticated
   useEffect(() => {
-    if (!isAuthenticated) {
+    if (isInitialized && !isAuthenticated) {
       router.push('/login');
     }
-  }, [isAuthenticated, router]);
+  }, [isInitialized, isAuthenticated, router]);
+
+  // Clear registration flow flag on mount
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      sessionStorage.removeItem('just-registered');
+    }
+  }, []);
 
   const [port, setPort] = useState(userProfile?.port || 'Mercedes Fish Port');
   const [coordinates, setCoordinates] = useState<[number, number]>([
     userProfile?.lat || 14.0122,
     userProfile?.lng || 123.0114
   ]);
-  
+
   const [prevProfile, setPrevProfile] = useState(userProfile);
   if (userProfile !== prevProfile) {
     setPrevProfile(userProfile);
@@ -168,7 +175,7 @@ function OnboardingContent() {
       localStorage.setItem('profile-port', port);
       localStorage.setItem('profile-lat', String(coordinates[0]));
       localStorage.setItem('profile-lng', String(coordinates[1]));
-      
+
       // Set other sensible defaults
       if (!localStorage.getItem('profile-boatType')) {
         localStorage.setItem('profile-boatType', 'motorized');
@@ -203,11 +210,11 @@ function OnboardingContent() {
     }
   };
 
-  if (!isAuthenticated) return null;
+  if (!isInitialized || !isAuthenticated) return null;
 
   return (
     <div className="h-screen w-screen overflow-hidden flex flex-col relative bg-brand-offwhite font-sans antialiased">
-      
+
       {/* 1. TOP HEADER INSTRUCTION BANNER */}
       <header className="absolute top-0 left-0 right-0 z-10 bg-brand-black text-white px-4 py-3.5 md:px-8 md:py-4 flex items-center justify-between shadow-lg">
         <div className="flex items-center gap-3">
@@ -234,7 +241,7 @@ function OnboardingContent() {
         </div>
 
         <div className="flex items-center gap-2">
-          <button 
+          <button
             onClick={playVoiceGuide}
             className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-white/10 hover:bg-white/20 transition-all text-[11px] font-bold text-white/90 cursor-pointer"
             title="Read instructions out loud"
@@ -242,8 +249,8 @@ function OnboardingContent() {
             <Volume2 className="w-3.5 h-3.5 text-brand-green" />
             <span className="hidden sm:inline">Voice Assist</span>
           </button>
-          
-          <button 
+
+          <button
             onClick={() => router.push('/login')}
             className="text-white/40 hover:text-white transition-colors p-1.5 hover:bg-white/5 rounded-full cursor-pointer"
           >
@@ -254,20 +261,20 @@ function OnboardingContent() {
 
       {/* 2. FULLSCREEN LEAFLET MAP */}
       <div className="w-full h-full pt-[68px] pb-[160px] relative z-0">
-        <MapComponent 
+        <MapComponent
           hotspots={hotspots}
           selectedHotspot={null}
-          onSelectHotspot={() => {}}
+          onSelectHotspot={() => { }}
           filterType="both"
           selectedSpecies={[]}
           hideSidebar={true}
-          center={coordinates} 
-          onMapClick={handleMapClick} 
+          center={coordinates}
+          onMapClick={handleMapClick}
         />
-        
+
         {/* Floating Controls Overlay (Current GPS PIN button) */}
         <div className="absolute top-24 right-4 z-10 flex flex-col gap-2">
-          <button 
+          <button
             onClick={handleUseCurrentLocation}
             className="p-3.5 bg-white hover:bg-gray-50 text-brand-green rounded-full shadow-lg border border-gray-200 transition-all hover:scale-105 active:scale-95 flex items-center justify-center cursor-pointer"
             title="Locate my GPS position"
@@ -282,7 +289,7 @@ function OnboardingContent() {
             <MapPin className="w-3.5 h-3.5 text-brand-green" />
             <span>Search Home Reference Port</span>
           </div>
-          
+
           <div className="relative">
             <input
               type="text"
@@ -331,11 +338,10 @@ function OnboardingContent() {
                   <button
                     key={preset.name}
                     onClick={() => handlePresetSelect(preset)}
-                    className={`w-full px-3 py-2.5 text-left rounded-xl text-xs font-bold transition-all flex items-center justify-between hover:bg-gray-50 cursor-pointer ${
-                      port === preset.name
+                    className={`w-full px-3 py-2.5 text-left rounded-xl text-xs font-bold transition-all flex items-center justify-between hover:bg-gray-50 cursor-pointer ${port === preset.name
                         ? 'bg-brand-green/10 text-brand-green border-l-4 border-brand-green pl-2'
                         : 'text-brand-black/80'
-                    }`}
+                      }`}
                   >
                     <div className="flex items-center gap-2 truncate">
                       <Anchor className={`w-3.5 h-3.5 shrink-0 ${port === preset.name ? 'text-brand-green' : 'text-brand-black/40'}`} />
@@ -354,7 +360,7 @@ function OnboardingContent() {
 
       {/* 4. BOTTOM CONFIRMATION DRAWER */}
       {drawerOpen && (
-        <div className="absolute bottom-0 left-0 right-0 z-10 bg-white border-t border-gray-200/80 shadow-[0_-10px_35px_rgba(0,0,0,0.1)] px-6 py-5 md:px-12 flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+        <div className="absolute bottom-0 left-0 right-0 z-10 bg-white shadow-xl border-t border-gray-200 px-6 py-5 md:px-12 flex flex-col md:flex-row md:items-center md:justify-between gap-4">
           <div className="flex items-start gap-3.5">
             <div className="w-11 h-11 rounded-2xl bg-brand-green/10 flex items-center justify-center text-brand-green shrink-0">
               <Compass className="w-6 h-6 animate-spin-slow" />
@@ -373,14 +379,14 @@ function OnboardingContent() {
           </div>
 
           <div className="flex items-center gap-3 w-full md:w-auto">
-            <button 
+            <button
               onClick={handleUseCurrentLocation}
               className="flex-1 md:flex-none px-5 py-3 rounded-2xl border border-gray-200 hover:border-gray-300 text-brand-black/75 hover:text-brand-black font-bold text-xs uppercase tracking-wider transition-all hover:bg-gray-50 text-center cursor-pointer"
             >
               GPS Reset
             </button>
-            
-            <button 
+
+            <button
               onClick={handleConfirmPort}
               className="flex-[2] md:flex-none px-8 py-3.5 bg-brand-green hover:bg-brand-green/95 text-white font-black text-xs uppercase tracking-widest rounded-2xl shadow-md hover:shadow-lg transition-all active:scale-[0.98] text-center cursor-pointer flex items-center justify-center gap-2"
             >
@@ -411,7 +417,7 @@ function OnboardingContent() {
 
             <div className="space-y-2.5 text-xs text-brand-black/70 leading-relaxed font-semibold">
               <p>
-                The coordinates you clicked are outside Philippine municipal border grids: 
+                The coordinates you clicked are outside Philippine municipal border grids:
                 <strong className="text-brand-black block mt-0.5 font-bold">
                   {(outOfBoundsCoords?.[0] ?? 0).toFixed(4)}° N, {(outOfBoundsCoords?.[1] ?? 0).toFixed(4)}° E
                 </strong>

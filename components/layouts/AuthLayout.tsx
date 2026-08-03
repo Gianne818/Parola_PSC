@@ -23,12 +23,14 @@ import { getFontScaleClass } from "../../utils/fontScale";
 
 interface AuthLayoutProps {
   children: React.ReactNode;
+  fluid?: boolean;
 }
 
-export const AuthLayout: React.FC<AuthLayoutProps> = ({ children }) => {
+export const AuthLayout: React.FC<AuthLayoutProps> = ({ children, fluid = false }) => {
   const router = useRouter();
   const pathname = usePathname();
   const {
+    isInitialized,
     isAuthenticated,
     logout,
     language,
@@ -40,27 +42,23 @@ export const AuthLayout: React.FC<AuthLayoutProps> = ({ children }) => {
   
   const { t } = useTranslation(language);
   const [isCollapsed, setIsCollapsed] = useState(false);
-  const [isMounted, setIsMounted] = useState(false);
 
   useEffect(() => {
-    setTimeout(() => {
-      setIsMounted(true);
-      // Read sidebar state on load
-      const saved = localStorage.getItem("sidebar-collapsed");
-      if (saved) {
-        setIsCollapsed(saved === "true");
-      }
-    }, 0);
+    // Read sidebar state on load
+    const saved = localStorage.getItem("sidebar-collapsed");
+    if (saved) {
+      setIsCollapsed(saved === "true");
+    }
   }, []);
 
   // Sync auth state
   useEffect(() => {
-    if (isMounted && !isAuthenticated) {
+    if (isInitialized && !isAuthenticated) {
       router.push("/login");
     }
-  }, [isMounted, isAuthenticated, router]);
+  }, [isInitialized, isAuthenticated, router]);
 
-  if (!isMounted) return null;
+  if (!isInitialized) return null;
   if (!isAuthenticated) return null; // Let the redirect trigger
 
   const toggleSidebar = () => {
@@ -71,7 +69,6 @@ export const AuthLayout: React.FC<AuthLayoutProps> = ({ children }) => {
 
   const navItems = [
     { href: "/dashboard", icon: LayoutDashboard, label: t("dashboard") },
-    { href: "/map", icon: Map, label: "Map View" },
     { href: "/fuel", icon: Fuel, label: t("fuel") },
     { href: "/notifications", icon: Bell, label: t("alerts"), badge: true },
     { href: "/profile", icon: User, label: t("profile") },
@@ -81,14 +78,23 @@ export const AuthLayout: React.FC<AuthLayoutProps> = ({ children }) => {
   const unreadCount = notifications.filter((n) => !n.read).length;
 
   return (
-    <div className={`min-h-screen flex flex-col bg-[#F7FAF9] dark:bg-[#12211E]/95 text-gray-800 dark:text-[#F7FAF9] ${getFontScaleClass(fontScale)} transition-colors duration-300`}>
+    <div className={`min-h-screen flex flex-col bg-white text-gray-800 dark:text-[#F7FAF9] ${getFontScaleClass(fontScale)} transition-colors duration-300`}>
       
       {/* Mobile Top Header */}
-      <header className="md:hidden sticky top-0 left-0 right-0 h-14 bg-white dark:bg-[#12211E] border-b border-gray-100 dark:border-teal-950 flex items-center justify-between px-4 z-40 shadow-sm">
-        <ParolaLogo className="w-7 h-7" />
+      <header className="md:hidden sticky top-0 left-0 right-0 h-14 bg-brand-black border-b border-teal-950 flex items-center justify-between px-4 z-40 shadow-md">
+        <div className="flex items-center gap-2">
+          <div className="dark">
+            <ParolaLogo className="w-7 h-7" />
+          </div>
+          {/* Live signal dots */}
+          <span className="relative flex h-2 w-2 ml-1">
+            <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-brand-green opacity-75"></span>
+            <span className="relative inline-flex rounded-full h-2 w-2 bg-brand-green"></span>
+          </span>
+        </div>
         <button
           onClick={logout}
-          className="flex items-center gap-1 bg-rose-50 hover:bg-rose-100 dark:bg-rose-950/20 text-rose-600 border border-rose-100 dark:border-rose-900/30 text-[10px] font-black uppercase tracking-wider px-3 h-8 rounded-full transition"
+          className="flex items-center gap-1 bg-brand-red/15 hover:bg-brand-red/25 text-brand-red border border-brand-red/20 text-[10px] font-bold uppercase tracking-wider px-3.5 h-8.5 rounded-full transition cursor-pointer"
         >
           <LogOut className="w-3 h-3" />
           <span>{t("logout")}</span>
@@ -107,7 +113,7 @@ export const AuthLayout: React.FC<AuthLayoutProps> = ({ children }) => {
           {/* Collapse toggle pill right edge */}
           <button
             onClick={toggleSidebar}
-            className="absolute top-6 -right-3 w-6 h-6 rounded-full border border-gray-200 dark:border-teal-900 bg-white dark:bg-[#12211E] hover:bg-gray-50 dark:hover:bg-teal-950 flex items-center justify-center text-gray-400 hover:text-gray-600 transition shadow-sm z-40 cursor-pointer"
+            className="absolute top-6 -right-3 w-6 h-6 rounded-full border border-[#00B37E] bg-white hover:bg-[#E5F7F3] flex items-center justify-center text-[#00B37E] transition shadow-sm z-40 cursor-pointer"
             aria-label="Toggle sidebar"
           >
             {isCollapsed ? <ChevronRight className="w-3.5 h-3.5" /> : <ChevronLeft className="w-3.5 h-3.5" />}
@@ -131,7 +137,7 @@ export const AuthLayout: React.FC<AuthLayoutProps> = ({ children }) => {
                   title={isCollapsed ? item.label : undefined}
                   className={`flex items-center gap-3.5 h-11 px-4 rounded-full font-bold text-sm transition-all select-none relative group ${
                     isActive
-                      ? "bg-brand-green/15 text-brand-green dark:bg-brand-green/20"
+                      ? "bg-[#E5F7F3] text-[#00B37E] dark:bg-[#00B37E]/20 dark:text-[#00B37E]"
                       : "text-gray-600 hover:text-[#12211E] dark:text-gray-300 dark:hover:text-white hover:bg-gray-50 dark:hover:bg-teal-950/40"
                   }`}
                 >
@@ -139,11 +145,6 @@ export const AuthLayout: React.FC<AuthLayoutProps> = ({ children }) => {
                   
                   {!isCollapsed && (
                     <span className="truncate">{item.label}</span>
-                  )}
-
-                  {/* Active navigation glow line */}
-                  {isActive && !isCollapsed && (
-                    <span className="absolute right-4 w-1.5 h-1.5 rounded-full bg-brand-green" />
                   )}
 
                   {/* Red Badge Alert */}
@@ -160,32 +161,23 @@ export const AuthLayout: React.FC<AuthLayoutProps> = ({ children }) => {
           </nav>
 
           {/* Bottom logout area */}
-          <div className="p-4 border-t border-gray-100 dark:border-teal-950 space-y-2">
-            <button
-              onClick={toggleTheme}
-              className="w-full flex items-center gap-3 h-11 px-4 rounded-full font-bold text-sm text-gray-500 hover:text-gray-800 dark:text-gray-300 dark:hover:text-white hover:bg-gray-50 dark:hover:bg-teal-950/40 transition select-none"
-            >
-              <span className="w-5 text-center">{theme === "light" ? "🌙" : "☀️"}</span>
-              {!isCollapsed && <span>{theme === "light" ? "Dark Mode" : "Light Mode"}</span>}
-            </button>
-
+          <div className="p-4 border-t border-gray-100 dark:border-teal-950">
             <button
               onClick={logout}
               className={`w-full flex items-center gap-3.5 h-11 px-4 rounded-full font-bold text-sm transition select-none ${
                 isCollapsed
-                  ? "text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/20 justify-center"
-                  : "text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/25 justify-start"
+                  ? "text-red-500 hover:bg-red-50/50 justify-center"
+                  : "text-red-500 hover:bg-red-50/50 justify-start"
               }`}
             >
-              <LogOut className="w-5 h-5 shrink-0" />
-              {!isCollapsed && <span>{t("logout")}</span>}
+              <LogOut className="w-5 h-5 shrink-0 text-red-500" />
+              {!isCollapsed && <span>Logout</span>}
             </button>
           </div>
         </aside>
 
-        {/* Content Panel Area */}
-        <main className="flex-1 flex flex-col min-w-0 pb-16 md:pb-0">
-          <div className="flex-1 overflow-y-auto p-4 md:p-8 max-w-7xl w-full mx-auto animate-fade-in">
+        <main className={`flex-1 flex flex-col min-w-0 pb-16 md:pb-0 ${fluid ? "h-screen overflow-hidden bg-white" : "bg-white"}`}>
+          <div className={fluid ? "flex-1 animate-fade-in flex flex-col h-full min-h-0 bg-white" : "flex-1 overflow-y-auto p-4 md:p-8 w-full animate-fade-in bg-white"}>
             {children}
           </div>
         </main>

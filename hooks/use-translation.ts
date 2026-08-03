@@ -82,13 +82,13 @@ export const DICTIONARY = {
     hil: "Dashboard"
   },
   fuel: {
-    en: "Co-op Fuel",
+    en: "Fuel Pool",
     tl: "Krudo Pool",
     ceb: "Krudo Pool",
     hil: "Krudo Pool"
   },
   alerts: {
-    en: "Alerts",
+    en: "Notifications",
     tl: "Alerto",
     ceb: "Alerto",
     hil: "Alerto"

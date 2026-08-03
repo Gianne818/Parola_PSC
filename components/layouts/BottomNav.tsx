@@ -14,7 +14,6 @@ export const BottomNav: React.FC = () => {
 
   const tabs = [
     { href: "/dashboard", icon: LayoutDashboard, label: "Dash" },
-    { href: "/map", icon: Map, label: "Map" },
     { href: "/fuel", icon: Fuel, label: "Fuel" },
     { href: "/notifications", icon: Bell, label: "Alerts", badge: true },
     { href: "/profile", icon: User, label: "Profile" },
@@ -39,7 +38,7 @@ export const BottomNav: React.FC = () => {
             <div
               className={`flex items-center justify-center p-1.5 rounded-full transition-all ${
                 isActive
-                  ? "bg-[#10B981]/10 text-[#10B981]"
+                  ? "bg-brand-green/10 text-brand-green"
                   : "text-gray-500 hover:text-gray-700 dark:text-gray-400"
               }`}
             >
@@ -55,7 +54,7 @@ export const BottomNav: React.FC = () => {
 
             <span
               className={`text-[9px] font-black tracking-wide uppercase mt-0.5 ${
-                isActive ? "text-[#10B981]" : "text-gray-400"
+                isActive ? "text-brand-green" : "text-gray-400"
               }`}
             >
               {tab.label}

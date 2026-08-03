@@ -32,7 +32,7 @@ export const TierProgressBar: React.FC<TierProgressBarProps> = ({
       <div className="relative w-full h-4 bg-[#E2E8F0] dark:bg-zinc-800 rounded-full">
         {/* Fill */}
         <div
-          className="h-full bg-gradient-to-r from-emerald-500 to-[#10B981] rounded-full transition-all duration-500 ease-out shadow-sm"
+          className="h-full bg-gradient-to-r from-emerald-500 to-brand-green rounded-full transition-all duration-500 ease-out shadow-sm"
           style={{ width: `${percentage}%` }}
         />
 
@@ -53,7 +53,7 @@ export const TierProgressBar: React.FC<TierProgressBarProps> = ({
               <div
                 className={`w-3.5 h-3.5 rounded-full border-2 transition-all duration-300 ${
                   isAchieved
-                    ? "bg-[#10B981] border-white dark:border-zinc-900 scale-110 shadow"
+                    ? "bg-brand-green border-white dark:border-zinc-900 scale-110 shadow"
                     : "bg-white dark:bg-zinc-850 border-gray-300"
                 }`}
               />
@@ -78,7 +78,7 @@ export const TierProgressBar: React.FC<TierProgressBarProps> = ({
               <span className="text-xs font-bold text-gray-800 dark:text-gray-200">
                 {tier.volume.toLocaleString()}L
               </span>
-              <span className="text-[10px] font-bold text-[#10B981] bg-emerald-50 dark:bg-emerald-950/40 px-1.5 py-0.5 rounded-full border border-emerald-100 dark:border-emerald-900/30">
+              <span className="text-[10px] font-bold text-brand-green bg-brand-green/10 px-1.5 py-0.5 rounded-full border border-brand-green/20">
                 -₱{tier.discount.toFixed(2)}/L
               </span>
             </div>

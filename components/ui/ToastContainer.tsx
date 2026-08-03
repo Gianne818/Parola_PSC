@@ -42,7 +42,7 @@ export const ToastContainer: React.FC = () => {
                 <AlertCircle className="w-5 h-5 text-rose-500" />
               )}
               {toast.type === "info" && (
-                <Info className="w-5 h-5 text-[#10B981]" />
+                <Info className="w-5 h-5 text-brand-green" />
               )}
             </div>
 

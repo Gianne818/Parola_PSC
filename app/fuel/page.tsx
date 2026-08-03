@@ -4,9 +4,8 @@ import React, { useState } from "react";
 import { AuthLayout } from "../../components/layouts/AuthLayout";
 import { useApp, MUNICIPAL_PORTS } from "../../context/AppContext";
 import { useTranslation } from "../../hooks/use-translation";
-import { TierProgressBar } from "../../components/ui/TierProgressBar";
 import { Modal } from "../../components/ui/Modal";
-import { DollarSign, Fuel, Gift, Info, Layers, Plus, Users } from "lucide-react";
+import { Fuel, MapPin, Users, Calendar, ChevronRight, Search, Plus } from "lucide-react";
 
 export default function FuelPage() {
   const {
@@ -15,23 +14,30 @@ export default function FuelPage() {
     addFuelCommit,
     createFuelPool,
     language,
-    showToast
+    showToast,
   } = useApp();
 
   const { t } = useTranslation(language);
 
-  // States
-  const [selectedPoolId, setSelectedPoolId] = useState<string | null>(null);
-  const [fuelCommitLiters, setFuelCommitLiters] = useState(100);
-  const [isCreateOpen, setIsCreateOpen] = useState(false);
+  // Navigation state between the two tabs shown in images
+  const [activeTab, setActiveTab] = useState<"pools" | "tiers">("pools");
 
-  // New pool form fields
+  // Selected pool state (defaults to the first pool or null)
+  const [selectedPoolId, setSelectedPoolId] = useState<string | null>(
+    fuelPools.length > 0 ? fuelPools[0].id : null
+  );
+
+  const [fuelCommitLiters, setFuelCommitLiters] = useState<number>(100);
+  const [searchQuery, setSearchQuery] = useState("");
+
+  // Create pool modal state
+  const [isCreateOpen, setIsCreateOpen] = useState(false);
   const [newPoolName, setNewPoolName] = useState("");
   const [newPoolTarget, setNewPoolTarget] = useState(4000);
-  const [newPoolPort, setNewPoolPort] = useState(userProfile.port);
+  const [newPoolPort, setNewPoolPort] = useState(userProfile.port || "Batangas Pier 1");
   const [newPoolDiscount, setNewPoolDiscount] = useState(2.5);
 
-  const activePool = fuelPools.find((p) => p.id === selectedPoolId);
+  const activePool = fuelPools.find((p) => p.id === selectedPoolId) || fuelPools[0];
 
   const handleLaunchPoolSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -49,247 +55,464 @@ export default function FuelPage() {
     });
 
     setIsCreateOpen(false);
-    // Reset
     setNewPoolName("");
     setNewPoolTarget(4000);
     setNewPoolDiscount(2.5);
   };
 
+  const handleCommitOrder = () => {
+    if (!activePool) return;
+    addFuelCommit(activePool.id, fuelCommitLiters);
+    showToast("Successfully committed fuel volume!", "success");
+  };
+
+  // Helper calculation for tier-based discount savings
+  const calculateTierDiscount = (volume: number) => {
+    if (volume >= 6000) return 8.0;
+    if (volume >= 4000) return 5.5;
+    if (volume >= 2500) return 3.2;
+    if (volume >= 1000) return 1.5;
+    return 0.0;
+  };
+
+  const currentDiscount = activePool ? calculateTierDiscount(activePool.currentVolume) : 0;
+  const estimatedSavings = fuelCommitLiters * currentDiscount;
+
   return (
     <AuthLayout>
-      <div className="space-y-6 md:space-y-8 pb-12">
-        {/* Header */}
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-          <div>
-            <span className="text-[10px] font-black uppercase tracking-wider text-gray-400">
-              Cooperative Fuel Pool
-            </span>
-            <h2 className="font-display font-[900] text-3xl text-slate-900 dark:text-[#F7FAF9] mt-0.5 flex items-center gap-2">
-              <Fuel className="w-7 h-7 text-[#10B981]" />
-              Co-op Fuel Pools
-            </h2>
-          </div>
+      <div className="space-y-6 text-slate-800 font-sans">
 
-          <button
-            onClick={() => setIsCreateOpen(true)}
-            className="bg-[#10B981] hover:bg-[#00B37E] text-white font-black text-xs uppercase tracking-widest px-6 h-11 rounded-2xl transition shadow flex items-center justify-center gap-1.5 active:scale-95"
-          >
-            <Plus className="w-4 h-4" />
-            <span>Launch Co-op Pool</span>
-          </button>
-        </div>
-
-        {/* Informative program stats */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-          <div className="bg-white dark:bg-[#12211E] border border-gray-100 dark:border-teal-950 p-6 rounded-[2rem] shadow-sm flex items-start gap-4">
-            <div className="p-3 bg-emerald-50 dark:bg-emerald-950/40 rounded-2xl text-[#10B981]">
-              <Users className="w-6 h-6" />
+        {/* Top Header */}
+        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 pb-4 border-b border-gray-200">
+          <div className="flex items-center gap-3">
+            <div className="w-12 h-12 rounded-2xl bg-[#10B981]/10 text-[#10B981] flex items-center justify-center">
+              <Fuel className="w-6 h-6" />
             </div>
             <div>
-              <span className="text-[10px] font-bold text-gray-400 uppercase tracking-widest block">
-                Total Participations
-              </span>
-              <span className="text-xl font-black text-[#12211E] dark:text-[#F7FAF9] block mt-0.5">
-                42 Fishermen Active
-              </span>
-              <span className="text-[10px] text-gray-400 font-bold block mt-0.5">
-                Across 14 coastal ports
-              </span>
+              <h1 className="text-xl md:text-2xl font-black uppercase tracking-tight text-slate-900">
+                COOPERATIVE FUEL ORDER
+              </h1>
+              <p className="text-xs text-gray-500 font-medium">
+                Pool municipal diesel orders to unlock bulk pricing discounts.
+              </p>
             </div>
           </div>
 
-          <div className="bg-white dark:bg-[#12211E] border border-gray-100 dark:border-teal-950 p-6 rounded-[2rem] shadow-sm flex items-start gap-4">
-            <div className="p-3 bg-teal-50 dark:bg-teal-950/40 rounded-2xl text-[#10B981]">
-              <Layers className="w-6 h-6" />
+          <div className="flex items-center gap-3">
+            <div className="relative w-64 md:w-80">
+              <Search className="w-4 h-4 absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400" />
+              <input
+                type="text"
+                placeholder="Search Port or Pool..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="w-full bg-white border border-gray-200 text-xs font-semibold rounded-2xl py-2.5 pl-10 pr-4 focus:outline-none focus:border-[#10B981] shadow-sm"
+              />
             </div>
-            <div>
-              <span className="text-[10px] font-bold text-gray-400 uppercase tracking-widest block">
-                Total Bulk Volume
-              </span>
-              <span className="text-xl font-black text-[#12211E] dark:text-[#F7FAF9] block mt-0.5">
-                9,700 Liters Committed
-              </span>
-              <span className="text-[10px] text-gray-400 font-bold block mt-0.5">
-                Bulk pipeline discounts unlocked
-              </span>
-            </div>
-          </div>
-
-          <div className="bg-white dark:bg-[#12211E] border border-gray-100 dark:border-teal-950 p-6 rounded-[2rem] shadow-sm flex items-start gap-4">
-            <div className="p-3 bg-amber-50 dark:bg-amber-950/40 rounded-2xl text-amber-500">
-              <Gift className="w-6 h-6" />
-            </div>
-            <div>
-              <span className="text-[10px] font-bold text-gray-400 uppercase tracking-widest block">
-                Average Savings Rate
-              </span>
-              <span className="text-xl font-black text-[#12211E] dark:text-[#F7FAF9] block mt-0.5">
-                ₱3.20 Off per Liter
-              </span>
-              <span className="text-[10px] text-gray-400 font-bold block mt-0.5">
-                Aggregated fuel co-op tier multiplier
-              </span>
-            </div>
+            <button
+              onClick={() => setIsCreateOpen(true)}
+              className="bg-[#10B981] hover:bg-[#059669] text-white font-extrabold text-xs uppercase px-5 py-2.5 rounded-2xl transition flex items-center gap-1.5 shadow-sm active:scale-95 cursor-pointer whitespace-nowrap"
+            >
+              <Plus className="w-4 h-4" />
+              <span>START POOL</span>
+            </button>
           </div>
         </div>
 
-        {/* Pools list */}
-        <div className="space-y-4">
-          <h3 className="font-display font-black text-xl text-slate-900 dark:text-[#F7FAF9]">
-            Active Co-op Listings
-          </h3>
+        {/* Navigation Tabs */}
+        <div className="flex justify-center">
+          <div className="inline-flex bg-white p-1 rounded-2xl border border-gray-200 shadow-sm gap-1">
+            <button
+              onClick={() => setActiveTab("pools")}
+              className={`px-6 py-2.5 rounded-xl text-xs font-black uppercase transition cursor-pointer ${activeTab === "pools"
+                  ? "bg-[#10B981]/10 text-[#10B981] border border-[#10B981]/30"
+                  : "text-gray-400 hover:text-gray-700"
+                }`}
+            >
+              NEARBY FUEL POOLS
+            </button>
+            <button
+              onClick={() => setActiveTab("tiers")}
+              className={`px-6 py-2.5 rounded-xl text-xs font-black uppercase transition cursor-pointer ${activeTab === "tiers"
+                  ? "bg-[#10B981]/10 text-[#10B981] border border-[#10B981]/30"
+                  : "text-gray-400 hover:text-gray-700"
+                }`}
+            >
+              PRICE TIERS & QUOTATIONS
+            </button>
+          </div>
+        </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            {fuelPools.map((pool) => {
-              const personalCommit = pool.commits[userProfile.phone] || 0;
-              const hasJoined = personalCommit > 0;
+        {/* TAB 1: NEARBY FUEL POOLS */}
+        {activeTab === "pools" && (
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
 
-              return (
-                <div
-                  key={pool.id}
-                  className="bg-white dark:bg-[#12211E] border border-gray-100 dark:border-teal-950 p-6 md:p-8 rounded-[2rem] shadow-sm flex flex-col justify-between space-y-6 text-left"
-                >
-                  <div className="space-y-3">
-                    <div className="flex justify-between items-start">
-                      <div>
-                        <span className="text-[9px] font-black uppercase tracking-widest px-2 py-0.5 rounded-full border bg-slate-50 dark:bg-teal-950/40 border-gray-150 text-gray-500">
-                          📍 {pool.port}
-                        </span>
-                        <h4 className="font-display font-black text-xl text-slate-900 dark:text-white mt-1.5">
-                          {pool.name}
-                        </h4>
+            {/* Left Column: Pool Listings */}
+            <div className="lg:col-span-7 space-y-4">
+              <div className="flex items-center justify-between bg-white border border-gray-200 rounded-2xl px-5 py-3 shadow-md">
+                <span className="text-[11px] font-black uppercase tracking-wider text-gray-500">
+                  BROWSE COOPERATIVE POOLS
+                </span>
+                <span className="text-[11px] font-extrabold text-[#10B981] uppercase flex items-center gap-1 cursor-pointer">
+                  ↑↓ SORTED BY DISTANCE (ASCENDING)
+                </span>
+              </div>
+
+              <div className="space-y-3">
+                {fuelPools
+                  .filter(
+                    (p) =>
+                      p.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+                      p.port.toLowerCase().includes(searchQuery.toLowerCase())
+                  )
+                  .map((pool) => {
+                    const isSelected = selectedPoolId === pool.id;
+                    const personalCommit = pool.commits?.[userProfile.phone] || 0;
+                    const percentage = Math.min(
+                      100,
+                      Math.round((pool.currentVolume / pool.targetVolume) * 100)
+                    );
+
+                    return (
+                      <div
+                        key={pool.id}
+                        onClick={() => setSelectedPoolId(pool.id)}
+                        className={`bg-white border-2 rounded-3xl p-5 transition cursor-pointer shadow-md relative ${isSelected
+                            ? "border-[#10B981] ring-1 ring-[#10B981]/50"
+                            : "border-gray-200 hover:border-gray-300"
+                          }`}
+                      >
+                        <div className="flex justify-between items-start mb-2">
+                          <div>
+                            <div className="flex items-center gap-2">
+                              <h3 className="font-black text-slate-900 uppercase text-sm tracking-tight">
+                                {pool.name}
+                              </h3>
+                              {personalCommit > 0 && (
+                                <span className="bg-[#10B981]/10 text-[#10B981] text-[9px] font-black uppercase px-2 py-0.5 rounded-md border border-[#10B981]/20">
+                                  JOINED
+                                </span>
+                              )}
+                            </div>
+                            <div className="flex items-center gap-2 mt-1">
+                              <span className="text-[11px] font-bold text-gray-500 flex items-center gap-1">
+                                <MapPin className="w-3 h-3 text-[#10B981]" /> {pool.port}
+                              </span>
+                              <span className="bg-gray-100 text-gray-600 text-[10px] font-black px-2 py-0.5 rounded-full">
+                                0.5 km away
+                              </span>
+                            </div>
+                          </div>
+
+                          <div className="flex items-center gap-4">
+                            <div className="text-right">
+                              <span className="text-[10px] font-black text-gray-400 block uppercase">
+                                DISCOUNT
+                              </span>
+                              <span className="text-sm font-black text-[#10B981]">
+                                -₱{pool.discountPerLiter.toFixed(2)}/L
+                              </span>
+                            </div>
+                            <ChevronRight className={`w-5 h-5 text-gray-400 transition-transform ${isSelected ? "text-[#10B981] translate-x-1" : ""}`} />
+                          </div>
+                        </div>
+
+                        <div className="flex items-center justify-between text-[11px] font-bold text-gray-500 mt-4 pt-3 border-t border-gray-100">
+                          <div>
+                            Liters: <span className="font-black text-slate-800">{pool.currentVolume.toLocaleString()}L</span> / {pool.targetVolume.toLocaleString()}L ({percentage}% Filled)
+                          </div>
+                          <div className="flex items-center gap-3">
+                            <span className="flex items-center gap-1">
+                              <Users className="w-3.5 h-3.5 text-gray-400" /> {pool.participants || 12} Users
+                            </span>
+                            <span className="flex items-center gap-1 text-gray-400">
+                              <Calendar className="w-3.5 h-3.5" /> Ends: 2026-08-01T05:18:09.643Z
+                            </span>
+                          </div>
+                        </div>
                       </div>
-                      
-                      <div className="text-right">
-                        <span className="text-xs font-black text-brand-green block">
-                          Current Tier Discount
-                        </span>
-                        <span className="text-2xl font-[900] text-brand-green">
-                          -₱{pool.discountPerLiter.toFixed(2)}/L
-                        </span>
-                      </div>
-                    </div>
+                    );
+                  })}
+              </div>
+            </div>
 
-                    <p className="text-xs text-gray-400 font-bold leading-normal">
-                      Municipal bulk cooperative pooling closes soon. Commit liters to unlock next discount tier levels!
-                    </p>
+            {/* Right Column: Active Pool Selection Sidebar */}
+            {activePool && (
+              <div className="lg:col-span-5 bg-white border-2 border-slate-900/10 rounded-3xl p-6 shadow-md space-y-6">
+                <div>
+                  <span className="text-[10px] font-black uppercase tracking-widest text-[#10B981]">
+                    ACTIVE POOL SELECTION
+                  </span>
+                  <h2 className="text-lg font-black text-slate-900 uppercase tracking-tight mt-0.5">
+                    {activePool.name}
+                  </h2>
+                  <p className="text-xs text-gray-500 font-semibold mt-0.5">
+                    Distributing Base: {activePool.port}
+                  </p>
+                </div>
+
+                {/* Progress Visual */}
+                <div className="space-y-1.5">
+                  <div className="flex justify-between text-xs font-black">
+                    <span className="text-gray-600">Volume Discount Status</span>
+                    <span className="text-[#10B981]">{activePool.currentVolume.toLocaleString()}L Committed</span>
                   </div>
-
-                  {/* Progressive Bar Visualizer */}
-                  <div className="border-t border-b border-gray-50 dark:border-teal-950/50 py-4">
-                    <div className="flex justify-between text-[11px] font-bold text-gray-400 mb-1">
-                      <span>Volume Unlocked: {pool.currentVolume.toLocaleString()}L / {pool.targetVolume.toLocaleString()}L</span>
-                      <span className="text-brand-green font-black">Target Goal</span>
-                    </div>
-                    
-                    <TierProgressBar
-                      currentVolume={pool.currentVolume}
-                      targetVolume={pool.targetVolume}
+                  <div className="w-full bg-gray-100 rounded-full h-3 overflow-hidden p-0.5 border border-gray-200">
+                    <div
+                      className="bg-[#10B981] h-full rounded-full transition-all duration-300"
+                      style={{
+                        width: `${Math.min(
+                          100,
+                          (activePool.currentVolume / activePool.targetVolume) * 100
+                        )}%`,
+                      }}
                     />
                   </div>
+                  <div className="flex justify-between text-[10px] font-extrabold text-gray-400">
+                    <span>0 L</span>
+                    <span>Target: {activePool.targetVolume.toLocaleString()} L</span>
+                  </div>
+                </div>
 
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-2">
-                      <div className="text-xs font-bold text-gray-400">
-                        Participants: <span className="text-gray-800 dark:text-white font-extrabold">{pool.participants}</span>
+                {/* Bulk Savings Target Tiers Grid */}
+                <div className="bg-slate-50 border border-gray-200 rounded-2xl p-4 space-y-3">
+                  <span className="text-[10px] font-black uppercase tracking-wider text-gray-400 block">
+                    BULK SAVINGS TARGET TIERS
+                  </span>
+                  <div className="grid grid-cols-2 gap-2 text-xs">
+                    <div className="bg-white p-2.5 rounded-xl border border-gray-100 flex justify-between items-center shadow-2xs">
+                      <div>
+                        <div className="font-black text-slate-800">Bronze Tier</div>
+                        <div className="text-[10px] text-gray-400 font-bold">1,000 L</div>
                       </div>
-                      <span className="w-1 h-1 rounded-full bg-gray-300" />
-                      <div className="text-xs font-bold text-gray-400">
-                        Status: <span className="text-brand-green font-black uppercase">Open</span>
-                      </div>
+                      <span className="font-black text-[#10B981]">-1.50/L</span>
                     </div>
 
-                    <div className="flex items-center gap-2">
-                      {hasJoined && (
-                        <span className="text-[10px] font-black uppercase text-brand-green bg-brand-green/10 dark:bg-brand-green/20 px-2.5 py-1 rounded-full border border-brand-green/20">
-                          My order: {personalCommit}L
-                        </span>
-                      )}
+                    <div className="bg-white p-2.5 rounded-xl border border-gray-100 flex justify-between items-center shadow-2xs">
+                      <div>
+                        <div className="font-black text-slate-800">Silver Tier</div>
+                        <div className="text-[10px] text-gray-400 font-bold">2,500 L</div>
+                      </div>
+                      <span className="font-black text-gray-400">-3.20/L</span>
+                    </div>
 
-                      <button
-                        onClick={() => {
-                          setSelectedPoolId(pool.id);
-                          setFuelCommitLiters(hasJoined ? personalCommit : 100);
-                        }}
-                        className={`px-4 py-2.5 rounded-xl text-xs font-black uppercase tracking-wider transition ${
-                          hasJoined
-                            ? "bg-slate-100 hover:bg-slate-200 text-gray-700 dark:bg-zinc-800 dark:text-white"
-                            : "bg-brand-green hover:bg-brand-green/90 text-white shadow-sm"
-                        }`}
-                      >
-                        {hasJoined ? "Edit Liters" : "Commit Liters"}
-                      </button>
+                    <div className="bg-white p-2.5 rounded-xl border border-gray-100 flex justify-between items-center shadow-2xs">
+                      <div>
+                        <div className="font-black text-slate-800">Gold Co-Op Tier</div>
+                        <div className="text-[10px] text-gray-400 font-bold">4,000 L</div>
+                      </div>
+                      <span className="font-black text-gray-400">-5.50/L</span>
+                    </div>
+
+                    <div className="bg-white p-2.5 rounded-xl border border-gray-100 flex justify-between items-center shadow-2xs">
+                      <div>
+                        <div className="font-black text-slate-800">Maximum Bulk Tier</div>
+                        <div className="text-[10px] text-gray-400 font-bold">6,000 L</div>
+                      </div>
+                      <span className="font-black text-gray-400">-8.00/L</span>
                     </div>
                   </div>
                 </div>
-              );
-            })}
+
+                {/* Liter Input Stepper */}
+                <div className="space-y-3">
+                  <label className="text-[10px] font-black uppercase tracking-wider text-gray-400 block">
+                    SELECT REQUESTED VOLUME (LITERS)
+                  </label>
+                  <div className="grid grid-cols-3 gap-2">
+                    <button
+                      onClick={() => setFuelCommitLiters(Math.max(50, fuelCommitLiters - 50))}
+                      className="bg-slate-100 hover:bg-slate-200 text-slate-900 font-black py-3 rounded-2xl text-xs transition cursor-pointer"
+                    >
+                      -50L
+                    </button>
+                    <input
+                      type="number"
+                      value={fuelCommitLiters}
+                      onChange={(e) => setFuelCommitLiters(Number(e.target.value))}
+                      className="bg-slate-50 border border-gray-200 rounded-2xl text-center font-black text-sm text-slate-900 focus:outline-none focus:border-[#10B981]"
+                    />
+                    <button
+                      onClick={() => setFuelCommitLiters(fuelCommitLiters + 50)}
+                      className="bg-slate-100 hover:bg-slate-200 text-slate-900 font-black py-3 rounded-2xl text-xs transition cursor-pointer"
+                    >
+                      +50L
+                    </button>
+                  </div>
+                </div>
+
+                {/* Financial Summary */}
+                <div className="bg-slate-50/50 rounded-2xl p-4 space-y-2 border border-gray-100 text-xs font-bold">
+                  <div className="flex justify-between text-gray-600">
+                    <span>Liters Requested:</span>
+                    <span className="font-black text-slate-900">{fuelCommitLiters} L</span>
+                  </div>
+                  <div className="flex justify-between text-gray-600">
+                    <span>Locked Discount Per Liter:</span>
+                    <span className="font-black text-[#10B981]">-₱{currentDiscount.toFixed(2)}/L</span>
+                  </div>
+                  <div className="pt-2 border-t border-gray-200 flex justify-between items-center">
+                    <span className="font-black uppercase text-slate-900">ESTIMATED ORDER SAVINGS:</span>
+                    <span className="font-black text-lg text-[#10B981]">
+                      ₱{isNaN(estimatedSavings) ? "0.00" : estimatedSavings.toFixed(2)}
+                    </span>
+                  </div>
+                </div>
+
+                <button
+                  onClick={handleCommitOrder}
+                  className="w-full bg-[#10B981] hover:bg-[#059669] text-white font-black text-xs uppercase py-4 rounded-2xl transition shadow-sm active:scale-98 cursor-pointer"
+                >
+                  JOIN BULK ORDER POOL
+                </button>
+              </div>
+            )}
           </div>
-        </div>
-      </div>
+        )}
 
-      {/* Fuel Commit Modal */}
-      <Modal
-        isOpen={selectedPoolId !== null}
-        onClose={() => setSelectedPoolId(null)}
-        title={activePool ? `Commit order: ${activePool.name}` : "Join Co-op"}
-        size="sm"
-      >
-        {activePool && (
-          <div className="space-y-6">
-            <div className="bg-brand-green/10 dark:bg-brand-green/20 border border-brand-green/20 p-4 rounded-2xl">
-              <div className="flex justify-between text-xs font-bold text-gray-500">
-                <span>Co-op Target:</span>
-                <span className="text-brand-green font-black">{activePool.targetVolume.toLocaleString()} Liters</span>
-              </div>
-              <div className="flex justify-between text-xs font-bold text-gray-500 mt-1">
-                <span>Current Volume:</span>
-                <span className="text-brand-green font-black">{activePool.currentVolume.toLocaleString()} Liters</span>
-              </div>
-            </div>
-
-            <div className="space-y-2">
-              <label className="text-[10px] font-black uppercase tracking-wider text-gray-400 block">
-                Enter Liters to Commit
-              </label>
-              <div className="relative">
-                <input
-                  type="number"
-                  min={50}
-                  max={2000}
-                  value={fuelCommitLiters}
-                  onChange={(e) => setFuelCommitLiters(parseInt(e.target.value) || 0)}
-                  className="w-full bg-slate-50 dark:bg-teal-950/20 border-2 border-slate-200 dark:border-teal-900 rounded-2xl h-12 px-4 text-sm font-semibold focus:outline-none focus:border-brand-green"
-                />
-                <span className="absolute right-4 top-1/2 -translate-y-1/2 text-sm font-black text-brand-green">
-                  Liters
+        {/* TAB 2: PRICE TIERS & QUOTATIONS */}
+        {activeTab === "tiers" && (
+          <div className="max-w-5xl mx-auto my-6">
+            <div className="bg-white border-2 border-slate-900/10 rounded-3xl p-8 shadow-sm">
+              <div className="mb-8">
+                <span className="text-[10px] font-black uppercase tracking-widest text-[#10B981]">
+                  STANDARD PRICING MATRIX
                 </span>
+                <h2 className="text-2xl font-black text-slate-900 uppercase tracking-tight">
+                  CO-OP PRICE TIERS & QUOTATIONS
+                </h2>
+                <p className="text-xs text-gray-500 font-medium mt-1">
+                  Fuel prices decrease exponentially as the combined municipal volume grows towards bulk target levels.
+                </p>
               </div>
-              <p className="text-[10px] text-gray-400 font-bold">
-                * Commitments can be adjusted before the closing date. Estimated discount is based on volume tier achieve metrics.
-              </p>
-            </div>
 
-            <div className="pt-4 flex gap-3">
-              <button
-                onClick={() => setSelectedPoolId(null)}
-                className="flex-1 bg-gray-100 hover:bg-gray-200 dark:bg-zinc-800 text-gray-600 dark:text-white font-black text-xs uppercase tracking-widest py-3 rounded-2xl transition"
-              >
-                Close
-              </button>
-              <button
-                onClick={() => {
-                  addFuelCommit(activePool.id, fuelCommitLiters);
-                  setSelectedPoolId(null);
-                }}
-                className="flex-1 bg-brand-green hover:bg-brand-green/90 text-white font-black text-xs uppercase tracking-widest py-3 rounded-2xl transition"
-              >
-                Confirm Order
-              </button>
+              <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
+
+                {/* Active Price Levels Stack */}
+                <div className="lg:col-span-7 space-y-4">
+                  <span className="text-[10px] font-black uppercase tracking-wider text-gray-400 block">
+                    ACTIVE PRICE LEVELS
+                  </span>
+
+                  {/* Bronze Tier */}
+                  <div className="border border-gray-200 rounded-2xl p-4 flex items-center justify-between bg-white shadow-2xs hover:border-[#10B981] transition">
+                    <div className="flex items-center gap-4">
+                      <div className="w-8 h-8 rounded-full bg-[#10B981]/10 text-[#10B981] font-black text-xs flex items-center justify-center">
+                        1
+                      </div>
+                      <div>
+                        <h4 className="font-black text-slate-900 uppercase text-xs">BRONZE TIER</h4>
+                        <span className="text-[10px] text-gray-400 font-bold">Min Pool Volume: 1,000 L</span>
+                      </div>
+                    </div>
+                    <div className="text-right">
+                      <span className="text-sm font-black text-slate-900 block">₱59.50/L</span>
+                      <span className="text-[10px] font-extrabold text-[#10B981]">Save ₱1.50/L</span>
+                    </div>
+                  </div>
+
+                  {/* Silver Tier */}
+                  <div className="border border-gray-200 rounded-2xl p-4 flex items-center justify-between bg-white shadow-2xs hover:border-[#10B981] transition">
+                    <div className="flex items-center gap-4">
+                      <div className="w-8 h-8 rounded-full bg-[#10B981]/10 text-[#10B981] font-black text-xs flex items-center justify-center">
+                        2
+                      </div>
+                      <div>
+                        <h4 className="font-black text-slate-900 uppercase text-xs">SILVER TIER</h4>
+                        <span className="text-[10px] text-gray-400 font-bold">Min Pool Volume: 2,500 L</span>
+                      </div>
+                    </div>
+                    <div className="text-right">
+                      <span className="text-sm font-black text-slate-900 block">₱57.80/L</span>
+                      <span className="text-[10px] font-extrabold text-[#10B981]">Save ₱3.20/L</span>
+                    </div>
+                  </div>
+
+                  {/* Gold Co-Op Tier */}
+                  <div className="border border-gray-200 rounded-2xl p-4 flex items-center justify-between bg-white shadow-2xs hover:border-[#10B981] transition">
+                    <div className="flex items-center gap-4">
+                      <div className="w-8 h-8 rounded-full bg-[#10B981]/10 text-[#10B981] font-black text-xs flex items-center justify-center">
+                        3
+                      </div>
+                      <div>
+                        <h4 className="font-black text-slate-900 uppercase text-xs">GOLD CO-OP TIER</h4>
+                        <span className="text-[10px] text-gray-400 font-bold">Min Pool Volume: 4,000 L</span>
+                      </div>
+                    </div>
+                    <div className="text-right">
+                      <span className="text-sm font-black text-slate-900 block">₱55.50/L</span>
+                      <span className="text-[10px] font-extrabold text-[#10B981]">Save ₱5.50/L</span>
+                    </div>
+                  </div>
+
+                  {/* Maximum Bulk Tier */}
+                  <div className="border border-gray-200 rounded-2xl p-4 flex items-center justify-between bg-white shadow-2xs hover:border-[#10B981] transition">
+                    <div className="flex items-center gap-4">
+                      <div className="w-8 h-8 rounded-full bg-[#10B981]/10 text-[#10B981] font-black text-xs flex items-center justify-center">
+                        4
+                      </div>
+                      <div>
+                        <h4 className="font-black text-slate-900 uppercase text-xs">MAXIMUM BULK TIER</h4>
+                        <span className="text-[10px] text-gray-400 font-bold">Min Pool Volume: 6,000 L</span>
+                      </div>
+                    </div>
+                    <div className="text-right">
+                      <span className="text-sm font-black text-slate-900 block">₱53.00/L</span>
+                      <span className="text-[10px] font-extrabold text-[#10B981]">Save ₱8.00/L</span>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Right Info Box: Guidelines & Compliance */}
+                <div className="lg:col-span-5 bg-[#F0FDF4] border border-[#10B981]/20 rounded-3xl p-6 space-y-6">
+                  <div>
+                    <h3 className="text-xs font-black uppercase text-[#10B981] tracking-wider mb-4">
+                      JOINT PURCHASE GUIDELINES
+                    </h3>
+                    <ul className="space-y-4 text-xs font-semibold text-gray-700">
+                      <li className="flex items-start gap-3">
+                        <span className="w-5 h-5 rounded-full bg-[#10B981] text-white font-bold text-[10px] flex items-center justify-center shrink-0 mt-0.5">
+                          1
+                        </span>
+                        <span>
+                          No advance deposits required. Place volume reservations securely using cellular SMS networks.
+                        </span>
+                      </li>
+                      <li className="flex items-start gap-3">
+                        <span className="w-5 h-5 rounded-full bg-[#10B981] text-white font-bold text-[10px] flex items-center justify-center shrink-0 mt-0.5">
+                          2
+                        </span>
+                        <span>
+                          Upon pool closing date, fuel tankers deliver directly to distribution shoreline bases.
+                        </span>
+                      </li>
+                      <li className="flex items-start gap-3">
+                        <span className="w-5 h-5 rounded-full bg-[#10B981] text-white font-bold text-[10px] flex items-center justify-center shrink-0 mt-0.5">
+                          3
+                        </span>
+                        <span>
+                          Each cooperative member receives their diesel allocation directly at the port and pays the final bulk-rate price.
+                        </span>
+                      </li>
+                    </ul>
+                  </div>
+
+                  <div className="pt-4 border-t border-[#10B981]/20">
+                    <h4 className="text-[10px] font-black uppercase text-[#10B981] tracking-wider mb-1">
+                      PORT COMPLIANCE
+                    </h4>
+                    <p className="text-[11px] text-gray-600 font-medium">
+                      Sourced from certified depots complying with BFAR sea fleet regulations.
+                    </p>
+                  </div>
+                </div>
+
+              </div>
             </div>
           </div>
         )}
-      </Modal>
+
+      </div>
 
       {/* Launch Pool Modal */}
       <Modal
@@ -309,7 +532,7 @@ export default function FuelPage() {
               placeholder="e.g. Mercedes Fishermen Pool C"
               value={newPoolName}
               onChange={(e) => setNewPoolName(e.target.value)}
-              className="w-full bg-slate-50 dark:bg-teal-950/20 border border-slate-200 dark:border-teal-900 rounded-2xl h-11 px-4 text-xs font-semibold focus:outline-none"
+              className="w-full bg-slate-50 border border-slate-200 rounded-2xl h-11 px-4 text-xs font-semibold focus:outline-none focus:border-[#10B981]"
             />
           </div>
 
@@ -323,7 +546,7 @@ export default function FuelPage() {
                 required
                 value={newPoolTarget}
                 onChange={(e) => setNewPoolTarget(parseInt(e.target.value) || 4000)}
-                className="w-full bg-slate-50 dark:bg-teal-950/20 border border-slate-200 dark:border-teal-900 rounded-2xl h-11 px-4 text-xs font-semibold focus:outline-none"
+                className="w-full bg-slate-50 border border-slate-200 rounded-2xl h-11 px-4 text-xs font-semibold focus:outline-none focus:border-[#10B981]"
               />
             </div>
 
@@ -337,7 +560,7 @@ export default function FuelPage() {
                 required
                 value={newPoolDiscount}
                 onChange={(e) => setNewPoolDiscount(parseFloat(e.target.value) || 2.5)}
-                className="w-full bg-slate-50 dark:bg-teal-950/20 border border-slate-200 dark:border-teal-900 rounded-2xl h-11 px-4 text-xs font-semibold focus:outline-none"
+                className="w-full bg-slate-50 border border-slate-200 rounded-2xl h-11 px-4 text-xs font-semibold focus:outline-none focus:border-[#10B981]"
               />
             </div>
           </div>
@@ -349,7 +572,7 @@ export default function FuelPage() {
             <select
               value={newPoolPort}
               onChange={(e) => setNewPoolPort(e.target.value)}
-              className="w-full bg-slate-50 dark:bg-[#12211E] border border-slate-200 dark:border-teal-900 rounded-2xl h-11 px-4 text-xs font-semibold focus:outline-none text-gray-800 dark:text-gray-200"
+              className="w-full bg-slate-50 border border-slate-200 rounded-2xl h-11 px-4 text-xs font-semibold focus:outline-none text-gray-800"
             >
               {MUNICIPAL_PORTS.map((port) => (
                 <option key={port.name} value={port.name}>
@@ -363,13 +586,13 @@ export default function FuelPage() {
             <button
               type="button"
               onClick={() => setIsCreateOpen(false)}
-              className="flex-1 bg-gray-100 hover:bg-gray-200 dark:bg-zinc-800 text-gray-600 dark:text-white font-black text-xs uppercase tracking-widest py-3 rounded-2xl transition"
+              className="flex-1 bg-gray-100 hover:bg-gray-200 text-gray-600 font-black text-xs uppercase tracking-widest py-3 rounded-2xl transition cursor-pointer"
             >
               Cancel
             </button>
             <button
               type="submit"
-              className="flex-1 bg-brand-green hover:bg-brand-green/90 text-white font-black text-xs uppercase tracking-widest py-3 rounded-2xl transition"
+              className="flex-1 bg-[#10B981] hover:bg-[#059669] text-white font-black text-xs uppercase tracking-widest py-3 rounded-2xl transition cursor-pointer"
             >
               Create Pool
             </button>

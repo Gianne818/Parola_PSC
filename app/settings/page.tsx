@@ -2,21 +2,19 @@
 
 import React, { useState } from "react";
 import { AuthLayout } from "../../components/layouts/AuthLayout";
-import { useApp, MUNICIPAL_PORTS } from "../../context/AppContext";
+import { useApp } from "../../context/AppContext";
 import { useTranslation } from "../../hooks/use-translation";
 import { fontScales } from "../../utils/fontScale";
 import {
-  Anchor,
-  Compass,
-  FileText,
-  Globe,
-  HelpCircle,
-  HelpCircle as QuestionIcon,
-  Info,
-  RefreshCw,
-  Sliders,
+  Sun,
+  Moon,
+  ShieldAlert,
+  Bell,
+  Target,
+  Check,
+  Radio,
   Sparkles,
-  User,
+  RefreshCw,
   Volume2
 } from "lucide-react";
 import ReactMarkdown from "react-markdown";
@@ -26,7 +24,6 @@ export default function SettingsPage() {
     userProfile,
     updateProfile,
     language,
-    changeLanguage,
     fontScale,
     changeFontScale,
     weather,
@@ -35,30 +32,44 @@ export default function SettingsPage() {
 
   const { t } = useTranslation(language);
 
-  // Profile Edit fields
-  const [vesselName, setVesselName] = useState(userProfile.vesselName);
-  const [licenseNo, setLicenseNo] = useState(userProfile.licenseNo);
-  const [homePort, setHomePort] = useState(userProfile.port);
-  const [boatType, setBoatType] = useState(userProfile.boatType);
-  const [speciesPreference, setSpeciesPreference] = useState(userProfile.speciesPreference);
+  // Theme state
+  const [theme, setTheme] = useState<"light" | "dark">("light");
+
+  // Threshold States (Sliders)
+  const [waveThreshold, setWaveThreshold] = useState<number>(2.0);
+  const [windThreshold, setWindThreshold] = useState<number>(20);
+
+  // Emergency contact state
+  const [emergencyContact, setEmergencyContact] = useState("0917 111 2222");
+
+  // SMS Alert Toggles
+  const [hazardousWeatherAlerts, setHazardousWeatherAlerts] = useState(true);
+  const [fuelPoolMilestones, setFuelPoolMilestones] = useState(true);
+
+  // Target Biological Families Selection
+  const [pelagicSelected, setPelagicSelected] = useState(true);
+  const [demersalSelected, setDemersalSelected] = useState(false);
 
   // AI Advisor State
   const [aiReport, setAiReport] = useState<string | null>(null);
   const [aiLoading, setAiLoading] = useState(false);
 
-  const handleSaveProfile = (e: React.FormEvent) => {
-    e.preventDefault();
-    const chosenPortObj = MUNICIPAL_PORTS.find((p) => p.name === homePort) || MUNICIPAL_PORTS[0];
+  const handleApplyVariables = () => {
+    // Determine species target string
+    let species: "both" | "pelagic" | "demersal" = "both";
+    if (pelagicSelected && !demersalSelected) species = "pelagic";
+    if (!pelagicSelected && demersalSelected) species = "demersal";
 
     updateProfile({
-      vesselName,
-      licenseNo,
-      boatType,
-      speciesPreference,
-      port: homePort,
-      lat: chosenPortObj.lat,
-      lng: chosenPortObj.lng,
+      ...userProfile,
+      speciesPreference: species
     });
+
+    showToast("Variables successfully applied!", "success");
+  };
+
+  const handleTriggerSOS = () => {
+    showToast("SOS Distress Signal Broadcasted to Coast Guard!", "error");
   };
 
   const handleGenerateAdvisorReport = async () => {
@@ -75,7 +86,10 @@ export default function SettingsPage() {
           language,
           port: userProfile.port,
           weather,
-          species: userProfile.speciesPreference === "both" ? "Tuna and Tamban" : userProfile.speciesPreference,
+          species:
+            userProfile.speciesPreference === "both"
+              ? "Tuna and Tamban"
+              : userProfile.speciesPreference,
         }),
       });
 
@@ -94,253 +108,359 @@ export default function SettingsPage() {
     }
   };
 
-  const languages = [
-    { code: "en", label: "English 🇺🇸" },
-    { code: "tl", label: "Tagalog 🇵🇭" },
-    { code: "ceb", label: "Cebuano 🇵🇭" },
-    { code: "hil", label: "Hiligaynon 🇵🇭" },
-  ] as const;
-
   return (
     <AuthLayout>
-      <div className="space-y-8 max-w-4xl mx-auto pb-12">
-        {/* Title */}
-        <div>
-          <span className="text-[10px] font-black uppercase tracking-wider text-gray-400">
-            Customize Beacon
-          </span>
-          <h2 className="font-display font-[900] text-3xl text-slate-900 dark:text-[#F7FAF9] mt-0.5 flex items-center gap-2">
-            <Sliders className="w-7 h-7 text-brand-green" />
-            Settings & AI Advisor
-          </h2>
-        </div>
+      <div className="space-y-6 pb-16 pt-2">
 
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-          {/* Left / Span 2: Profile Form & Accessibility Options */}
-          <div className="lg:col-span-2 space-y-8">
-            
-            {/* 1. Profile settings Card */}
-            <div className="bg-white dark:bg-[#12211E] border border-gray-100 dark:border-teal-950 rounded-[2rem] p-6 md:p-8 shadow-sm">
-              <h3 className="font-display font-black text-xl text-slate-950 dark:text-[#F7FAF9] border-b border-gray-150 dark:border-teal-950 pb-3 mb-6 flex items-center gap-2">
-                <User className="w-5.5 h-5.5 text-brand-green" />
-                Vessel Profile Config
-              </h3>
-
-              <form onSubmit={handleSaveProfile} className="space-y-5 text-left">
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                  <div className="space-y-1">
-                    <label className="text-[10px] font-black uppercase tracking-wider text-gray-400 block">
-                      Vessel Name
-                    </label>
-                    <input
-                      type="text"
-                      required
-                      value={vesselName}
-                      onChange={(e) => setVesselName(e.target.value)}
-                      className="w-full bg-slate-50 dark:bg-teal-950/20 border border-slate-200 dark:border-teal-900 focus:border-brand-green rounded-2xl h-11 px-4 text-xs font-semibold focus:outline-none transition"
-                    />
-                  </div>
-
-                  <div className="space-y-1">
-                    <label className="text-[10px] font-black uppercase tracking-wider text-gray-400 block">
-                      License Registration No.
-                    </label>
-                    <input
-                      type="text"
-                      required
-                      value={licenseNo}
-                      onChange={(e) => setLicenseNo(e.target.value)}
-                      className="w-full bg-slate-50 dark:bg-teal-950/20 border border-slate-200 dark:border-teal-900 focus:border-brand-green rounded-2xl h-11 px-4 text-xs font-semibold focus:outline-none transition"
-                    />
-                  </div>
-                </div>
-
-                <div className="space-y-1">
-                  <label className="text-[10px] font-black uppercase tracking-wider text-gray-400 block">
-                    Anchorage Home Port
-                  </label>
-                  <select
-                    value={homePort}
-                    onChange={(e) => setHomePort(e.target.value)}
-                    className="w-full bg-slate-50 dark:bg-[#12211E] border border-slate-200 dark:border-teal-900 rounded-2xl h-11 px-4 text-xs font-semibold focus:outline-none text-gray-800 dark:text-gray-200"
-                  >
-                    {MUNICIPAL_PORTS.map((port) => (
-                      <option key={port.name} value={port.name}>
-                        {port.name} ({port.province})
-                      </option>
-                    ))}
-                  </select>
-                </div>
-
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                  <div className="space-y-1">
-                    <label className="text-[10px] font-black uppercase tracking-wider text-gray-400 block">
-                      Boat Type
-                    </label>
-                    <select
-                      value={boatType}
-                      onChange={(e) => setBoatType(e.target.value as any)}
-                      className="w-full bg-slate-50 dark:bg-[#12211E] border border-slate-200 dark:border-teal-900 rounded-2xl h-11 px-4 text-xs font-semibold focus:outline-none text-gray-800 dark:text-gray-200"
-                    >
-                      <option value="motorized">Motorized Banca</option>
-                      <option value="non-motorized">Non-motorized Banca</option>
-                    </select>
-                  </div>
-
-                  <div className="space-y-1">
-                    <label className="text-[10px] font-black uppercase tracking-wider text-gray-400 block">
-                      Species Target Focus
-                    </label>
-                    <select
-                      value={speciesPreference}
-                      onChange={(e) => setSpeciesPreference(e.target.value as any)}
-                      className="w-full bg-slate-50 dark:bg-[#12211E] border border-slate-200 dark:border-teal-900 rounded-2xl h-11 px-4 text-xs font-semibold focus:outline-none text-gray-800 dark:text-gray-200"
-                    >
-                      <option value="both">Both Families (Tamban + Tuna)</option>
-                      <option value="pelagic">Surface Pelagic</option>
-                      <option value="demersal">Deep Coral Reefs</option>
-                    </select>
-                  </div>
-                </div>
-
-                <button
-                  type="submit"
-                  className="w-full bg-brand-green hover:bg-brand-green/90 text-white font-black text-xs uppercase tracking-widest py-3.5 rounded-2xl transition shadow-md active:scale-95 pt-2"
-                >
-                  Save Profile Configuration
-                </button>
-              </form>
+          {/* Header Title & CTA */}
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-2">
+            <div>
+              <h1 className="font-display font-[900] text-2xl sm:text-3xl tracking-tight text-slate-900">
+                SETTINGS & SAFETY CONTROLS
+              </h1>
+              <p className="text-xs font-semibold text-gray-400 mt-1">
+                Configure warning limit thresholds, appearance settings, and SOS beacon transmitters.
+              </p>
             </div>
 
-            {/* 2. Accessibility Options card */}
-            <div className="bg-white dark:bg-[#12211E] border border-gray-100 dark:border-teal-950 rounded-[2rem] p-6 md:p-8 shadow-sm">
-              <h3 className="font-display font-black text-xl text-slate-950 dark:text-[#F7FAF9] border-b border-gray-150 dark:border-teal-950 pb-3 mb-6 flex items-center gap-2">
-                <Globe className="w-5.5 h-5.5 text-brand-green" />
-                Display & Language Localization
-              </h3>
+            <button
+              onClick={handleApplyVariables}
+              className="inline-flex items-center justify-center gap-2 px-6 py-3 rounded-full bg-[#00B074] hover:bg-[#009B66] text-white font-black text-xs uppercase tracking-wider transition shadow-sm self-start sm:self-auto active:scale-95"
+            >
+              <Check className="w-4 h-4 stroke-[3]" />
+              <span>APPLY VARIABLES</span>
+            </button>
+          </div>
 
-              <div className="space-y-6">
-                {/* Language switcher list */}
+          {/* Grid Layout: 2 Columns */}
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 items-start">
+
+            {/* LEFT COLUMN */}
+            <div className="space-y-6">
+
+              {/* Theme & UI Scaling Card */}
+              <div className="bg-white border border-gray-200/80 rounded-[2rem] p-6 sm:p-7 shadow-md space-y-6">
+                <div className="flex items-center gap-2">
+                  <Sun className="w-4 h-4 text-[#00B074]" />
+                  <h2 className="font-display font-black text-xs uppercase tracking-wider text-slate-900">
+                    THEME & UI SCALING
+                  </h2>
+                </div>
+
+                {/* Appearance Skin Switcher */}
                 <div className="space-y-2">
                   <label className="text-[10px] font-black uppercase tracking-wider text-gray-400 block">
-                    Choose Local Language
+                    APPEARANCE SKIN
                   </label>
-                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-                    {languages.map((lang) => (
-                      <button
-                        key={lang.code}
-                        onClick={() => changeLanguage(lang.code)}
-                        className={`h-11 rounded-2xl text-xs font-black transition flex items-center justify-center gap-1.5 border ${
-                          language === lang.code
-                            ? "bg-brand-green/15 text-brand-green border-brand-green/20 dark:border-brand-green/35"
-                            : "bg-slate-50 border-gray-200 dark:bg-teal-950/20 dark:border-teal-900 text-gray-600 dark:text-white hover:bg-gray-100"
+                  <div className="bg-slate-100 p-1.5 rounded-2xl grid grid-cols-2 gap-1">
+                    <button
+                      type="button"
+                      onClick={() => setTheme("light")}
+                      className={`py-3 rounded-xl text-xs font-black flex items-center justify-center gap-2 transition ${theme === "light"
+                        ? "bg-white text-[#00B074] shadow-sm"
+                        : "text-gray-500 hover:text-slate-800"
                         }`}
-                      >
-                        {lang.label}
-                      </button>
-                    ))}
+                    >
+                      <Sun className="w-4 h-4" />
+                      <span>LIGHT THEME</span>
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={() => setTheme("dark")}
+                      className={`py-3 rounded-xl text-xs font-black flex items-center justify-center gap-2 transition ${theme === "dark"
+                        ? "bg-slate-900 text-white shadow-sm"
+                        : "text-gray-500 hover:text-slate-800"
+                        }`}
+                    >
+                      <Moon className="w-4 h-4" />
+                      <span>DARK THEME</span>
+                    </button>
                   </div>
                 </div>
 
-                {/* Font Scaling accessibility slider */}
-                <div className="space-y-3 pt-3 border-t border-gray-100 dark:border-teal-950">
-                  <div className="flex justify-between items-center text-xs font-bold text-gray-400">
-                    <label className="text-[10px] font-black uppercase tracking-wider">
-                      On-Deck Text Font Scaling
+                {/* Accessibility Font Scale Slider */}
+                <div className="space-y-3 pt-2">
+                  <div className="flex justify-between items-center">
+                    <label className="text-[10px] font-black uppercase tracking-wider text-gray-400">
+                      ACCESSIBILITY FONT SCALE
                     </label>
-                    <span className="text-brand-green font-black bg-brand-green/5 dark:bg-brand-green/10 px-2 py-0.5 rounded-full border border-brand-green/20">
-                      {fontScales[fontScale]}%
+                    <span className="text-xs font-black text-[#00B074]">
+                      {fontScales[fontScale]}% Size
                     </span>
                   </div>
 
-                  <div className="flex items-center gap-4">
-                    <span className="text-xs font-bold text-gray-400">Smaller</span>
-                    <input
-                      type="range"
-                      min={0}
-                      max={4}
-                      value={fontScale}
-                      onChange={(e) => changeFontScale(parseInt(e.target.value))}
-                      className="flex-1 h-2 bg-gray-200 dark:bg-zinc-850 rounded-lg appearance-none cursor-pointer accent-brand-green"
+                  <input
+                    type="range"
+                    min={0}
+                    max={4}
+                    value={fontScale}
+                    onChange={(e) => changeFontScale(parseInt(e.target.value))}
+                    style={{
+                      background: `linear-gradient(to right, #00B074 0%, #00B074 ${fontScale * 25}%, #E2E8F0 ${fontScale * 25}%, #E2E8F0 100%)`
+                    }}
+                    className="w-full h-2 rounded-lg appearance-none cursor-pointer accent-[#00B074]"
+                  />
+
+                  <div className="flex justify-between items-center text-[10px] font-bold text-gray-400 pt-1">
+                    <span>80% Compact</span>
+                    <span>100% Default</span>
+                    <span>130% Large Type</span>
+                  </div>
+                </div>
+              </div>
+
+              {/* SMS Alert Channels Card */}
+              <div className="bg-white border border-gray-200/80 rounded-[2rem] p-6 sm:p-7 shadow-md space-y-5">
+                <div className="flex items-center gap-2">
+                  <Bell className="w-4 h-4 text-[#00B074]" />
+                  <h2 className="font-display font-black text-xs uppercase tracking-wider text-slate-900">
+                    SMS ALERT CHANNELS
+                  </h2>
+                </div>
+
+                {/* Switch 1: Hazardous Weather Alerts */}
+                <div className="flex items-center justify-between p-4 bg-slate-50 border border-gray-200/80 rounded-2xl">
+                  <div className="space-y-0.5">
+                    <h3 className="font-display font-black text-xs text-slate-900 uppercase">
+                      HAZARDOUS WEATHER ALERTS
+                    </h3>
+                    <p className="text-[11px] font-semibold text-gray-400">
+                      Immediate broadcast warning alerts.
+                    </p>
+                  </div>
+
+                  <button
+                    type="button"
+                    onClick={() => setHazardousWeatherAlerts(!hazardousWeatherAlerts)}
+                    className={`w-12 h-7 rounded-full transition-colors relative cursor-pointer shrink-0 ${hazardousWeatherAlerts ? "bg-[#00B074]" : "bg-gray-300"
+                      }`}
+                  >
+                    <span
+                      className={`w-5.5 h-5.5 rounded-full bg-white absolute top-0.75 transition-transform shadow ${hazardousWeatherAlerts ? "translate-x-5.5" : "translate-x-1"
+                        }`}
                     />
-                    <span className="text-sm font-black text-gray-500">Larger</span>
+                  </button>
+                </div>
+
+                {/* Switch 2: Fuel Pool Milestones */}
+                <div className="flex items-center justify-between p-4 bg-slate-50 border border-gray-200/80 rounded-2xl">
+                  <div className="space-y-0.5">
+                    <h3 className="font-display font-black text-xs text-slate-900 uppercase">
+                      FUEL POOL MILESTONES
+                    </h3>
+                    <p className="text-[11px] font-semibold text-gray-400">
+                      Notice when bulk diesel targets are close.
+                    </p>
                   </div>
-                  <p className="text-[10px] text-gray-400 font-bold leading-normal">
-                    * Slide to scale up size text across all views. Improves screen legibility under direct glare on offshore vessels.
-                  </p>
+
+                  <button
+                    type="button"
+                    onClick={() => setFuelPoolMilestones(!fuelPoolMilestones)}
+                    className={`w-12 h-7 rounded-full transition-colors relative cursor-pointer shrink-0 ${fuelPoolMilestones ? "bg-[#00B074]" : "bg-gray-300"
+                      }`}
+                  >
+                    <span
+                      className={`w-5.5 h-5.5 rounded-full bg-white absolute top-0.75 transition-transform shadow ${fuelPoolMilestones ? "translate-x-5.5" : "translate-x-1"
+                        }`}
+                    />
+                  </button>
                 </div>
               </div>
-            </div>
-          </div>
 
-          {/* Right Card / Span 1: AI Advisor Console */}
-          <div className="space-y-6">
-            <div className="bg-[#12211E] text-white rounded-[2rem] p-6 md:p-8 space-y-6 shadow-xl relative overflow-hidden transition-colors">
-              <div className="absolute top-0 right-0 w-44 h-44 bg-brand-green rounded-full blur-[60px] opacity-25 pointer-events-none" />
-
-              <div className="space-y-4">
-                <div className="w-11 h-11 bg-brand-green/25 border border-brand-green/40 rounded-2xl flex items-center justify-center text-brand-green animate-pulse">
-                  <Sparkles className="w-5.5 h-5.5" />
+              {/* AI Advisor Card */}
+              <div className="bg-slate-900 text-white rounded-[2rem] p-6 sm:p-7 space-y-5 shadow-md">
+                <div className="flex items-center gap-2">
+                  <Sparkles className="w-4 h-4 text-[#00B074]" />
+                  <h2 className="font-display font-black text-xs uppercase tracking-wider text-white">
+                    PAROLA AI ADVISOR
+                  </h2>
                 </div>
-                <h3 className="font-display font-[900] text-xl tracking-tight leading-tight text-white">
-                  Parola AI Advisor
-                </h3>
-                <p className="text-[11px] text-gray-300 font-bold leading-relaxed">
-                  Synthesize live Open-Meteo metrics through server-side Gemini 3.6 Flash. Receive instant localized, on-deck advice.
+
+                <p className="text-xs font-semibold text-gray-400 leading-relaxed">
+                  Generate instant live advice based on current coastal metrics, port location, and species preferences.
                 </p>
-              </div>
-
-              <div className="border-t border-teal-900 pt-4 space-y-3.5">
-                <div className="text-left space-y-1.5 text-xs text-gray-400">
-                  <div className="flex justify-between font-bold">
-                    <span>Base Port:</span>
-                    <span className="text-brand-green font-black">{userProfile.port}</span>
-                  </div>
-                  <div className="flex justify-between font-bold">
-                    <span>Weather Alert:</span>
-                    <span className="text-white font-black">Signal #{weather.stormSignal}</span>
-                  </div>
-                  <div className="flex justify-between font-bold">
-                    <span>Target Target:</span>
-                    <span className="text-white font-black truncate max-w-[120px]">{speciesPreference === "both" ? "Tuna, Tamban" : speciesPreference}</span>
-                  </div>
-                </div>
 
                 <button
+                  type="button"
                   onClick={handleGenerateAdvisorReport}
                   disabled={aiLoading}
-                  className="w-full bg-brand-green hover:bg-brand-green/90 disabled:bg-teal-950 text-white font-black text-xs uppercase tracking-widest py-3 rounded-2xl transition flex items-center justify-center gap-2"
+                  className="w-full bg-[#00B074] hover:bg-[#009B66] disabled:opacity-50 text-white font-black text-xs uppercase tracking-wider py-3.5 rounded-2xl transition flex items-center justify-center gap-2"
                 >
                   {aiLoading ? (
                     <>
                       <RefreshCw className="w-4 h-4 animate-spin" />
-                      <span>Sieving Matrices...</span>
+                      <span>GENERATING ADVICE...</span>
                     </>
                   ) : (
                     <>
                       <Volume2 className="w-4 h-4" />
-                      <span>Generate Advisor Advice</span>
+                      <span>GENERATE LIGHTHOUSE REPORT</span>
                     </>
                   )}
                 </button>
+
+                {aiReport && (
+                  <div className="bg-slate-800/80 border border-slate-700 rounded-2xl p-4 text-xs font-semibold leading-relaxed max-h-60 overflow-y-auto text-gray-200">
+                    <ReactMarkdown>{aiReport}</ReactMarkdown>
+                  </div>
+                )}
               </div>
+
             </div>
 
-            {/* AI Advisor Response Render */}
-            {aiReport && (
-              <div className="bg-white dark:bg-[#12211E] border border-brand-green/20 dark:border-brand-green/10 rounded-[2rem] p-6 md:p-8 text-left space-y-4 shadow-sm animate-fade-in max-h-[380px] overflow-y-auto">
-                <h4 className="font-display font-black text-sm uppercase tracking-wider text-brand-green border-b border-brand-green/20 pb-2 mb-2 flex items-center gap-1.5">
-                  <Sparkles className="w-4 h-4 text-brand-green" />
-                  Advisory Report
-                </h4>
-                <div className="prose prose-sm dark:prose-invert prose-emerald font-bold leading-relaxed max-w-none text-xs text-gray-600 dark:text-gray-200">
-                  <ReactMarkdown>{aiReport}</ReactMarkdown>
+            {/* RIGHT COLUMN */}
+            <div className="space-y-6">
+
+              {/* Marine Safety Thresholds Card */}
+              <div className="bg-white border border-gray-200/80 rounded-[2rem] p-6 sm:p-7 shadow-md space-y-6">
+                <div className="flex items-center gap-2">
+                  <ShieldAlert className="w-4 h-4 text-[#00B074]" />
+                  <h2 className="font-display font-black text-xs uppercase tracking-wider text-slate-900">
+                    MARINE SAFETY THRESHOLDS
+                  </h2>
+                </div>
+
+                {/* Wave Height Limit Slider */}
+                <div className="space-y-2">
+                  <div className="flex justify-between items-center">
+                    <label className="text-xs font-black text-slate-800">
+                      Wave Height Limit Threshold
+                    </label>
+                    <span className="text-xs font-black text-[#00B074]">
+                      {waveThreshold.toFixed(1)} meters
+                    </span>
+                  </div>
+
+                  <input
+                    type="range"
+                    min={0.5}
+                    max={5.0}
+                    step={0.1}
+                    value={waveThreshold}
+                    onChange={(e) => setWaveThreshold(parseFloat(e.target.value))}
+                    style={{
+                      background: `linear-gradient(to right, #00B074 0%, #00B074 ${((waveThreshold - 0.5) / 4.5) * 100}%, #E2E8F0 ${((waveThreshold - 0.5) / 4.5) * 100}%, #E2E8F0 100%)`
+                    }}
+                    className="w-full h-2 rounded-lg appearance-none cursor-pointer accent-[#00B074]"
+                  />
+
+                  <p className="text-[10px] font-bold text-gray-400">
+                    Waves above this will flag the Dashboard Map coordinates as unsafe (Caution/Hold).
+                  </p>
+                </div>
+
+                {/* Wind Speed Limit Slider */}
+                <div className="space-y-2 pt-2">
+                  <div className="flex justify-between items-center">
+                    <label className="text-xs font-black text-slate-800">
+                      Wind Speed Limit Threshold
+                    </label>
+                    <span className="text-xs font-black text-[#00B074]">
+                      {windThreshold} knots
+                    </span>
+                  </div>
+
+                  <input
+                    type="range"
+                    min={5}
+                    max={50}
+                    step={1}
+                    value={windThreshold}
+                    onChange={(e) => setWindThreshold(parseInt(e.target.value))}
+                    style={{
+                      background: `linear-gradient(to right, #00B074 0%, #00B074 ${((windThreshold - 5) / 45) * 100}%, #E2E8F0 ${((windThreshold - 5) / 45) * 100}%, #E2E8F0 100%)`
+                    }}
+                    className="w-full h-2 rounded-lg appearance-none cursor-pointer accent-[#00B074]"
+                  />
+                </div>
+
+                {/* Emergency Base Contact Input */}
+                <div className="space-y-2 pt-2">
+                  <label className="text-[10px] font-black uppercase tracking-wider text-gray-400 block">
+                    EMERGENCY BASE CONTACT
+                  </label>
+                  <input
+                    type="text"
+                    value={emergencyContact}
+                    onChange={(e) => setEmergencyContact(e.target.value)}
+                    className="w-full bg-slate-100/80 border border-transparent focus:border-[#00B074] rounded-2xl h-12 px-5 text-xs font-black text-slate-900 focus:outline-none transition"
+                  />
+                </div>
+
+                {/* Red SOS Button */}
+                <button
+                  type="button"
+                  onClick={handleTriggerSOS}
+                  className="w-full bg-[#E63946] hover:bg-[#D62839] text-white font-black text-xs uppercase tracking-wider py-4 rounded-2xl transition flex items-center justify-center gap-2 shadow-md active:scale-95"
+                >
+                  <Radio className="w-4 h-4 animate-pulse" />
+                  <span>TRIGGER SOS DISTRESS BROADCAST</span>
+                </button>
+              </div>
+
+              {/* Target Biological Families Card */}
+              <div className="bg-white border border-gray-200/80 rounded-[2rem] p-6 sm:p-7 shadow-md space-y-4">
+                <div className="flex items-center gap-2">
+                  <Target className="w-4 h-4 text-[#00B074]" />
+                  <h2 className="font-display font-black text-xs uppercase tracking-wider text-slate-900">
+                    TARGET BIOLOGICAL FAMILIES
+                  </h2>
+                </div>
+
+                <p className="text-[11px] font-semibold text-gray-400">
+                  Check target biological groups to focus radar satellite upwellings on relevant families.
+                </p>
+
+                <div className="grid grid-cols-2 gap-3 pt-1">
+                  {/* Pelagic Checkbox Card */}
+                  <label
+                    onClick={() => setPelagicSelected(!pelagicSelected)}
+                    className="flex items-center justify-between p-3.5 border border-gray-200/80 rounded-2xl bg-slate-50/50 hover:bg-slate-50 cursor-pointer transition"
+                  >
+                    <div>
+                      <span className="font-display font-black text-xs text-slate-800 block">
+                        Pelagic
+                      </span>
+                      <span className="text-[9px] font-bold text-gray-400 block mt-0.5">
+                        Surface & Open Ocean
+                      </span>
+                    </div>
+                    <input
+                      type="checkbox"
+                      checked={pelagicSelected}
+                      onChange={() => { }}
+                      className="w-4 h-4 rounded border-gray-300 text-[#00B074] focus:ring-[#00B074] cursor-pointer"
+                    />
+                  </label>
+
+                  {/* Demersal Checkbox Card */}
+                  <label
+                    onClick={() => setDemersalSelected(!demersalSelected)}
+                    className="flex items-center justify-between p-3.5 border border-gray-200/80 rounded-2xl bg-slate-50/50 hover:bg-slate-50 cursor-pointer transition"
+                  >
+                    <div>
+                      <span className="font-display font-black text-xs text-slate-800 block">
+                        Demersal
+                      </span>
+                      <span className="text-[9px] font-bold text-gray-400 block mt-0.5">
+                        Bottom & Reef Species
+                      </span>
+                    </div>
+                    <input
+                      type="checkbox"
+                      checked={demersalSelected}
+                      onChange={() => { }}
+                      className="w-4 h-4 rounded border-gray-300 text-[#00B074] focus:ring-[#00B074] cursor-pointer"
+                    />
+                  </label>
                 </div>
               </div>
-            )}
+
+            </div>
+
           </div>
         </div>
-      </div>
     </AuthLayout>
   );
 }
