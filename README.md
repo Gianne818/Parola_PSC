@@ -1,4 +1,4 @@
-### Readme is to be setup
+### Readme is to be setup. This is a prototype FE
 
 
 # React + TypeScript + Vite
