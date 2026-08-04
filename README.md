@@ -1,7 +1,6 @@
 # PAROLA: AI-Powered Blue Economy Platform for Municipal Fisherfolk
 
 **Team Name:** StarIsda  
-**Platform Version:** 1.0.0 (Hackathon Edition)  
 **Primary Focus:** Artificial Intelligence for Sustainable Fisheries, Marine Safety, and Digital Equity  
 
 ---
@@ -47,23 +46,23 @@ Parola's technical architecture utilizes a serverless, cloud-based batch process
                                             ▼
 ┌────────────────────────────────────────────────────────────────────────────────────────┐
 │                              DATA PROCESSING & FEATURE GRID                            │
-│           Philippine EEZ Subsetting │ Lazy Loading (xarray) │ Feature Engineering       │
+│           Philippine EEZ Subsetting │ Lazy Loading (xarray) │ Feature Engineering      │
 └───────────────────────────────────────────┬────────────────────────────────────────────┘
                                             │
                                             ▼
 ┌────────────────────────────────────────────────────────────────────────────────────────┐
 │                                  AI PROCESSING CORE                                    │
-│  ┌──────────────────────────────┐ ┌─────────────────────────────┐ ┌─────────────────┐ │
-│  │ Pelagic Model (LightGBM)     │ │ Reef/Demersal (LightGBM)    │ │ DBSCAN Hotspot  │ │
-│  │ SST, SSH, Currents, Chl-a    │ │ Bathymetry, Habitat, GBIF   │ │ Clustering      │ │
-│  └──────────────┬───────────────┘ └──────────────┬──────────────┘ └────────┬────────┘ │
+│  ┌──────────────────────────────┐ ┌─────────────────────────────┐ ┌─────────────────┐  │
+│  │ Pelagic Model (LightGBM)     │ │ Reef/Demersal (LightGBM)    │ │ DBSCAN Hotspot  │  │ 
+│  │ SST, SSH, Currents, Chl-a    │ │ Bathymetry, Habitat, GBIF   │ │ Clustering      │  │
+│  └──────────────┬───────────────┘ └──────────────┬──────────────┘ └────────┬────────┘  │
 └─────────────────┼───────────────────────────────┼─────────────────────────┼────────────┘
                   └───────────────────────┬───────┴─────────────────────────┘
                                           │
                                           ▼
 ┌────────────────────────────────────────────────────────────────────────────────────────┐
 │                             SAFETY OVERRIDE ENGINE (Rules-Based)                       │
-│              Evaluates Open-Meteo Wind/Wave Data & PAGASA Storm Bulletins             │
+│              Evaluates Open-Meteo Wind/Wave Data & PAGASA Storm Bulletins              │
 │        [ Hazard Detected ---> Suppress Advisory & Dispatch Urgent Safety SMS ]         │
 └───────────────────────────────────────────┬────────────────────────────────────────────┘
                                             │
