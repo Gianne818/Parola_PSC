@@ -6,6 +6,7 @@ import "leaflet/dist/leaflet.css";
 import L from "leaflet";
 import { Hotspot } from "../../../types";
 import { isWithinPhilippineGeofence } from "../../../utils/spatial";
+import { getSpeciesColor, getSpeciesConfig } from "../../../utils/speciesColors";
 
 // Custom marker icon definitions
 const safeHotspotIcon = typeof window !== "undefined" ? L.divIcon({
@@ -217,6 +218,11 @@ export default function MapInner({
       const matchesSpecies = species.some((s: string) => {
         return selectedSpecies.some((sel: string) => {
           if (s === sel) return true;
+          const selConf = getSpeciesConfig(sel);
+          const sConf = getSpeciesConfig(s);
+          if (selConf && sConf && selConf.family === sConf.family) return true;
+          if (selConf && (s.toLowerCase().includes(selConf.family.toLowerCase()) || selConf.family.toLowerCase().includes(s.toLowerCase()))) return true;
+          if (s.toLowerCase().includes(sel.toLowerCase()) || sel.toLowerCase().includes(s.toLowerCase())) return true;
           const selTokens = sel.toLowerCase().split(/[\s\/()]+/);
           const spotText = s.toLowerCase();
           return selTokens.some(token => token.length > 2 && spotText.includes(token));
@@ -370,17 +376,45 @@ export default function MapInner({
           const depth = spot.depth || 50;
 
           const isUnsafe = manualOverrideHold || (spot as any).isUnsafe;
-          const markerIcon = isUnsafe 
-            ? unsafeHotspotIcon 
-            : type === "pelagic" 
-              ? safeHotspotIcon 
-              : demersalHotspotIcon;
+          const isSelected = selectedHotspot?.id === spot.id;
+
+          // Resolve hotspot species color matching species assigned color
+          let speciesColor = type === "pelagic" ? "#10B981" : "#3B82F6";
+          if (selectedSpecies && selectedSpecies.length > 0) {
+            const matchedSel = selectedSpecies.find((sel) =>
+              species.some((sp: string) => {
+                const selConf = getSpeciesConfig(sel);
+                const spConf = getSpeciesConfig(sp);
+                if (selConf && spConf && selConf.family === spConf.family) return true;
+                if (selConf && (sp.toLowerCase().includes(selConf.family.toLowerCase()) || selConf.family.toLowerCase().includes(sp.toLowerCase()))) return true;
+                return sp.toLowerCase().includes(sel.toLowerCase()) || sel.toLowerCase().includes(sp.toLowerCase());
+              })
+            );
+            if (matchedSel) {
+              speciesColor = getSpeciesColor(matchedSel, speciesColor);
+            } else {
+              speciesColor = getSpeciesColor(species, speciesColor);
+            }
+          } else {
+            speciesColor = getSpeciesColor(species, speciesColor);
+          }
+
+          const markerIcon = isUnsafe
+            ? unsafeHotspotIcon
+            : typeof window !== "undefined"
+              ? L.divIcon({
+                  className: `custom-hotspot-marker-${isSelected ? "active" : "normal"}`,
+                  html: `<div style="width: ${isSelected ? 28 : 24}px; height: ${isSelected ? 28 : 24}px; background-color: ${speciesColor}40; border-radius: 50%; display: flex; justify-content: center; align-items: center; border: ${isSelected ? 2 : 1.5}px solid ${speciesColor}; ${isSelected ? `box-shadow: 0 0 12px ${speciesColor};` : ''}"><div style="width: ${isSelected ? 12 : 10}px; height: ${isSelected ? 12 : 10}px; background-color: ${speciesColor}; border-radius: 50%; border: 1.5px solid white; box-shadow: 0 1px 4px rgba(0,0,0,0.3);"></div></div>`,
+                  iconSize: [isSelected ? 28 : 24, isSelected ? 28 : 24],
+                  iconAnchor: [isSelected ? 14 : 12, isSelected ? 14 : 12],
+                })
+              : null;
 
           if (!markerIcon) return null;
 
           return (
             <Marker
-              key={spot.id}
+              key={`${spot.id}-${speciesColor}-${isSelected ? "sel" : "nor"}`}
               position={[lat, lng]}
               icon={markerIcon}
               eventHandlers={{

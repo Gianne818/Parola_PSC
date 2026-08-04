@@ -8,9 +8,12 @@ import { MapComponent } from "../../components/features/hotspots/MapComponent";
 import { Modal } from "../../components/ui/Modal";
 import { TierProgressBar } from "../../components/ui/TierProgressBar";
 import { calculateDistance, calculateBearing } from "../../utils/spatial";
+import { CATEGORIZED_SPECIES, getSpeciesConfig, getSpeciesColor } from "../../utils/speciesColors";
 import {
   AlertTriangle,
   ChevronLeft,
+  ChevronDown,
+  ChevronUp,
   Compass,
   List,
   Map as MapIcon,
@@ -34,30 +37,17 @@ import {
   Meh,
   GripVertical,
   Fish,
-  Anchor
+  Anchor,
+  HelpCircle,
+  Info,
+  Lightbulb,
+  X
 } from "lucide-react";
 
 const SPECIES_FAMILIES = [
   { id: "pelagic", label: "Surface & Open Water", local: "Pelagic Species" },
   { id: "demersal", label: "Bottom & Reef Fish", local: "Demersal Species" }
 ];
-
-const CATEGORIZED_SPECIES = {
-  pelagic: [
-    { name: "Tamban / Tunsoy", family: "Clupeidae", localName: "Family: Clupeidae (Sardines & Herrings)", desc: "Upper Ocean Pelagic" },
-    { name: "Galunggong / Talakitok", family: "Carangidae", localName: "Family: Carangidae (Jacks & Scads)", desc: "Upper & Coastal Water" },
-    { name: "Alumahan / Tulingan / Bariles", family: "Scombridae", localName: "Family: Scombridae (Mackerels & Tunas)", desc: "Oceanic Pelagic" },
-    { name: "Dilis", family: "Engraulidae", localName: "Family: Engraulidae (Anchovies)", desc: "Coastal Surface Water" },
-    { name: "Kipalkipal / Bahi", family: "Belonidae", localName: "Family: Belonidae (Needlefishes)", desc: "Surface Water Column" },
-  ],
-  demersal: [
-    { name: "Lapu-lapu", family: "Serranidae", localName: "Family: Serranidae (Groupers)", desc: "Coral Reef & Rocky Seabed" },
-    { name: "Maya-maya", family: "Lutjanidae", localName: "Family: Lutjanidae (Snappers)", desc: "Deep Reef Floor" },
-    { name: "Bisugo", family: "Nemipteridae", localName: "Family: Nemipteridae (Threadfin Breams)", desc: "Mud & Sand Seabed" },
-    { name: "Samaral", family: "Siganidae", localName: "Family: Siganidae (Rabbitfishes)", desc: "Reef & Seagrass Beds" },
-    { name: "Katambak / Dugso", family: "Lethrinidae", localName: "Family: Lethrinidae (Emperors)", desc: "Deep Shelf Seabed" },
-  ],
-};
 
 export default function DashboardPage() {
   const {
@@ -91,6 +81,10 @@ export default function DashboardPage() {
   const [selectedHotspot, setSelectedHotspot] = useState<any>(null);
   const [searchQuery] = useState("");
 
+  // Collapsible Fish Category States (defaulted to collapsed for compact card layout)
+  const [isPelagicExpanded, setIsPelagicExpanded] = useState<boolean>(false);
+  const [isDemersalExpanded, setIsDemersalExpanded] = useState<boolean>(false);
+
   // SOS States
   const [isSosActive, setIsSosActive] = useState(false);
   const [sosCountdown, setSosCountdown] = useState(5);
@@ -100,14 +94,15 @@ export default function DashboardPage() {
   const [selectedPoolId, setSelectedPoolId] = useState<string | null>(null);
   const [fuelCommitLiters, setFuelCommitLiters] = useState(100);
 
-  // Voice Assist State
-  const [isSpeaking, setIsSpeaking] = useState(false);
+  // Contextual Guidance & Tooltip States
+  const [showOnboardingHint, setShowOnboardingHint] = useState<boolean>(true);
+  const [activeTooltip, setActiveTooltip] = useState<string | null>(null);
 
-  // Municipal Advisor Card Resizing State
-  const [advisorWidth, setAdvisorWidth] = useState<number>(440);
+  // Municipal Advisor Card Resizing State (Enlarged default width for clarity)
+  const [advisorWidth, setAdvisorWidth] = useState<number>(600);
   const [isResizing, setIsResizing] = useState<boolean>(false);
-  const minAdvisorWidth = 340;
-  const maxAdvisorWidth = 850;
+  const minAdvisorWidth = 450;
+  const maxAdvisorWidth = 880;
 
   const handleMouseDownResize = (e: React.MouseEvent) => {
     e.preventDefault();
@@ -197,46 +192,6 @@ export default function DashboardPage() {
     setSosCountdown(5);
     setSosTransponding(false);
     showToast("SOS distress broadcast cancelled.", "info");
-  };
-
-  // Text-To-Speech Synthesis Handler
-  const handleVoiceAssist = () => {
-    if (isSpeaking) {
-      if (typeof window !== "undefined" && window.speechSynthesis) {
-        window.speechSynthesis.cancel();
-      }
-      setIsSpeaking(false);
-      return;
-    }
-
-    const voiceText =
-      (
-        {
-          en: `Attention Captain of Vessel ${userProfile.vesselName}. Current weather telemetry for ${userProfile.port} anchorage: Sea surface temperature is ${weather.temp} degrees. Wind is blowing at ${weather.windSpeed} kilometers per hour. Wave height is ${weather.waveHeight} meters. Tide level is ${weather.tide}. Storm signal status is ${weather.stormSignal}. Conditions are evaluated as ${isSafetyHoldActive ? "dangerous, please hold sailing" : "favorable to sail"}. Safe passages!`,
-          tl: `Atensyon Kapitan ng Bangkang ${userProfile.vesselName}. Kasalukuyang lagay ng panahon sa ${userProfile.port}: Temperatura ng dagat ay ${weather.temp} degrees. Bilis ng hangin ay ${weather.windSpeed} km/h. Taas ng alon ay ${weather.waveHeight} metro. Kundisyon sa pagpalaot ay ${isSafetyHoldActive ? "mapanganib, iwasang pumalaot" : "ligtas at magpalaot"}. Mag-ingat!`
-        } as Record<string, string>
-      )[language] || `Maritime telemetry ready.`;
-
-    if (typeof window !== "undefined" && window.speechSynthesis) {
-      window.speechSynthesis.cancel();
-      const utterance = new SpeechSynthesisUtterance(voiceText);
-
-      const voices = window.speechSynthesis.getVoices();
-      const phVoice = voices.find(
-        (v) => v.lang.includes("PH") || v.lang.includes("fil")
-      );
-      if (phVoice) utterance.voice = phVoice;
-
-      utterance.onend = () => setIsSpeaking(false);
-      utterance.onerror = () => setIsSpeaking(false);
-
-      setIsSpeaking(true);
-      window.speechSynthesis.speak(utterance);
-    } else {
-      setIsSpeaking(true);
-      setTimeout(() => setIsSpeaking(false), 5000);
-      showToast("Speech synthesis is simulated in this browser environment.", "info");
-    }
   };
 
   const handleFeedback = (level: string) => {
@@ -356,21 +311,6 @@ export default function DashboardPage() {
                 <span>LIST VIEW</span>
               </button>
             </div>
-
-            <div
-              className={`px-4 py-3 rounded-2xl text-xs font-black uppercase tracking-wider flex items-center gap-2 border shadow-md transition ${isSafetyHoldActive
-                ? "bg-rose-600 border-rose-600 text-white"
-                : "bg-[#00B074] border-[#00B074] text-white"
-                }`}
-            >
-              <span
-                className={`w-2.5 h-2.5 rounded-full bg-white ${isSafetyHoldActive ? "animate-ping" : ""
-                  }`}
-              />
-              <span>
-                {isSafetyHoldActive ? "CAUTION HOLD" : "FAVORABLE TO SAIL"}
-              </span>
-            </div>
           </div>
 
             {/* Map Canvas / Grid List - Strictly match height */}
@@ -475,7 +415,7 @@ export default function DashboardPage() {
             <div
               onMouseDown={handleMouseDownResize}
               onTouchStart={handleTouchStartResize}
-              title="Click and drag left edge to expand Municipal Advisor to the left"
+              title="Click and drag left edge to expand Municipal Advisor"
               className="hidden lg:flex absolute left-0 top-0 bottom-0 w-4 -ml-2 cursor-col-resize z-50 items-center justify-center group select-none"
             >
               <div
@@ -491,152 +431,234 @@ export default function DashboardPage() {
               </div>
             </div>
 
-            <div className="space-y-5">
-              {/* Header */}
-              <div className="flex items-center justify-between">
+            <div className="space-y-6">
+              {/* Header with Quick Guide & Language Toggle */}
+              <div className="flex items-center justify-between border-b border-gray-100 pb-3.5">
                 <div className="flex items-center gap-2.5">
                   <button className="w-8 h-8 rounded-full border border-gray-200 flex items-center justify-center text-slate-600 hover:bg-slate-50 transition cursor-pointer shrink-0">
                     <ChevronLeft className="w-4 h-4" />
                   </button>
                   <div className="flex items-center gap-2">
-                    <Compass className="w-4 h-4 text-[#00B074]" />
-                    <h2 className="font-display font-black text-xs uppercase tracking-wider text-slate-900">
-                      MUNICIPAL ADVISOR
-                    </h2>
+                    <div className="p-1.5 bg-emerald-50 rounded-lg border border-emerald-100">
+                      <Compass className="w-4 h-4 text-[#00B074]" />
+                    </div>
+                    <div>
+                      <h2 className="font-display font-black text-sm uppercase tracking-wider text-slate-900 leading-none">
+                        MUNICIPAL ADVISOR
+                      </h2>
+                      <span className="text-[10px] text-gray-400 font-bold block mt-0.5">
+                        Local Maritime Telemetry & Hotspot Guidance
+                      </span>
+                    </div>
                   </div>
                 </div>
 
-                <button
-                  onClick={() => changeLanguage(language === "en" ? "tl" : "en")}
-                  className="flex items-center gap-1.5 bg-white border border-gray-200 px-3 py-1.5 rounded-full text-[10px] font-black text-slate-800 transition shadow-sm cursor-pointer shrink-0"
-                >
-                  <Globe className="w-3.5 h-3.5 text-[#00B074]" />
-                  <span>{language === "en" ? "ENGLISH" : "FILIPINO"}</span>
-                </button>
-              </div>
-
-              {/* Marine Safety Condition Card */}
-              <div
-                className={`p-4 rounded-2xl border flex items-center justify-between gap-3 ${isSafetyHoldActive
-                  ? isCalculatedUnsafe
-                    ? "bg-rose-50 border-rose-200 text-rose-700"
-                    : "bg-amber-50 border-amber-200 text-amber-800"
-                  : "bg-emerald-50/60 border-emerald-100 text-emerald-900"
-                  }`}
-              >
-                <div className="flex items-center gap-3 min-w-0">
-                  <div
-                    className={`p-2 rounded-xl text-white shrink-0 ${isSafetyHoldActive ? "bg-rose-500" : "bg-[#00B074]"
-                      }`}
-                  >
-                    {isSafetyHoldActive ? (
-                      <ShieldAlert className="w-5 h-5" />
-                    ) : (
-                      <ShieldCheck className="w-5 h-5" />
-                    )}
-                  </div>
-                  <div className="min-w-0">
-                    <span className="text-[9px] font-black uppercase tracking-widest block opacity-60">
-                      MARINE SAFETY CONDITION
-                    </span>
-                    <span className="font-display font-black text-xs uppercase tracking-wider block mt-0.5 text-slate-800 truncate">
-                      {labelSailing}
-                    </span>
-                  </div>
-                </div>
-
-                <button
-                  onClick={() => {
-                    setManualOverrideHold(!manualOverrideHold);
-                    showToast(
-                      `Cooperative safety limits toggled to ${!manualOverrideHold ? "HOLD" : "SAFE"}.`,
-                      "info"
-                    );
-                  }}
-                  className={`px-3 py-1.5 rounded-xl text-[10px] font-black uppercase tracking-wider border shrink-0 transition cursor-pointer ${manualOverrideHold
-                    ? "bg-amber-500 border-amber-500 text-white"
-                    : "bg-white border-gray-200 text-slate-700 hover:bg-slate-50"
-                    }`}
-                >
-                  TRIGGER HOLD
-                </button>
-              </div>
-
-              {/* Target Species Count & Safety Limits */}
-              <div className="bg-white p-4 rounded-2xl border border-gray-200 flex flex-wrap items-center justify-between gap-3 shadow-md">
                 <div className="flex items-center gap-2">
-                  <TrendingUp className="w-4 h-4 text-[#00B074]" />
-                  <span className="text-xs font-black text-slate-800">
-                    Target Species Count:{" "}
-                    <span className="text-[#00B074]">{filteredHotspots.length}</span>
-                  </span>
-                </div>
-                <span className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">
-                  LIMIT: WAVE 2.0M / WIND 20KT
-                </span>
-              </div>
-
-              {/* Base Reference Station */}
-              <div className="bg-white border border-gray-200 rounded-2xl p-4 flex items-center justify-between shadow-md">
-                <div className="space-y-0.5 min-w-0">
-                  <span className="text-[9px] font-black text-gray-400 uppercase tracking-widest block">
-                    BASE REFERENCE STATION
-                  </span>
-                  <h3 className="text-xs font-display font-black uppercase text-slate-800 leading-tight truncate">
-                    {userProfile.port}
-                  </h3>
-                  <p className="text-[10px] font-semibold text-gray-400">
-                    Lat: {(userProfile.lat ?? 14.0122).toFixed(4)}° N | Lng: {(userProfile.lng ?? 123.0114).toFixed(4)}° E
-                  </p>
-                </div>
-                <span className="text-[9px] font-black uppercase px-2.5 py-1 rounded-full bg-emerald-50 border border-emerald-100 text-[#00B074] shrink-0">
-                  ONLINE
-                </span>
-              </div>
-
-              {/* Species Filter System */}
-              <div className="space-y-4 pt-1">
-                <div className="flex items-center justify-between border-b border-gray-100 pb-3">
-                  <h2 className="font-display font-black text-xs uppercase tracking-wider text-slate-900 flex items-center gap-2">
-                    <Sliders className="w-4 h-4 text-[#00B074]" />
-                    SPECIES FILTER SYSTEM
-                  </h2>
                   <button
-                    onClick={() => {
-                      setCheckedFamilies([]);
-                      setActiveTab("both");
-                      setShowGeneralPelagic(true);
-                      setShowGeneralDemersal(true);
-                      setSelectedSpecies([]);
-                    }}
-                    className="text-[10px] font-black uppercase text-[#00B074] hover:underline cursor-pointer"
+                    onClick={() => setShowOnboardingHint(!showOnboardingHint)}
+                    className={`flex items-center gap-1 px-3 py-1.5 rounded-full text-[10px] font-black uppercase tracking-wider border transition shadow-xs cursor-pointer ${
+                      showOnboardingHint
+                        ? "bg-emerald-50 border-emerald-200 text-[#00B074]"
+                        : "bg-white border-gray-200 text-gray-500 hover:text-slate-800"
+                    }`}
+                    title="Toggle Dashboard Quick Guide"
                   >
-                    RESET ALL
+                    <Lightbulb className="w-3.5 h-3.5" />
+                    <span className="hidden sm:inline">GUIDE</span>
+                  </button>
+
+                  <button
+                    onClick={() => changeLanguage(language === "en" ? "tl" : "en")}
+                    className="flex items-center gap-1.5 bg-white border border-gray-200 px-3 py-1.5 rounded-full text-[10px] font-black text-slate-800 transition shadow-xs cursor-pointer shrink-0 hover:bg-slate-50"
+                  >
+                    <Globe className="w-3.5 h-3.5 text-[#00B074]" />
+                    <span>{language === "en" ? "ENGLISH" : "FILIPINO"}</span>
+                  </button>
+                </div>
+              </div>
+
+              {/* Quick Onboarding Banner for Fishermen / First-Time Users */}
+              {showOnboardingHint && (
+                <div className="bg-gradient-to-r from-emerald-50/90 via-teal-50/60 to-emerald-50/90 border border-emerald-200/80 rounded-2xl p-4 relative space-y-2.5 shadow-xs">
+                  <button
+                    onClick={() => setShowOnboardingHint(false)}
+                    className="absolute top-3 right-3 text-gray-400 hover:text-slate-700 transition cursor-pointer"
+                    title="Dismiss guide"
+                  >
+                    <X className="w-4 h-4" />
+                  </button>
+                  <div className="flex items-center gap-2">
+                    <span className="p-1 bg-[#00B074] text-white rounded-lg">
+                      <Lightbulb className="w-3.5 h-3.5" />
+                    </span>
+                    <h4 className="font-display font-black text-xs uppercase tracking-wider text-slate-900">
+                      Quick Guide for Fisherfolk / Gabay sa Pagpalaot
+                    </h4>
+                  </div>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 pt-1 text-[11px] font-medium text-slate-700">
+                    <div className="bg-white/80 p-2.5 rounded-xl border border-emerald-100/60 space-y-1">
+                      <span className="font-bold text-[#00B074] block">1. Station Status</span>
+                      <p className="text-[10px] text-gray-500 leading-tight">
+                        Check your localized home anchorage coordinates and active weather telemetry.
+                      </p>
+                    </div>
+                    <div className="bg-white/80 p-2.5 rounded-xl border border-emerald-100/60 space-y-1">
+                      <span className="font-bold text-[#00B074] block">2. Find Fish</span>
+                      <p className="text-[10px] text-gray-500 leading-tight">
+                        Filter by Surface Fish (Pelagic) or Bottom Fish (Demersal) to locate active spots.
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* ================= SECTION 1: STATION & MARINE SAFETY STATUS ================= */}
+              <div className="space-y-3">
+                <div className="flex items-center justify-between">
+                  <h3 className="text-xs font-display font-black text-slate-900 uppercase tracking-wider flex items-center gap-1.5">
+                    <Anchor className="w-3.5 h-3.5 text-[#00B074]" />
+                    STATION & SEA SAFETY STATUS
+                  </h3>
+                  <button
+                    onClick={() =>
+                      setActiveTooltip(
+                        activeTooltip === "station" ? null : "station"
+                      )
+                    }
+                    className="text-gray-400 hover:text-slate-700 transition"
+                    title="Learn about station status"
+                  >
+                    <HelpCircle className="w-3.5 h-3.5 text-gray-400" />
                   </button>
                 </div>
 
-                {/* Tabs: SURFACE WATER, BOTTOM & REEF, ALL FISH */}
-                <div className="flex gap-1.5 w-full bg-gray-100 p-1 rounded-xl">
+                {activeTooltip === "station" && (
+                  <div className="p-3 bg-slate-50 border border-slate-200 rounded-xl text-[10px] text-slate-600 font-medium">
+                    💡 **Station Info**: Shows your home port anchorage coordinates and real-time telemetry updates.
+                  </div>
+                )}
+
+                {/* Base Reference Station Card */}
+                <div className="bg-white border border-gray-200 rounded-2xl p-4 flex items-center justify-between shadow-xs hover:border-emerald-200 transition">
+                  <div className="space-y-1">
+                    <div className="flex items-center gap-2">
+                      <span className="text-[9px] font-black text-gray-400 uppercase tracking-widest">
+                        HOME ANCHORAGE
+                      </span>
+                      <span className="text-[9px] font-black uppercase px-2 py-0.5 rounded-full bg-emerald-50 border border-emerald-100 text-[#00B074]">
+                        STATION ONLINE
+                      </span>
+                    </div>
+                    <h4 className="text-sm font-display font-black uppercase text-slate-900 leading-tight">
+                      {userProfile.port}
+                    </h4>
+                  </div>
+                  <div className="text-right">
+                    <span className="text-[9px] font-black text-gray-400 uppercase block tracking-wider">
+                      Coordinates
+                    </span>
+                    <span className="text-xs font-black text-slate-700">
+                      {userProfile.lat?.toFixed(4)}°N, {userProfile.lng?.toFixed(4)}°E
+                    </span>
+                  </div>
+                </div>
+
+                {/* Target Species Count & Threshold Safety Bar */}
+                <div className="bg-slate-50/80 p-3 rounded-2xl border border-gray-200/80 flex flex-wrap items-center justify-between gap-2 text-xs">
+                  <div className="flex items-center gap-2">
+                    <TrendingUp className="w-4 h-4 text-[#00B074]" />
+                    <span className="font-black text-slate-800 text-[11px]">
+                      Active Fishing Hotspots:{" "}
+                      <span className="text-[#00B074] font-black">{filteredHotspots.length} spots</span>
+                    </span>
+                  </div>
+                  <span className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">
+                    SAFETY LIMIT: WAVES &lt; 2.0M | WIND &lt; 20KT
+                  </span>
+                </div>
+              </div>
+
+              {/* ================= SECTION 2: SPECIES FILTER SYSTEM ================= */}
+              <div className="space-y-4 pt-3 border-t border-gray-100">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-1.5">
+                    <Sliders className="w-3.5 h-3.5 text-[#00B074]" />
+                    <h3 className="font-display font-black text-xs uppercase tracking-wider text-slate-900">
+                      FISH & SPECIES FINDER
+                    </h3>
+                  </div>
+                  <div className="flex items-center gap-3">
+                    <button
+                      onClick={() =>
+                        setActiveTooltip(
+                          activeTooltip === "species" ? null : "species"
+                        )
+                      }
+                      className="text-gray-400 hover:text-slate-700 transition"
+                      title="Learn about species categories"
+                    >
+                      <HelpCircle className="w-3.5 h-3.5 text-gray-400" />
+                    </button>
+                    <button
+                      onClick={() => {
+                        setCheckedFamilies([]);
+                        setActiveTab("both");
+                        setShowGeneralPelagic(true);
+                        setShowGeneralDemersal(true);
+                        setSelectedSpecies([]);
+                        setIsPelagicExpanded(false);
+                        setIsDemersalExpanded(false);
+                      }}
+                      className="text-[10px] font-black uppercase text-[#00B074] hover:underline cursor-pointer"
+                    >
+                      RESET ALL
+                    </button>
+                  </div>
+                </div>
+
+                {activeTooltip === "species" && (
+                  <div className="p-3 bg-emerald-50/80 border border-emerald-200 rounded-xl text-[10px] text-slate-700 space-y-1">
+                    <p className="font-bold text-[#00B074]">🐟 Habitat Explanation:</p>
+                    <p>• **Surface Water (Pelagic)**: Fish that swim near upper ocean surface (Tamban, Galunggong, Tulingan).</p>
+                    <p>• **Bottom & Reef (Demersal)**: Fish that feed near seabed & corals (Lapu-lapu, Maya-maya, Bisugo).</p>
+                  </div>
+                )}
+
+                {/* Integrated Habitat Filter & Mode Switcher */}
+                <div className="grid grid-cols-3 gap-2 w-full bg-slate-100/80 p-1.5 rounded-2xl border border-slate-200/60">
                   {(["pelagic", "demersal", "both"] as const).map((tab) => {
-                    const tabLabels = {
-                      pelagic: { main: "Surface Water", sub: "Pelagic" },
-                      demersal: { main: "Bottom & Reef", sub: "Demersal" },
-                      both: { main: "All Fish", sub: "Both Types" }
+                    const tabConfig = {
+                      pelagic: { main: "Surface Water", sub: "Pelagic Species" },
+                      demersal: { main: "Bottom & Reef", sub: "Demersal Species" },
+                      both: { main: "All Fish", sub: "Both Habitats" },
                     };
-                    const info = tabLabels[tab];
+
+                    const info = tabConfig[tab];
+                    const isActive = activeTab === tab;
+
                     return (
                       <button
                         key={tab}
-                        onClick={() => setActiveTab(tab)}
-                        className={`flex-1 py-1.5 px-1 rounded-lg text-center transition cursor-pointer flex flex-col items-center justify-center ${activeTab === tab
-                          ? "bg-white text-slate-900 shadow-sm"
-                          : "text-gray-500 hover:text-slate-800"
-                          }`}
+                        type="button"
+                        onClick={() => {
+                          setActiveTab(tab);
+                          if (tab === "pelagic") setShowGeneralPelagic(true);
+                          if (tab === "demersal") setShowGeneralDemersal(true);
+                          if (tab === "both") {
+                            setShowGeneralPelagic(true);
+                            setShowGeneralDemersal(true);
+                          }
+                        }}
+                        className={`py-2 px-2 rounded-xl transition cursor-pointer flex flex-col justify-center items-center text-center select-none ${
+                          isActive
+                            ? "bg-white text-slate-900 shadow-sm border border-gray-200/80 font-black"
+                            : "bg-transparent text-gray-500 hover:text-slate-800 font-bold"
+                        }`}
                       >
-                        <span className="text-[11px] font-black uppercase tracking-wider block leading-tight truncate w-full">
+                        <span className="text-[11px] font-black uppercase tracking-wider truncate w-full">
                           {info.main}
                         </span>
-                        <span className="text-[9px] font-bold text-gray-400 block truncate w-full mt-0.5">
+                        <span className="text-[9px] font-bold text-gray-400 truncate w-full mt-0.5">
                           ({info.sub})
                         </span>
                       </button>
@@ -644,250 +666,315 @@ export default function DashboardPage() {
                   })}
                 </div>
 
-                {/* General Grids Toggles */}
-                <div className="grid grid-cols-2 gap-3">
-                  <button
-                    onClick={() => setShowGeneralPelagic(!showGeneralPelagic)}
-                    className={`p-3 rounded-xl border text-left flex items-center justify-between transition cursor-pointer ${showGeneralPelagic
-                      ? "bg-emerald-50/50 border-[#00B074] text-[#00B074] font-extrabold"
-                      : "bg-white border-gray-200 text-gray-400"
-                      }`}
-                  >
-                    <div className="min-w-0">
-                      <span className={`text-xs font-black block truncate ${showGeneralPelagic ? "text-[#00B074]" : "text-slate-800"}`}>
-                        Surface & Open Water
-                      </span>
-                      <span className="text-[9px] font-bold block opacity-75 text-gray-400 mt-0.5">
-                        Pelagic Fishing Grids
-                      </span>
-                    </div>
-                    {showGeneralPelagic ? (
-                      <Eye className="w-4 h-4 text-[#00B074] shrink-0" />
-                    ) : (
-                      <EyeOff className="w-4 h-4 shrink-0" />
-                    )}
-                  </button>
-
-                  <button
-                    onClick={() => setShowGeneralDemersal(!showGeneralDemersal)}
-                    className={`p-3 rounded-xl border text-left flex items-center justify-between transition cursor-pointer ${showGeneralDemersal
-                      ? "bg-emerald-50/50 border-[#00B074] text-[#00B074] font-extrabold"
-                      : "bg-white border-gray-200 text-gray-400"
-                      }`}
-                  >
-                    <div className="min-w-0">
-                      <span className={`text-xs font-black block truncate ${showGeneralDemersal ? "text-[#00B074]" : "text-slate-800"}`}>
-                        Bottom & Reef Fish
-                      </span>
-                      <span className="text-[9px] font-bold block opacity-75 text-gray-400 mt-0.5">
-                        Demersal Fishing Grids
-                      </span>
-                    </div>
-                    {showGeneralDemersal ? (
-                      <Eye className="w-4 h-4 text-[#00B074] shrink-0" />
-                    ) : (
-                      <EyeOff className="w-4 h-4 shrink-0" />
-                    )}
-                  </button>
-                </div>
-
-                {/* Categorized Species by Habitat */}
+                {/* Categorized Species Selection Grid */}
                 <div className="space-y-4 pt-1">
-                  {/* Surface Water Species Section (shown if activeTab is "pelagic" or "both") */}
+                  {/* Surface Water Species Section */}
                   {(activeTab === "pelagic" || activeTab === "both") && (
-                    <div className="bg-emerald-50/60 border border-emerald-200/80 p-4 rounded-2xl space-y-3 shadow-xs">
-                      <div className="flex items-center justify-between">
-                        <div className="flex items-center gap-2">
-                          <Fish className="w-4 h-4 text-[#00B074]" />
-                          <span className="font-display font-black text-xs uppercase tracking-wider text-slate-900">
+                    <div className="bg-emerald-50/40 border border-emerald-200/70 rounded-2xl overflow-hidden transition-all duration-300">
+                      {/* Collapsible Header Bar */}
+                      <div
+                        onClick={() => setIsPelagicExpanded(!isPelagicExpanded)}
+                        className="p-3.5 flex items-center justify-between cursor-pointer hover:bg-emerald-100/50 transition select-none"
+                      >
+                        <div className="flex items-center gap-2 min-w-0">
+                          <Fish className="w-4 h-4 text-[#00B074] shrink-0" />
+                          <span className="font-display font-black text-xs uppercase tracking-wider text-slate-900 truncate">
                             Surface Water Species (Pelagic)
                           </span>
                         </div>
-                        <span className="text-[9px] font-extrabold uppercase px-2.5 py-0.5 rounded-full bg-emerald-100 text-[#00B074]">
-                          Upper Ocean
-                        </span>
-                      </div>
-                      <p className="text-[10px] font-semibold text-gray-500">
-                        Fish that swim in surface & open water. Click to filter hotspots on radar:
-                      </p>
-                      <div className="grid grid-cols-2 gap-2">
-                        {CATEGORIZED_SPECIES.pelagic.map((sp) => {
-                          const isSelected = selectedSpecies.includes(sp.name);
-                          return (
-                            <button
-                              key={sp.name}
-                              onClick={() => handleSpeciesToggle(sp.name)}
-                              className={`p-2.5 rounded-xl border text-left flex items-center justify-between transition-all cursor-pointer ${isSelected
-                                ? "bg-[#00B074] text-white border-[#00B074] shadow-xs font-black"
-                                : "bg-white border-gray-200 text-slate-800 hover:border-emerald-300"
+                        <div className="flex items-center gap-2 shrink-0 ml-2">
+                          {(() => {
+                            const pelagicSel = CATEGORIZED_SPECIES.pelagic.filter((sp) =>
+                              selectedSpecies.includes(sp.name)
+                            ).length;
+                            return (
+                              <span
+                                className={`text-[9px] font-black uppercase px-2.5 py-0.5 rounded-full ${
+                                  pelagicSel > 0
+                                    ? "bg-[#00B074] text-white"
+                                    : "bg-emerald-100 text-[#00B074]"
                                 }`}
-                            >
-                              <div className="min-w-0 pr-1">
-                                <span className={`text-xs font-black block truncate ${isSelected ? "text-white" : "text-slate-900"}`}>
-                                  {sp.name}
-                                </span>
-                                <span className={`text-[9px] font-bold block truncate mt-0.5 ${isSelected ? "text-emerald-100" : "text-gray-400"}`}>
-                                  {sp.localName}
-                                </span>
-                              </div>
-                              <div
-                                className={`w-4 h-4 rounded-full border flex items-center justify-center shrink-0 ${isSelected
-                                  ? "bg-white text-[#00B074] border-white"
-                                  : "border-gray-300"
-                                  }`}
                               >
-                                {isSelected && <Check className="w-3 h-3 stroke-[3]" />}
-                              </div>
-                            </button>
-                          );
-                        })}
+                                {pelagicSel > 0 ? `${pelagicSel} SELECTED` : "UPPER OCEAN"}
+                              </span>
+                            );
+                          })()}
+                          <button
+                            type="button"
+                            aria-label={isPelagicExpanded ? "Collapse Pelagic section" : "Expand Pelagic section"}
+                            className="p-1 rounded-lg text-gray-400 hover:text-slate-700 hover:bg-white/60 transition"
+                          >
+                            <ChevronDown
+                              className={`w-4 h-4 transition-transform duration-300 ${
+                                isPelagicExpanded ? "rotate-180 text-[#00B074]" : ""
+                              }`}
+                            />
+                          </button>
+                        </div>
+                      </div>
+
+                      {/* Collapsible Body */}
+                      <div
+                        className={`grid transition-all duration-300 ease-in-out ${
+                          isPelagicExpanded
+                            ? "grid-rows-[1fr] opacity-100 p-4 pt-1 border-t border-emerald-100/80"
+                            : "grid-rows-[0fr] opacity-0 p-0 pointer-events-none"
+                        }`}
+                      >
+                        <div className="overflow-hidden space-y-3">
+                          <p className="text-[10px] font-medium text-gray-500 pt-1">
+                            Click species below to filter fishing hotspots on the map:
+                          </p>
+                          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                            {CATEGORIZED_SPECIES.pelagic.map((sp) => {
+                              const isSelected = selectedSpecies.includes(sp.name);
+                              return (
+                                <button
+                                  key={sp.name}
+                                  onClick={() => handleSpeciesToggle(sp.name)}
+                                  className={`p-2.5 rounded-xl border text-left flex items-center justify-between transition-all cursor-pointer select-none ${
+                                    isSelected
+                                      ? "bg-slate-50/90 text-slate-900 font-black shadow-sm"
+                                      : "bg-white border-gray-200 text-slate-800 hover:border-slate-300 hover:shadow-xs"
+                                  }`}
+                                  style={isSelected ? { borderColor: sp.color, boxShadow: `0 2px 8px ${sp.color}25` } : {}}
+                                >
+                                  <div className="min-w-0 pr-2">
+                                    <span className={`text-xs font-black block truncate ${isSelected ? "text-slate-950" : "text-slate-900"}`}>
+                                      {sp.name}
+                                    </span>
+                                    <span className="text-[9px] font-bold block truncate mt-0.5 text-gray-400">
+                                      {sp.localName}
+                                    </span>
+                                  </div>
+
+                                  {/* Right-side Colored Circle (acts as both selection indicator & map color legend, NO CHECKMARK) */}
+                                  <div className="shrink-0 flex items-center justify-center ml-1">
+                                    {isSelected ? (
+                                      <span
+                                        className="w-4 h-4 rounded-full inline-block shadow-sm ring-2 ring-white"
+                                        style={{ backgroundColor: sp.color }}
+                                        title={`Selected species & map hotspot color: ${sp.color}`}
+                                      />
+                                    ) : (
+                                      <span
+                                        className="w-4 h-4 rounded-full border-2 border-gray-300 bg-transparent inline-block"
+                                        title={`Map hotspot color if selected: ${sp.color}`}
+                                      />
+                                    )}
+                                  </div>
+                                </button>
+                              );
+                            })}
+                          </div>
+                        </div>
                       </div>
                     </div>
                   )}
 
-                  {/* Bottom & Reef Species Section (shown if activeTab is "demersal" or "both") */}
+                  {/* Bottom & Reef Species Section */}
                   {(activeTab === "demersal" || activeTab === "both") && (
-                    <div className="bg-amber-50/60 border border-amber-200/80 p-4 rounded-2xl space-y-3 shadow-xs">
-                      <div className="flex items-center justify-between">
-                        <div className="flex items-center gap-2">
-                          <Anchor className="w-4 h-4 text-[#D97706]" />
-                          <span className="font-display font-black text-xs uppercase tracking-wider text-slate-900">
+                    <div className="bg-amber-50/40 border border-amber-200/70 rounded-2xl overflow-hidden transition-all duration-300">
+                      {/* Collapsible Header Bar */}
+                      <div
+                        onClick={() => setIsDemersalExpanded(!isDemersalExpanded)}
+                        className="p-3.5 flex items-center justify-between cursor-pointer hover:bg-amber-100/50 transition select-none"
+                      >
+                        <div className="flex items-center gap-2 min-w-0">
+                          <Anchor className="w-4 h-4 text-[#D97706] shrink-0" />
+                          <span className="font-display font-black text-xs uppercase tracking-wider text-slate-900 truncate">
                             Bottom & Reef Species (Demersal)
                           </span>
                         </div>
-                        <span className="text-[9px] font-extrabold uppercase px-2.5 py-0.5 rounded-full bg-amber-100 text-[#D97706]">
-                          Seabed & Coral
-                        </span>
-                      </div>
-                      <p className="text-[10px] font-semibold text-gray-500">
-                        Fish that live near seabed, coral reefs & rocky ocean floors. Click to filter:
-                      </p>
-                      <div className="grid grid-cols-2 gap-2">
-                        {CATEGORIZED_SPECIES.demersal.map((sp) => {
-                          const isSelected = selectedSpecies.includes(sp.name);
-                          return (
-                            <button
-                              key={sp.name}
-                              onClick={() => handleSpeciesToggle(sp.name)}
-                              className={`p-2.5 rounded-xl border text-left flex items-center justify-between transition-all cursor-pointer ${isSelected
-                                ? "bg-[#D97706] text-white border-[#D97706] shadow-xs font-black"
-                                : "bg-white border-gray-200 text-slate-800 hover:border-amber-300"
+                        <div className="flex items-center gap-2 shrink-0 ml-2">
+                          {(() => {
+                            const demersalSel = CATEGORIZED_SPECIES.demersal.filter((sp) =>
+                              selectedSpecies.includes(sp.name)
+                            ).length;
+                            return (
+                              <span
+                                className={`text-[9px] font-black uppercase px-2.5 py-0.5 rounded-full ${
+                                  demersalSel > 0
+                                    ? "bg-[#D97706] text-white"
+                                    : "bg-amber-100 text-[#D97706]"
                                 }`}
-                            >
-                              <div className="min-w-0 pr-1">
-                                <span className={`text-xs font-black block truncate ${isSelected ? "text-white" : "text-slate-900"}`}>
-                                  {sp.name}
-                                </span>
-                                <span className={`text-[9px] font-bold block truncate mt-0.5 ${isSelected ? "text-amber-100" : "text-gray-400"}`}>
-                                  {sp.localName}
-                                </span>
-                              </div>
-                              <div
-                                className={`w-4 h-4 rounded-full border flex items-center justify-center shrink-0 ${isSelected
-                                  ? "bg-white text-[#D97706] border-white"
-                                  : "border-gray-300"
-                                  }`}
                               >
-                                {isSelected && <Check className="w-3 h-3 stroke-[3]" />}
-                              </div>
-                            </button>
-                          );
-                        })}
+                                {demersalSel > 0 ? `${demersalSel} SELECTED` : "SEABED & CORAL"}
+                              </span>
+                            );
+                          })()}
+                          <button
+                            type="button"
+                            aria-label={isDemersalExpanded ? "Collapse Demersal section" : "Expand Demersal section"}
+                            className="p-1 rounded-lg text-gray-400 hover:text-slate-700 hover:bg-white/60 transition"
+                          >
+                            <ChevronDown
+                              className={`w-4 h-4 transition-transform duration-300 ${
+                                isDemersalExpanded ? "rotate-180 text-[#D97706]" : ""
+                              }`}
+                            />
+                          </button>
+                        </div>
+                      </div>
+
+                      {/* Collapsible Body */}
+                      <div
+                        className={`grid transition-all duration-300 ease-in-out ${
+                          isDemersalExpanded
+                            ? "grid-rows-[1fr] opacity-100 p-4 pt-1 border-t border-amber-100/80"
+                            : "grid-rows-[0fr] opacity-0 p-0 pointer-events-none"
+                        }`}
+                      >
+                        <div className="overflow-hidden space-y-3">
+                          <p className="text-[10px] font-medium text-gray-500 pt-1">
+                            Click species below to filter fishing hotspots on the map:
+                          </p>
+                          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                            {CATEGORIZED_SPECIES.demersal.map((sp) => {
+                              const isSelected = selectedSpecies.includes(sp.name);
+                              return (
+                                <button
+                                  key={sp.name}
+                                  onClick={() => handleSpeciesToggle(sp.name)}
+                                  className={`p-2.5 rounded-xl border text-left flex items-center justify-between transition-all cursor-pointer select-none ${
+                                    isSelected
+                                      ? "bg-slate-50/90 text-slate-900 font-black shadow-sm"
+                                      : "bg-white border-gray-200 text-slate-800 hover:border-slate-300 hover:shadow-xs"
+                                  }`}
+                                  style={isSelected ? { borderColor: sp.color, boxShadow: `0 2px 8px ${sp.color}25` } : {}}
+                                >
+                                  <div className="min-w-0 pr-2">
+                                    <span className={`text-xs font-black block truncate ${isSelected ? "text-slate-950" : "text-slate-900"}`}>
+                                      {sp.name}
+                                    </span>
+                                    <span className="text-[9px] font-bold block truncate mt-0.5 text-gray-400">
+                                      {sp.localName}
+                                    </span>
+                                  </div>
+
+                                  {/* Right-side Colored Circle (acts as both selection indicator & map color legend, NO CHECKMARK) */}
+                                  <div className="shrink-0 flex items-center justify-center ml-1">
+                                    {isSelected ? (
+                                      <span
+                                        className="w-4 h-4 rounded-full inline-block shadow-sm ring-2 ring-white"
+                                        style={{ backgroundColor: sp.color }}
+                                        title={`Selected species & map hotspot color: ${sp.color}`}
+                                      />
+                                    ) : (
+                                      <span
+                                        className="w-4 h-4 rounded-full border-2 border-gray-300 bg-transparent inline-block"
+                                        title={`Map hotspot color if selected: ${sp.color}`}
+                                      />
+                                    )}
+                                  </div>
+                                </button>
+                              );
+                            })}
+                          </div>
+                        </div>
                       </div>
                     </div>
                   )}
                 </div>
               </div>
 
-              {/* Weather Telemetry Grid */}
-              <div className="space-y-4 pt-2 border-t border-gray-100">
+              {/* ================= SECTION 3: LIVE SEA & WEATHER METRICS ================= */}
+              <div className="space-y-4 pt-3 border-t border-gray-100">
                 <div className="flex justify-between items-center">
-                  <h2 className="font-display font-black text-xs uppercase tracking-wider text-slate-900 flex items-center gap-2">
-                    <Waves className="w-4 h-4 text-[#00B074]" />
-                    SEA & WEATHER METRICS GRID
-                  </h2>
-                  <button
-                    onClick={handleVoiceAssist}
-                    className={`flex items-center gap-1.5 px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-wider border transition cursor-pointer ${isSpeaking
-                      ? "bg-rose-50 border-rose-200 text-rose-600"
-                      : "bg-emerald-50 border-emerald-100 text-[#00B074]"
-                      }`}
-                  >
-                    {isSpeaking ? (
-                      <VolumeX className="w-3.5 h-3.5" />
-                    ) : (
-                      <Volume2 className="w-3.5 h-3.5" />
-                    )}
-                    <span>{isSpeaking ? "STOP VOICE" : t("voiceAssist")}</span>
-                  </button>
+                  <div className="flex items-center gap-1.5">
+                    <Waves className="w-3.5 h-3.5 text-[#00B074]" />
+                    <h3 className="font-display font-black text-xs uppercase tracking-wider text-slate-900">
+                      SEA & WEATHER METRICS GRID
+                    </h3>
+                  </div>
                 </div>
 
-                <div className="grid grid-cols-2 gap-3">
-                  <div className="p-3 bg-white border border-gray-200 rounded-2xl flex items-center gap-3 shadow-xs">
-                    <Wind className="w-4 h-4 text-[#00B074]" />
-                    <div>
+                {/* Weather Metrics Grid (3 columns on wide cards) */}
+                <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+                  <div className="p-3 bg-white border border-gray-200 rounded-2xl flex items-center gap-2.5 shadow-xs">
+                    <Wind className="w-4 h-4 text-[#00B074] shrink-0" />
+                    <div className="min-w-0">
                       <span className="text-[9px] font-black text-gray-400 uppercase block leading-tight">
                         WIND SPEED
                       </span>
                       <span className="text-xs font-black text-slate-800 block mt-0.5">
                         {weather.windSpeed} km/h
                       </span>
+                      <span className="text-[9px] font-bold text-emerald-600 block mt-0.5">
+                        {windKnots < 15 ? "Calm Breeze" : "Moderate Wind"}
+                      </span>
                     </div>
                   </div>
 
                   <div
-                    className={`p-3 rounded-2xl border transition-colors flex items-center gap-3 ${weather.waveHeight >= 2.0
-                      ? "bg-rose-50 border-rose-200 text-rose-950"
-                      : "bg-white border-gray-200 shadow-xs"
-                      }`}
+                    className={`p-3 rounded-2xl border transition-colors flex items-center gap-2.5 shadow-xs ${
+                      weather.waveHeight >= 2.0
+                        ? "bg-rose-50 border-rose-200 text-rose-950"
+                        : "bg-white border-gray-200"
+                    }`}
                   >
                     <Waves
-                      className={`w-4 h-4 ${weather.waveHeight >= 2.0 ? "text-rose-500 animate-bounce" : "text-[#00B074]"
-                        }`}
+                      className={`w-4 h-4 shrink-0 ${
+                        weather.waveHeight >= 2.0 ? "text-rose-500 animate-bounce" : "text-[#00B074]"
+                      }`}
                     />
-                    <div>
+                    <div className="min-w-0">
                       <span className="text-[9px] font-black text-gray-400 uppercase block leading-tight">
                         WAVE HEIGHT
                       </span>
                       <span
-                        className={`text-xs font-black block mt-0.5 ${weather.waveHeight >= 2.0 ? "text-rose-600" : "text-slate-800"
-                          }`}
+                        className={`text-xs font-black block mt-0.5 ${
+                          weather.waveHeight >= 2.0 ? "text-rose-600" : "text-slate-800"
+                        }`}
                       >
                         {weather.waveHeight.toFixed(1)}m
+                      </span>
+                      <span
+                        className={`text-[9px] font-bold block mt-0.5 ${
+                          weather.waveHeight >= 2.0 ? "text-rose-600" : "text-emerald-600"
+                        }`}
+                      >
+                        {weather.waveHeight >= 2.0 ? "Rough Sea - Caution" : "Gentle Sea"}
                       </span>
                     </div>
                   </div>
 
-                  <div className="p-3 bg-white border border-gray-200 rounded-2xl flex items-center gap-3 shadow-xs">
-                    <ShieldAlert className="w-4 h-4 text-[#00B074]" />
-                    <div>
+                  <div className="p-3 bg-white border border-gray-200 rounded-2xl flex items-center gap-2.5 shadow-xs">
+                    <ShieldAlert className="w-4 h-4 text-[#00B074] shrink-0" />
+                    <div className="min-w-0">
                       <span className="text-[9px] font-black text-gray-400 uppercase block leading-tight">
                         STORM SIGNAL
                       </span>
                       <span className="text-xs font-black text-slate-800 block mt-0.5">
                         Signal #{weather.stormSignal}
                       </span>
+                      <span className="text-[9px] font-bold text-emerald-600 block mt-0.5">
+                        {weather.stormSignal === 0 ? "No Active Warning" : "Storm Warning"}
+                      </span>
                     </div>
                   </div>
 
-                  <div className="p-3 bg-white border border-gray-200 rounded-2xl flex items-center gap-3 shadow-xs">
-                    <Thermometer className="w-4 h-4 text-[#00B074]" />
-                    <div>
+                  <div className="p-3 bg-white border border-gray-200 rounded-2xl flex items-center gap-2.5 shadow-xs">
+                    <Thermometer className="w-4 h-4 text-[#00B074] shrink-0" />
+                    <div className="min-w-0">
                       <span className="text-[9px] font-black text-gray-400 uppercase block leading-tight">
                         SEA TEMP
                       </span>
                       <span className="text-xs font-black text-slate-800 block mt-0.5">
                         {weather.temp}°C
                       </span>
+                      <span className="text-[9px] font-bold text-gray-400 block mt-0.5">
+                        Normal range
+                      </span>
                     </div>
                   </div>
 
                   <div className="p-3 bg-white border border-gray-200 rounded-2xl col-span-2 flex items-center justify-between shadow-xs">
-                    <div className="flex items-center gap-3">
-                      <Compass className="w-4 h-4 text-[#00B074]" />
+                    <div className="flex items-center gap-2.5">
+                      <Compass className="w-4 h-4 text-[#00B074] shrink-0" />
                       <div>
                         <span className="text-[9px] font-black text-gray-400 uppercase block leading-tight">
-                          TIDE LEVEL
+                          TIDE LEVEL & TELEMETRY
                         </span>
                         <span className="text-xs font-black text-slate-800 block mt-0.5">
                           {weather.tide}
@@ -896,22 +983,23 @@ export default function DashboardPage() {
                     </div>
                     <button
                       onClick={refreshWeather}
-                      className="p-1.5 bg-white border border-slate-200 rounded-full transition cursor-pointer hover:bg-slate-50"
+                      className="p-2 bg-slate-50 hover:bg-slate-100 border border-slate-200 rounded-xl transition cursor-pointer text-slate-600 flex items-center gap-1 text-[10px] font-bold"
                       title="Refresh sensors"
                     >
-                      <RefreshCw className="w-3.5 h-3.5 text-gray-500" />
+                      <RefreshCw className="w-3.5 h-3.5 text-[#00B074]" />
+                      <span>Sync</span>
                     </button>
                   </div>
                 </div>
               </div>
 
-              {/* Model Calibration Feedback */}
-              <div className="space-y-3 pt-2 border-t border-gray-100">
+              {/* ================= SECTION 4: FEEDBACK & EMERGENCY SOS ================= */}
+              <div className="space-y-3 pt-3 border-t border-gray-100">
                 <span className="text-[9px] font-black text-gray-400 uppercase tracking-widest block">
                   COOPERATIVE MODEL CALIBRATION
                 </span>
-                <p className="text-[11px] font-semibold text-gray-400">
-                  Are predicted species locations accurate for your recent trip?
+                <p className="text-[11px] font-semibold text-gray-500">
+                  Help train AI catch accuracy: Were predicted species locations accurate for your trip?
                 </p>
 
                 <div className="grid grid-cols-3 gap-2">
@@ -921,7 +1009,7 @@ export default function DashboardPage() {
                   >
                     <ThumbsUp className="w-4 h-4 text-[#00B074]" />
                     <span className="text-[9px] font-black uppercase text-slate-700">
-                      HIGH
+                      HIGH ACCURACY
                     </span>
                   </button>
                   <button
@@ -953,16 +1041,15 @@ export default function DashboardPage() {
             </div>
 
             {/* Bottom Emergency Trigger */}
-            <div className="pt-3 border-t border-gray-100">
+            <div className="pt-3 border-t border-gray-100 mt-4">
               <button
                 onClick={handleTriggerSos}
-                className="w-full bg-rose-500 hover:bg-rose-600 text-white font-black text-xs uppercase tracking-wider py-4 rounded-2xl transition shadow-sm flex items-center justify-center gap-2 cursor-pointer"
+                className="w-full bg-rose-500 hover:bg-rose-600 text-white font-black text-xs uppercase tracking-wider py-4 rounded-2xl transition shadow-md flex items-center justify-center gap-2 cursor-pointer active:scale-[0.99]"
               >
                 <Siren className="w-5 h-5 animate-bounce" />
                 <span>EMERGENCY SOS DISTRESS BROADCAST</span>
               </button>
             </div>
-
           </div>
         </div>
 

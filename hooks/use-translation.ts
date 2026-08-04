@@ -88,10 +88,16 @@ export const DICTIONARY = {
     hil: "Krudo Pool"
   },
   alerts: {
+    en: "Alerts",
+    tl: "Mga Alerto",
+    ceb: "Mga Alerto",
+    hil: "Mga Alerto"
+  },
+  notifications: {
     en: "Notifications",
-    tl: "Alerto",
-    ceb: "Alerto",
-    hil: "Alerto"
+    tl: "Mga Abiso",
+    ceb: "Mga Pahibalo",
+    hil: "Mga Pahibalo"
   },
   profile: {
     en: "Profile",

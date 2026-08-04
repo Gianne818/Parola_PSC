@@ -6,6 +6,7 @@ import { usePathname, useRouter } from "next/navigation";
 import {
   LayoutDashboard,
   Fuel,
+  ShieldAlert,
   Bell,
   User,
   Settings,
@@ -70,7 +71,8 @@ export const AuthLayout: React.FC<AuthLayoutProps> = ({ children, fluid = false 
   const navItems = [
     { href: "/dashboard", icon: LayoutDashboard, label: t("dashboard") },
     { href: "/fuel", icon: Fuel, label: t("fuel") },
-    { href: "/notifications", icon: Bell, label: t("alerts"), badge: true },
+    { href: "/alerts", icon: ShieldAlert, label: t("alerts") },
+    { href: "/notifications", icon: Bell, label: t("notifications"), badge: true },
     { href: "/profile", icon: User, label: t("profile") },
     { href: "/settings", icon: Settings, label: t("settings") },
   ];
