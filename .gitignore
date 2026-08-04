@@ -30,6 +30,16 @@ dist-ssr
 out
 build
 .vercel
-.env.local
-.env*.local
 coverage
+
+# Environment files — NEVER commit real secrets
+.env
+.env.local
+.env.*
+!.env.example
+!.env.*.example
+**/.env
+**/.env.local
+**/.env.*
+!**/.env.example
+!**/.env.*.example
