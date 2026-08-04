@@ -3,7 +3,7 @@ Transform: AWS::Serverless-2016-10-31
 Description: >
   parola-inference-pipeline
   
-  SAM Template for the Parola Project Pelagic Model daily inference pipeline with StarISDAWorkflow cloud features.
+  SAM Template for the Parola Project Pelagic Model inference pipeline with StarISDAWorkflow cloud features.
 
 Resources:
   ParolaInferenceFunction:
@@ -14,6 +14,8 @@ Resources:
         - x86_64
       MemorySize: 3008
       Timeout: 900
+      FunctionUrlConfig:
+        AuthType: NONE
       Environment:
         Variables:
           MODEL_BUCKET_NAME: !Ref ParolaDataBucket
@@ -31,12 +33,17 @@ Resources:
         - S3WritePolicy:
             BucketName: !Ref ParolaDataBucket
       Events:
-        DailyInferenceSchedule:
+        SixHourInferenceSchedule:
           Type: Schedule
           Properties:
-            Schedule: 'cron(0 3 * * ? *)'
-            Name: ParolaDailyInferenceSchedule
-            Description: Trigger the model inference & weather workflow every morning at 3:00 AM UTC
+            Schedule: 'rate(6 hours)'
+            Name: ParolaSixHourInferenceSchedule
+            Description: Automatically trigger model inference & weather workflow every 6 hours
+        ApiTrigger:
+          Type: Api
+          Properties:
+            Path: /update-workflow
+            Method: POST
     Metadata:
       Dockerfile: Dockerfile
       DockerContext: .
@@ -56,6 +63,9 @@ Outputs:
   ParolaInferenceFunctionArn:
     Description: "Parola Inference Lambda Function ARN"
     Value: !GetAtt ParolaInferenceFunction.Arn
+  ParolaInferenceFunctionUrl:
+    Description: "Function URL to trigger workflow on demand via HTTP"
+    Value: !GetAtt ParolaInferenceFunctionUrl.FunctionUrl
   ParolaDataBucketName:
     Description: "S3 Bucket containing the model and output advisories"
     Value: !Ref ParolaDataBucket
