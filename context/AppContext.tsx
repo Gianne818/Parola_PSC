@@ -11,24 +11,24 @@ import { supabase } from "../lib/supabase";
 
 // Default pre-configured Philippine hotspots
 export const DEFAULT_HOTSPOTS: Hotspot[] = [
-  { id: "h1", name: "Apo-Mercedes Deep", type: "pelagic", species: ["Tamban (Clupeidae)", "Tulingan (Scombridae)", "Galunggong (Carangidae)"], lat: 14.25, lng: 123.15, depth: 450, lastUpdated: "Today, 04:00" },
-  { id: "h2", name: "San Miguel Bay East", type: "demersal", species: ["Lapu-lapu (Serranidae)", "Maya-maya (Lutjanidae)", "Bisugo (Nemipteridae)"], lat: 13.92, lng: 123.32, depth: 45, lastUpdated: "Today, 05:30" },
-  { id: "h3", name: "Apo Reef North", type: "both", species: ["Tulingan (Scombridae)", "Samaral (Siganidae)", "Maya-maya (Lutjanidae)"], lat: 12.69, lng: 120.42, depth: 120, lastUpdated: "Yesterday, 18:20" },
-  { id: "h4", name: "Sulu Sea Basin", type: "pelagic", species: ["Tamban (Clupeidae)", "Dilis (Engraulidae)", "Bahi (Belonidae)"], lat: 9.50, lng: 121.20, depth: 800, lastUpdated: "Today, 02:15" },
-  { id: "h5", name: "Celebes Trench Edge", type: "pelagic", species: ["Tulingan (Scombridae)", "Tamban (Clupeidae)"], lat: 5.80, lng: 124.50, depth: 1500, lastUpdated: "Today, 01:10" },
-  { id: "h6", name: "Bohol Sea Ridge", type: "demersal", species: ["Lapu-lapu (Serranidae)", "Katambak (Lethrinidae)"], lat: 9.35, lng: 124.25, depth: 180, lastUpdated: "Yesterday, 14:45" },
-  { id: "h7", name: "Camotes Sea Reef", type: "demersal", species: ["Samaral (Siganidae)", "Maya-maya (Lutjanidae)"], lat: 10.55, lng: 124.45, depth: 65, lastUpdated: "Today, 06:10" },
-  { id: "h8", name: "Visayan Sea Hotspot", type: "both", species: ["Galunggong (Carangidae)", "Bisugo (Nemipteridae)", "Samaral (Siganidae)"], lat: 11.50, lng: 123.80, depth: 55, lastUpdated: "Today, 03:00" },
-  { id: "h9", name: "San Bernardino Passage", type: "pelagic", species: ["Tulingan (Scombridae)", "Galunggong (Carangidae)"], lat: 12.55, lng: 124.15, depth: 320, lastUpdated: "Today, 07:05" },
-  { id: "h10", name: "Lingayen Gulf Shelf", type: "demersal", species: ["Bisugo (Nemipteridae)", "Lapu-lapu (Serranidae)"], lat: 16.25, lng: 120.15, depth: 35, lastUpdated: "Yesterday, 22:15" },
-  { id: "h11", name: "Lagonoy Gulf Basin", type: "pelagic", species: ["Tulingan (Scombridae)", "Tamban (Clupeidae)"], lat: 13.60, lng: 123.75, depth: 250, lastUpdated: "Today, 05:00" },
-  { id: "h12", name: "Tayabas Bay Bank", type: "both", species: ["Maya-maya (Lutjanidae)", "Samaral (Siganidae)"], lat: 13.70, lng: 121.85, depth: 50, lastUpdated: "Today, 04:30" },
-  { id: "h13", name: "Sibuyan Sea Center", type: "pelagic", species: ["Tamban (Clupeidae)", "Galunggong (Carangidae)"], lat: 12.40, lng: 122.50, depth: 190, lastUpdated: "Yesterday, 19:30" },
-  { id: "h14", name: "Babuyan Upwelling Zone", type: "pelagic", species: ["Tulingan (Scombridae)", "Galunggong (Carangidae)"], lat: 19.10, lng: 121.60, depth: 600, lastUpdated: "Today, 00:30" },
-  { id: "h15", name: "Sarangani Bay Shore", type: "demersal", species: ["Katambak (Lethrinidae)", "Lapu-lapu (Serranidae)"], lat: 6.05, lng: 125.15, depth: 75, lastUpdated: "Today, 06:45" },
-  { id: "h16", name: "Cuyo Pass Bank", type: "both", species: ["Galunggong (Carangidae)", "Bisugo (Nemipteridae)", "Maya-maya (Lutjanidae)"], lat: 10.95, lng: 121.05, depth: 85, lastUpdated: "Today, 02:45" },
-  { id: "h17", name: "Panay Gulf Ridge", type: "pelagic", species: ["Tulingan (Scombridae)", "Tamban (Clupeidae)"], lat: 10.25, lng: 122.40, depth: 280, lastUpdated: "Yesterday, 23:00" },
-  { id: "h18", name: "Davao Gulf Base", type: "demersal", species: ["Lapu-lapu (Serranidae)", "Katambak (Lethrinidae)"], lat: 6.85, lng: 125.80, depth: 110, lastUpdated: "Today, 05:15" }
+  { id: "h1", name: "Apo-Mercedes Deep", type: "pelagic", species: ["Tamban (Clupeidae)", "Tulingan (Scombridae)", "Galunggong (Carangidae)"], lat: 14.25, lng: 123.15, depth: 450, catchProbability: 0.94, lastUpdated: "Today, 04:00" },
+  { id: "h2", name: "San Miguel Bay East", type: "demersal", species: ["Lapu-lapu (Serranidae)", "Maya-maya (Lutjanidae)", "Bisugo (Nemipteridae)"], lat: 13.92, lng: 123.32, depth: 45, catchProbability: 0.86, lastUpdated: "Today, 05:30" },
+  { id: "h3", name: "Apo Reef North", type: "both", species: ["Tulingan (Scombridae)", "Samaral (Siganidae)", "Maya-maya (Lutjanidae)"], lat: 12.69, lng: 120.42, depth: 120, catchProbability: 0.76, lastUpdated: "Yesterday, 18:20" },
+  { id: "h4", name: "Sulu Sea Basin", type: "pelagic", species: ["Tamban (Clupeidae)", "Dilis (Engraulidae)", "Bahi (Belonidae)"], lat: 9.50, lng: 121.20, depth: 800, catchProbability: 0.65, lastUpdated: "Today, 02:15" },
+  { id: "h5", name: "Celebes Trench Edge", type: "pelagic", species: ["Tulingan (Scombridae)", "Tamban (Clupeidae)"], lat: 5.80, lng: 124.50, depth: 1500, catchProbability: 0.91, lastUpdated: "Today, 01:10" },
+  { id: "h6", name: "Bohol Sea Ridge", type: "demersal", species: ["Lapu-lapu (Serranidae)", "Katambak (Lethrinidae)"], lat: 9.35, lng: 124.25, depth: 180, catchProbability: 0.83, lastUpdated: "Yesterday, 14:45" },
+  { id: "h7", name: "Camotes Sea Reef", type: "demersal", species: ["Samaral (Siganidae)", "Maya-maya (Lutjanidae)"], lat: 10.55, lng: 124.45, depth: 65, catchProbability: 0.72, lastUpdated: "Today, 06:10" },
+  { id: "h8", name: "Visayan Sea Hotspot", type: "both", species: ["Galunggong (Carangidae)", "Bisugo (Nemipteridae)", "Samaral (Siganidae)"], lat: 11.50, lng: 123.80, depth: 55, catchProbability: 0.68, lastUpdated: "Today, 03:00" },
+  { id: "h9", name: "San Bernardino Passage", type: "pelagic", species: ["Tulingan (Scombridae)", "Galunggong (Carangidae)"], lat: 12.55, lng: 124.15, depth: 320, catchProbability: 0.96, lastUpdated: "Today, 07:05" },
+  { id: "h10", name: "Lingayen Gulf Shelf", type: "demersal", species: ["Bisugo (Nemipteridae)", "Lapu-lapu (Serranidae)"], lat: 16.25, lng: 120.15, depth: 35, catchProbability: 0.88, lastUpdated: "Yesterday, 22:15" },
+  { id: "h11", name: "Lagonoy Gulf Basin", type: "pelagic", species: ["Tulingan (Scombridae)", "Tamban (Clupeidae)"], lat: 13.60, lng: 123.75, depth: 250, catchProbability: 0.75, lastUpdated: "Today, 05:00" },
+  { id: "h12", name: "Tayabas Bay Bank", type: "both", species: ["Maya-maya (Lutjanidae)", "Samaral (Siganidae)"], lat: 13.70, lng: 121.85, depth: 50, catchProbability: 0.64, lastUpdated: "Today, 04:30" },
+  { id: "h13", name: "Sibuyan Sea Center", type: "pelagic", species: ["Tamban (Clupeidae)", "Galunggong (Carangidae)"], lat: 12.40, lng: 122.50, depth: 190, catchProbability: 0.92, lastUpdated: "Yesterday, 19:30" },
+  { id: "h14", name: "Babuyan Upwelling Zone", type: "pelagic", species: ["Tulingan (Scombridae)", "Galunggong (Carangidae)"], lat: 19.10, lng: 121.60, depth: 600, catchProbability: 0.81, lastUpdated: "Today, 00:30" },
+  { id: "h15", name: "Sarangani Bay Shore", type: "demersal", species: ["Katambak (Lethrinidae)", "Lapu-lapu (Serranidae)"], lat: 6.05, lng: 125.15, depth: 75, catchProbability: 0.78, lastUpdated: "Today, 06:45" },
+  { id: "h16", name: "Cuyo Pass Bank", type: "both", species: ["Galunggong (Carangidae)", "Bisugo (Nemipteridae)", "Maya-maya (Lutjanidae)"], lat: 10.95, lng: 121.05, depth: 85, catchProbability: 0.67, lastUpdated: "Today, 02:45" },
+  { id: "h17", name: "Panay Gulf Ridge", type: "pelagic", species: ["Tulingan (Scombridae)", "Tamban (Clupeidae)"], lat: 10.25, lng: 122.40, depth: 280, catchProbability: 0.89, lastUpdated: "Yesterday, 23:00" },
+  { id: "h18", name: "Davao Gulf Base", type: "demersal", species: ["Lapu-lapu (Serranidae)", "Katambak (Lethrinidae)"], lat: 6.85, lng: 125.80, depth: 110, catchProbability: 0.95, lastUpdated: "Today, 05:15" }
 ];
 
 export const MUNICIPAL_PORTS = [

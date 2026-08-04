@@ -6,7 +6,7 @@ import { Hotspot } from "../../../types";
 import { calculateDistance, calculateBearing } from "../../../utils/spatial";
 import { useApp } from "../../../context/AppContext";
 import { Anchor, Compass, Info, Navigation, ShieldCheck } from "lucide-react";
-import { ALL_SPECIES_CONFIGS, GENERAL_PELAGIC_COLOR, GENERAL_DEMERSAL_COLOR, getSpeciesConfig } from "../../../utils/speciesColors";
+import { ALL_SPECIES_CONFIGS, GENERAL_PELAGIC_COLOR, GENERAL_DEMERSAL_COLOR, GENERAL_PELAGIC_SHADES, GENERAL_DEMERSAL_SHADES, getSpeciesConfig } from "../../../utils/speciesColors";
 
 // Dynamically import the real Leaflet map component with SSR disabled
 const MapInner = dynamic(() => import("./MapInner"), {
@@ -78,37 +78,108 @@ export const MapComponent: React.FC<MapComponentProps> = ({
         </div>
 
         {/* Map Model & Species Prediction Color Legend Overlay */}
-        <div className="absolute top-4 right-4 bg-white/95 dark:bg-[#12211E]/95 backdrop-blur border border-slate-200 dark:border-teal-950 p-2.5 rounded-2xl shadow-md z-10 text-[10px] space-y-1.5 max-w-[225px]">
-          <span className="font-black text-gray-400 uppercase tracking-widest block text-[9px]">
-            Map Prediction Sources
-          </span>
-          <div className="space-y-1 font-bold text-gray-700 dark:text-gray-200">
-            <div className="flex items-center gap-1.5">
-              <span className="w-2.5 h-2.5 rounded-full inline-block shrink-0 shadow-xs" style={{ backgroundColor: GENERAL_PELAGIC_COLOR }} />
-              <span className="truncate">Pelagic (EOG Satellite Boat Data)</span>
-            </div>
-            <div className="flex items-center gap-1.5">
-              <span className="w-2.5 h-2.5 rounded-full inline-block shrink-0 shadow-xs" style={{ backgroundColor: GENERAL_DEMERSAL_COLOR }} />
-              <span className="truncate">Demersal (EOG Seabed & Vessel Data)</span>
-            </div>
+        <div className="absolute top-4 right-4 bg-white/95 dark:bg-[#12211E]/95 backdrop-blur border border-slate-200 dark:border-teal-950 p-3 rounded-2xl shadow-md z-10 text-[10px] space-y-2 max-w-[240px]">
+          <div className="flex items-center justify-between">
+            <span className="font-black text-gray-400 uppercase tracking-widest block text-[9px]">
+              Prediction Map Legend
+            </span>
+            <span className="text-[8px] font-black text-brand-green bg-emerald-50 dark:bg-emerald-950/60 px-1.5 py-0.5 rounded border border-emerald-200 dark:border-emerald-800 uppercase">
+              Live Gradient
+            </span>
+          </div>
+
+          <div className="space-y-1.5 font-bold text-gray-700 dark:text-gray-200">
+            {(!selectedSpecies || selectedSpecies.length === 0) && (
+              <div className="space-y-2 pt-1">
+                <div className="space-y-1 bg-slate-50 dark:bg-teal-950/50 p-2 rounded-xl border border-slate-200/80 dark:border-teal-900/60">
+                  <div className="flex items-center gap-1.5 font-black text-[9.5px] text-slate-900 dark:text-white">
+                    <span className="w-2.5 h-2.5 rounded-full inline-block shrink-0 shadow-xs" style={{ backgroundColor: GENERAL_PELAGIC_SHADES.medium }} />
+                    <span className="truncate">General Pelagic Model</span>
+                  </div>
+                  <div className="grid grid-cols-4 gap-1 text-[7.5px] font-black text-center pt-0.5">
+                    <div className="flex flex-col items-center" title="60–69%">
+                      <span className="w-full h-1.5 rounded-xs mb-0.5 shadow-2xs" style={{ backgroundColor: GENERAL_PELAGIC_SHADES.light }} />
+                      <span className="text-gray-400">60-69%</span>
+                    </div>
+                    <div className="flex flex-col items-center" title="70–79%">
+                      <span className="w-full h-1.5 rounded-xs mb-0.5 shadow-2xs" style={{ backgroundColor: GENERAL_PELAGIC_SHADES.medium }} />
+                      <span className="text-gray-400">70-79%</span>
+                    </div>
+                    <div className="flex flex-col items-center" title="80–89%">
+                      <span className="w-full h-1.5 rounded-xs mb-0.5 shadow-2xs" style={{ backgroundColor: GENERAL_PELAGIC_SHADES.dark }} />
+                      <span className="text-gray-400">80-89%</span>
+                    </div>
+                    <div className="flex flex-col items-center" title="90–100%">
+                      <span className="w-full h-1.5 rounded-xs mb-0.5 shadow-2xs" style={{ backgroundColor: GENERAL_PELAGIC_SHADES.deepest }} />
+                      <span className="text-gray-400">90-100%</span>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="space-y-1 bg-slate-50 dark:bg-teal-950/50 p-2 rounded-xl border border-slate-200/80 dark:border-teal-900/60">
+                  <div className="flex items-center gap-1.5 font-black text-[9.5px] text-slate-900 dark:text-white">
+                    <span className="w-2.5 h-2.5 rounded-full inline-block shrink-0 shadow-xs" style={{ backgroundColor: GENERAL_DEMERSAL_SHADES.medium }} />
+                    <span className="truncate">General Demersal Model</span>
+                  </div>
+                  <div className="grid grid-cols-4 gap-1 text-[7.5px] font-black text-center pt-0.5">
+                    <div className="flex flex-col items-center" title="60–69%">
+                      <span className="w-full h-1.5 rounded-xs mb-0.5 shadow-2xs" style={{ backgroundColor: GENERAL_DEMERSAL_SHADES.light }} />
+                      <span className="text-gray-400">60-69%</span>
+                    </div>
+                    <div className="flex flex-col items-center" title="70–79%">
+                      <span className="w-full h-1.5 rounded-xs mb-0.5 shadow-2xs" style={{ backgroundColor: GENERAL_DEMERSAL_SHADES.medium }} />
+                      <span className="text-gray-400">70-79%</span>
+                    </div>
+                    <div className="flex flex-col items-center" title="80–89%">
+                      <span className="w-full h-1.5 rounded-xs mb-0.5 shadow-2xs" style={{ backgroundColor: GENERAL_DEMERSAL_SHADES.dark }} />
+                      <span className="text-gray-400">80-89%</span>
+                    </div>
+                    <div className="flex flex-col items-center" title="90–100%">
+                      <span className="w-full h-1.5 rounded-xs mb-0.5 shadow-2xs" style={{ backgroundColor: GENERAL_DEMERSAL_SHADES.deepest }} />
+                      <span className="text-gray-400">90-100%</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
+
             {selectedSpecies && selectedSpecies.length > 0 && (
-              <div className="pt-1.5 mt-1 border-t border-gray-100 dark:border-teal-950/80 space-y-1">
-                <span className="text-[8.5px] font-black text-amber-600 dark:text-amber-400 uppercase block tracking-wider">
-                  Species Database Filter:
+              <div className="pt-1 space-y-2">
+                <span className="text-[8.5px] font-black text-slate-800 dark:text-slate-200 uppercase block tracking-wider">
+                  Species Probability Palette:
                 </span>
                 {selectedSpecies.map((spName) => {
                   const cfg = getSpeciesConfig(spName);
-                  const color = cfg ? cfg.color : "#00B074";
+                  if (!cfg) return null;
                   return (
-                    <div key={spName} className="flex items-center gap-1.5">
-                      <span className="w-2.5 h-2.5 rounded-full inline-block shrink-0 ring-1 ring-white shadow-xs" style={{ backgroundColor: color }} />
-                      <span className="truncate text-[9.5px]">{spName}</span>
+                    <div key={spName} className="space-y-1.5 bg-slate-50 dark:bg-teal-950/50 p-2 rounded-xl border border-slate-200/80 dark:border-teal-900/60">
+                      <div className="flex items-center gap-1.5 font-black text-[10px] text-slate-900 dark:text-white">
+                        <span className="w-2.5 h-2.5 rounded-full inline-block shrink-0 shadow-xs" style={{ backgroundColor: cfg.color }} />
+                        <span className="truncate">{cfg.name}</span>
+                      </div>
+                      
+                      {/* 4-tier probability gradient swatches */}
+                      <div className="grid grid-cols-4 gap-1 text-[7.5px] font-black text-center pt-0.5">
+                        <div className="flex flex-col items-center" title="60–69% Catch Probability">
+                          <span className="w-full h-2 rounded-xs mb-0.5 shadow-2xs" style={{ backgroundColor: cfg.shades.light }} />
+                          <span className="text-gray-400">60-69%</span>
+                        </div>
+                        <div className="flex flex-col items-center" title="70–79% Catch Probability">
+                          <span className="w-full h-2 rounded-xs mb-0.5 shadow-2xs" style={{ backgroundColor: cfg.shades.medium }} />
+                          <span className="text-gray-400">70-79%</span>
+                        </div>
+                        <div className="flex flex-col items-center" title="80–89% Catch Probability">
+                          <span className="w-full h-2 rounded-xs mb-0.5 shadow-2xs" style={{ backgroundColor: cfg.shades.dark }} />
+                          <span className="text-gray-400">80-89%</span>
+                        </div>
+                        <div className="flex flex-col items-center" title="90–100% Catch Probability">
+                          <span className="w-full h-2 rounded-xs mb-0.5 shadow-2xs" style={{ backgroundColor: cfg.shades.deepest }} />
+                          <span className="text-gray-400">90-100%</span>
+                        </div>
+                      </div>
                     </div>
                   );
                 })}
-                <div className="text-[8.5px] text-amber-700 dark:text-amber-300 font-semibold leading-tight pt-0.5">
-                  ⚠️ Separate species habitat database pending backend integration. EOG vessel detection spots hidden.
-                </div>
               </div>
             )}
           </div>
