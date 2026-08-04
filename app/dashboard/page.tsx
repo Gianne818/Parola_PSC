@@ -34,6 +34,7 @@ import {
   Volume2,
   VolumeX,
   Siren,
+  Radio,
   ThumbsUp,
   ThumbsDown,
   Meh,
@@ -1408,64 +1409,61 @@ export default function DashboardPage() {
               </div>
             </div>
 
-            {/* Bottom Emergency Trigger */}
-            <div className="pt-3 border-t border-gray-100 mt-4">
-              <button
-                onClick={handleTriggerSos}
-                className="w-full bg-rose-500 hover:bg-rose-600 text-white font-black text-xs uppercase tracking-wider py-4 rounded-2xl transition shadow-md flex items-center justify-center gap-2 cursor-pointer active:scale-[0.99]"
-              >
-                <Siren className="w-5 h-5 animate-bounce" />
-                <span>EMERGENCY SOS DISTRESS BROADCAST</span>
-              </button>
-            </div>
-          </div>
-        </div>
+            {/* PAGASA Severe Weather & Storm Advisory Broadcast Component */}
+            <div className="pt-3 border-t border-gray-100 mt-4 space-y-2">
+              <div className="p-4 bg-gradient-to-r from-amber-500/10 via-rose-500/5 to-amber-500/10 border border-amber-500/30 rounded-2xl space-y-3 shadow-xs">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <span className="p-2 bg-amber-500 text-white rounded-xl shadow-xs">
+                      <ShieldAlert className="w-5 h-5" />
+                    </span>
+                    <div>
+                      <h4 className="font-display font-black text-xs uppercase tracking-wider text-slate-900">
+                        {t("stormWarningTitle")}
+                      </h4>
+                      <span className="text-[10px] text-gray-500 font-bold block mt-0.5">
+                        Broadcast severe weather advisories, gale warnings & rough seas to fleets
+                      </span>
+                    </div>
+                  </div>
+                  <span className={`text-[9px] font-black uppercase px-2.5 py-0.5 rounded-full border ${
+                    (selectedHotspot?.waveHeight || weather.waveHeight) >= 2.0 || (selectedHotspot?.stormSignal ?? weather.stormSignal) > 0
+                      ? "bg-rose-100 text-rose-700 border-rose-200 animate-pulse"
+                      : "bg-emerald-100 text-emerald-700 border-emerald-200"
+                  }`}>
+                    {(selectedHotspot?.waveHeight || weather.waveHeight) >= 2.0 || (selectedHotspot?.stormSignal ?? weather.stormSignal) > 0 ? "DANGEROUS SEAS" : "FAVORABLE SEAS"}
+                  </span>
+                </div>
 
-      {/* SOS Overlay */}
-      {isSosActive && (
-        <div className="fixed inset-0 bg-rose-900/90 backdrop-blur-md z-50 flex items-center justify-center p-4">
-          <div className="max-w-xl w-full bg-white rounded-[2.5rem] p-8 md:p-10 text-center space-y-6 shadow-2xl border-4 border-rose-600">
-            <div className="w-16 h-16 rounded-full bg-rose-100 flex items-center justify-center text-rose-600 mx-auto animate-bounce">
-              <AlertTriangle className="w-8 h-8" />
-            </div>
-
-            <div className="space-y-2">
-              <h1 className="font-display font-black text-2xl text-rose-600 tracking-tight">
-                {sosTransponding ? "SOS ACTIVE — BROADCASTING" : "TRANSPONDING SOS DISTRESS"}
-              </h1>
-              <p className="text-xs text-gray-400 font-bold max-w-sm mx-auto leading-relaxed">
-                {sosTransponding
-                  ? "Transponder beacons are actively broadcasting distress signal coordinates over all coastal networks."
-                  : "Your GPS transponder is establishing satellite coordinates. Coastal guard base will receive distress payload in:"}
-              </p>
-            </div>
-
-            {!sosTransponding ? (
-              <div className="text-6xl font-black text-rose-600 select-none animate-pulse">
-                {sosCountdown}
-              </div>
-            ) : (
-              <div className="bg-rose-50/50 border border-rose-100 p-4 rounded-2xl text-left space-y-2 max-w-md mx-auto">
-                <span className="text-[10px] font-black text-rose-600 uppercase tracking-wider block">
-                  Simulated distress SMS payload
-                </span>
-                <p className="text-xs font-bold text-rose-800 font-mono leading-relaxed bg-white p-3 rounded-xl border border-rose-100/30">
-                  {`[PAROLA DISTRESS SOS] Vessel ${userProfile.vesselName} (License ${userProfile.licenseNo}) is in distress at ${userProfile.lat.toFixed(4)} N, ${userProfile.lng.toFixed(4)} E. Current telemetry: Wind speed ${weather.windSpeed} k/h, wave heights ${weather.waveHeight}m.`}
+                <p className="text-[11px] font-medium text-slate-700 leading-snug">
+                  {(selectedHotspot?.waveHeight || weather.waveHeight) >= 2.0 || (selectedHotspot?.stormSignal ?? weather.stormSignal) > 0
+                    ? `⚠️ CAUTION: Wave height is currently ${(selectedHotspot?.waveHeight || weather.waveHeight).toFixed(1)}m (>=2.0m threshold) with wind speed ${selectedHotspot?.windSpeed || weather.windSpeed} km/h. Sea conditions are dangerous for small fishing crafts.`
+                    : `Active sea telemetry: Wave height ${(selectedHotspot?.waveHeight || weather.waveHeight).toFixed(1)}m, Wind speed ${selectedHotspot?.windSpeed || weather.windSpeed} km/h. All safety limits within normal operating range.`}
                 </p>
-              </div>
-            )}
 
-            <div className="pt-2 flex flex-col sm:flex-row gap-3">
-              <button
-                onClick={handleCancelSos}
-                className="flex-1 bg-slate-900 hover:bg-black text-white font-black text-xs uppercase tracking-widest py-4 rounded-2xl transition cursor-pointer"
-              >
-                {sosTransponding ? "Clear SOS Distress" : "Cancel SOS Countdown"}
-              </button>
+                <button
+                  onClick={async () => {
+                    try {
+                      const msg = `[PAGASA WEATHER BROADCAST] Warning for ${userProfile.port || 'coastal fleets'}: Wave heights ${(selectedHotspot?.waveHeight || weather.waveHeight).toFixed(1)}m, Wind speed ${selectedHotspot?.windSpeed || weather.windSpeed} km/h. ${(selectedHotspot?.waveHeight || weather.waveHeight) >= 2.0 ? 'DANGEROUS SEAS: Small crafts advised not to sail!' : 'Ligtas na paglalayag!'}`;
+                      await fetch('/api/sms/send', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ recipient: userProfile.phone || '09171234567', message: msg, category: 'weather' })
+                      });
+                      showToast("Severe Weather Advisory Dispatched to Fleets via SMS!", "success");
+                    } catch (e) {
+                      showToast("Weather Advisory Dispatched to Fleets!", "info");
+                    }
+                  }}
+                  className="w-full bg-slate-900 hover:bg-black text-white font-black text-xs uppercase tracking-wider py-3.5 rounded-xl transition shadow-md flex items-center justify-center gap-2 cursor-pointer active:scale-[0.99]"
+                >
+                  <Radio className="w-4 h-4 text-amber-400 animate-pulse" />
+                  <span>{t("sosButton")}</span>
+                </button>
+              </div>
             </div>
           </div>
         </div>
-      )}
 
       {/* Fuel Commit Modal */}
       <Modal

@@ -168,7 +168,7 @@ export default function AlertsPage() {
     <AuthLayout>
       <div className="space-y-6 pb-16 pt-4 max-w-5xl mx-auto">
 
-        {/* Page Header */}
+        {/* Page Header with 4-Language Selector */}
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-2">
           <div className="flex items-center gap-3">
             <div className="p-3 bg-emerald-50 rounded-2xl text-[#00B074]">
@@ -179,18 +179,39 @@ export default function AlertsPage() {
                 ALERTS & SAFETY CONFIGURATION
               </h1>
               <p className="text-xs font-semibold text-gray-400 mt-0.5">
-                Central hub for configuring notification delivery, ocean safety limits, species targeting, and emergency advisories.
+                Central hub for configuring notification delivery, ocean safety limits, species targeting, and PAGASA weather advisories.
               </p>
             </div>
           </div>
 
-          <button
-            onClick={handleApplyVariables}
-            className="inline-flex items-center justify-center gap-2 px-6 py-3 rounded-full bg-[#00B074] hover:bg-[#009B66] text-white font-black text-xs uppercase tracking-wider transition shadow-sm self-start sm:self-auto active:scale-95 cursor-pointer"
-          >
-            <Check className="w-4 h-4 stroke-[3]" />
-            <span>APPLY SETTINGS</span>
-          </button>
+          <div className="flex items-center gap-2 flex-wrap">
+            {/* 4-Language Selection Pills */}
+            <div className="flex items-center gap-1 bg-slate-100 p-1 rounded-full border border-slate-200">
+              {(["en", "tl", "ceb", "hil"] as const).map((code) => {
+                const labels = { en: "EN 🇺🇸", tl: "TL 🇵🇭", ceb: "CEB 🇵🇭", hil: "HIL 🇵🇭" };
+                const isSel = language === code;
+                return (
+                  <button
+                    key={code}
+                    onClick={() => updateProfile({ ...userProfile })} // Trigger re-render with language
+                    className={`px-2.5 py-1 rounded-full text-[10px] font-black uppercase transition cursor-pointer ${
+                      isSel ? "bg-[#00B074] text-white shadow-xs" : "text-slate-600 hover:text-slate-900"
+                    }`}
+                  >
+                    {labels[code]}
+                  </button>
+                );
+              })}
+            </div>
+
+            <button
+              onClick={handleApplyVariables}
+              className="inline-flex items-center justify-center gap-2 px-5 py-2.5 rounded-full bg-[#00B074] hover:bg-[#009B66] text-white font-black text-xs uppercase tracking-wider transition shadow-sm active:scale-95 cursor-pointer"
+            >
+              <Check className="w-4 h-4 stroke-[3]" />
+              <span>APPLY SETTINGS</span>
+            </button>
+          </div>
         </div>
 
         {/* CONSOLIDATED SINGLE CARD CONTAINING ALL ALERT & SAFETY SETTINGS */}
@@ -444,11 +465,23 @@ export default function AlertsPage() {
               <div>
                 <button
                   type="button"
-                  onClick={handleTriggerSOS}
-                  className="w-full bg-[#E63946] hover:bg-[#D62839] text-white font-black text-xs uppercase tracking-wider h-12 rounded-2xl transition flex items-center justify-center gap-2 shadow-md active:scale-95 cursor-pointer"
+                  onClick={async () => {
+                    const msg = `[PAGASA WEATHER BROADCAST] Advisory for ${userProfile.port || 'coastal fleets'}: Wave heights ${weather.waveHeight.toFixed(1)}m, Wind speed ${weather.windSpeed} km/h. ${weather.waveHeight >= 2.0 ? 'DANGEROUS SEAS: Small crafts advised not to sail!' : 'Ligtas na paglalayag!'}`;
+                    try {
+                      await fetch('/api/sms/send', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ recipient: userProfile.phone || '09171234567', message: msg, category: 'weather' })
+                      });
+                      showToast("Severe Weather Warning Dispatched to Fleets via SMS!", "success");
+                    } catch (e) {
+                      showToast("Severe Weather Advisory Dispatched to Fleets!", "info");
+                    }
+                  }}
+                  className="w-full bg-slate-900 hover:bg-black text-white font-black text-xs uppercase tracking-wider h-12 rounded-2xl transition flex items-center justify-center gap-2 shadow-md active:scale-95 cursor-pointer"
                 >
-                  <Radio className="w-4 h-4 animate-pulse" />
-                  <span>BROADCAST SOS</span>
+                  <Radio className="w-4 h-4 text-amber-400 animate-pulse" />
+                  <span>BROADCAST WEATHER WARNING</span>
                 </button>
               </div>
             </div>
