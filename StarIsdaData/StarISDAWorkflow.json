@@ -1,0 +1,415 @@
+{
+  "name": "StarISDA",
+  "nodes": [
+    {
+      "parameters": {},
+      "type": "n8n-nodes-base.manualTrigger",
+      "typeVersion": 1,
+      "position": [-800, 160],
+      "id": "manual-trigger",
+      "name": "Manual Trigger"
+    },
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            { "field": "hours", "hoursInterval": 6 }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.3,
+      "position": [-800, -80],
+      "id": "schedule-trigger",
+      "name": "Schedule Trigger"
+    },
+    {
+      "parameters": {
+        "url": "https://marine-api.open-meteo.com/v1/marine",
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            { "name": "latitude", "value": "10.3157" },
+            { "name": "longitude", "value": "123.8854" },
+            { "name": "hourly", "value": "wave_height" },
+            { "name": "timezone", "value": "Asia/Manila" }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [-560, -180],
+      "id": "marine-weather",
+      "name": "Open-Meteo Marine"
+    },
+    {
+      "parameters": {
+        "url": "https://api.open-meteo.com/v1/forecast",
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            { "name": "latitude", "value": "10.3157" },
+            { "name": "longitude", "value": "123.8854" },
+            { "name": "hourly", "value": "wind_speed_10m,wind_direction_10m" },
+            { "name": "timezone", "value": "Asia/Manila" }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [-560, 20],
+      "id": "marine-wind",
+      "name": "Open-Meteo Wind"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "name": "wave_height",
+              "value": "={{$json.hourly.wave_height[0]}}",
+              "type": "number"
+            },
+            {
+              "name": "marine_time",
+              "value": "={{$json.hourly.time[0]}}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [-320, -180],
+      "id": "set-marine-wave",
+      "name": "Set Marine Wave"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "name": "wind_speed",
+              "value": "={{$json.hourly.wind_speed_10m[0]}}",
+              "type": "number"
+            },
+            {
+              "name": "wind_direction",
+              "value": "={{$json.hourly.wind_direction_10m[0]}}",
+              "type": "number"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [-320, 20],
+      "id": "set-marine-wind",
+      "name": "Set Marine Wind"
+    },
+    {
+      "parameters": {
+        "mode": "combine",
+        "combineBy": "combineByPosition",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.merge",
+      "typeVersion": 3.2,
+      "position": [-80, -80],
+      "id": "merge-marine",
+      "name": "Merge Marine Data"
+    },
+    {
+      "parameters": {
+        "url": "http://host.docker.internal:8000/update-environment",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [-560, 260],
+      "id": "update-environment",
+      "name": "Update Environment"
+    },
+    {
+      "parameters": {
+        "url": "http://host.docker.internal:8000/environment",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [-320, 260],
+      "id": "get-environment",
+      "name": "Get Environment"
+    },
+    {
+      "parameters": {
+        "url": "http://host.docker.internal:8000/update-pelagic",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [-560, 400],
+      "id": "update-pelagic",
+      "name": "Update Pelagic"
+    },
+    {
+      "parameters": {
+        "url": "http://host.docker.internal:8000/pelagic",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [-320, 400],
+      "id": "get-pelagic",
+      "name": "Get Pelagic"
+    },
+    {
+      "parameters": {
+        "url": "http://host.docker.internal:8000/update-reef-demersal",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [-560, 640],
+      "id": "update-reef",
+      "name": "Update Reef Demersal"
+    },
+    {
+      "parameters": {
+        "url": "http://host.docker.internal:8000/reef-demersal",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [-320, 640],
+      "id": "get-reef",
+      "name": "Get Reef Demersal"
+    },
+    {
+      "parameters": {
+        "url": "https://pagasa.chlod.net/api/v1/bulletin/list",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [-560, 880],
+      "id": "pagasa-bulletin",
+      "name": "PAGASA Bulletin"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "name": "storm_name",
+              "value": "={{ $json.bulletins && $json.bulletins[0] ? $json.bulletins[0].name : 'No active bulletin' }}",
+              "type": "string"
+            },
+            {
+              "name": "danger_level",
+              "value": "={{ $json.bulletins && $json.bulletins[0] ? $json.bulletins[0].count : 'No bulletin' }}",
+              "type": "string"
+            },
+            {
+              "name": "maritime_safety_status",
+              "value": "={{ $json.bulletins && $json.bulletins[0] ? ($json.bulletins[0].final ? 'Final bulletin' : 'Active bulletin') : 'No bulletin' }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [-320, 880],
+      "id": "parse-pagasa",
+      "name": "Parse PAGASA"
+    },
+    {
+      "parameters": {
+        "mode": "combine",
+        "combineBy": "combineByPosition",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.merge",
+      "typeVersion": 3.2,
+      "position": [160, 160],
+      "id": "merge-weather-environment",
+      "name": "Merge Weather+Environment"
+    },
+    {
+      "parameters": {
+        "mode": "combine",
+        "combineBy": "combineByPosition",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.merge",
+      "typeVersion": 3.2,
+      "position": [400, 400],
+      "id": "merge-pelagic",
+      "name": "Merge With Pelagic"
+    },
+    {
+      "parameters": {
+        "mode": "combine",
+        "combineBy": "combineByPosition",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.merge",
+      "typeVersion": 3.2,
+      "position": [640, 640],
+      "id": "merge-reef",
+      "name": "Merge With Reef"
+    },
+    {
+      "parameters": {
+        "mode": "combine",
+        "combineBy": "combineByPosition",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.merge",
+      "typeVersion": 3.2,
+      "position": [880, 640],
+      "id": "merge-all-data",
+      "name": "Merge All Data"
+    },
+    {
+      "parameters": {
+        "jsCode": "function stripNulls(obj) {\n  if (!obj) return obj;\n  const copy = { ...obj };\n  for (const k of Object.keys(copy)) {\n    if (copy[k] == null) delete copy[k];\n  }\n  return copy;\n}\n\nconst weather = $(\"Merge Marine Data\").item.json ?? null;\nconst environment = $(\"Get Environment\").item.json ?? null;\nconst pelagic = $(\"Get Pelagic\").item.json ?? null;\nconst reef = $(\"Get Reef Demersal\").item.json ?? null;\nconst pagasa = $(\"Parse PAGASA\").item.json ?? null;\n\nconst reasons = [];\nif ((weather?.wave_height ?? 0) >= 3) reasons.push('high wave height');\nif ((weather?.wind_speed ?? 0) >= 20) reasons.push('strong wind');\nif (pagasa?.storm_name && pagasa.storm_name !== 'No active bulletin') reasons.push('PAGASA bulletin');\n\nreturn [{\n  json: {\n    weather: stripNulls(weather),\n    environment: stripNulls(environment),\n    pelagic: stripNulls(pelagic),\n    reef: stripNulls(reef),\n    pagasa: stripNulls(pagasa),\n    safety_override: {\n      active: reasons.length > 0,\n      reason: reasons.join(', ') || 'No override',\n      severity: reasons.length > 0 ? 'high' : 'normal'\n    }\n  }\n}];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1120, 640],
+      "id": "safety-override",
+      "name": "Safety Override"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Manual Trigger": {
+      "main": [
+        [
+          { "node": "Open-Meteo Marine", "type": "main", "index": 0 },
+          { "node": "Open-Meteo Wind", "type": "main", "index": 0 },
+          { "node": "Update Environment", "type": "main", "index": 0 },
+          { "node": "Update Pelagic", "type": "main", "index": 0 },
+          { "node": "Update Reef Demersal", "type": "main", "index": 0 },
+          { "node": "PAGASA Bulletin", "type": "main", "index": 0 }
+        ]
+      ]
+    },
+    "Schedule Trigger": {
+      "main": [
+        [
+          { "node": "Open-Meteo Marine", "type": "main", "index": 0 },
+          { "node": "Open-Meteo Wind", "type": "main", "index": 0 },
+          { "node": "Update Environment", "type": "main", "index": 0 },
+          { "node": "Update Pelagic", "type": "main", "index": 0 },
+          { "node": "Update Reef Demersal", "type": "main", "index": 0 },
+          { "node": "PAGASA Bulletin", "type": "main", "index": 0 }
+        ]
+      ]
+    },
+    "Open-Meteo Marine": {
+      "main": [
+        [{ "node": "Set Marine Wave", "type": "main", "index": 0 }]
+      ]
+    },
+    "Open-Meteo Wind": {
+      "main": [
+        [{ "node": "Set Marine Wind", "type": "main", "index": 0 }]
+      ]
+    },
+    "Set Marine Wave": {
+      "main": [
+        [{ "node": "Merge Marine Data", "type": "main", "index": 0 }]
+      ]
+    },
+    "Set Marine Wind": {
+      "main": [
+        [{ "node": "Merge Marine Data", "type": "main", "index": 1 }]
+      ]
+    },
+    "Merge Marine Data": {
+      "main": [
+        [{ "node": "Merge Weather+Environment", "type": "main", "index": 0 }]
+      ]
+    },
+    "Update Environment": {
+      "main": [
+        [{ "node": "Get Environment", "type": "main", "index": 0 }]
+      ]
+    },
+    "Get Environment": {
+      "main": [
+        [{ "node": "Merge Weather+Environment", "type": "main", "index": 1 }]
+      ]
+    },
+    "Update Pelagic": {
+      "main": [
+        [{ "node": "Get Pelagic", "type": "main", "index": 0 }]
+      ]
+    },
+    "Get Pelagic": {
+      "main": [
+        [{ "node": "Merge With Pelagic", "type": "main", "index": 1 }]
+      ]
+    },
+    "Update Reef Demersal": {
+      "main": [
+        [{ "node": "Get Reef Demersal", "type": "main", "index": 0 }]
+      ]
+    },
+    "Get Reef Demersal": {
+      "main": [
+        [{ "node": "Merge With Reef", "type": "main", "index": 1 }]
+      ]
+    },
+    "PAGASA Bulletin": {
+      "main": [
+        [{ "node": "Parse PAGASA", "type": "main", "index": 0 }]
+      ]
+    },
+    "Parse PAGASA": {
+      "main": [
+        [{ "node": "Merge All Data", "type": "main", "index": 2 }]
+      ]
+    },
+    "Merge Weather+Environment": {
+      "main": [
+        [{ "node": "Merge With Pelagic", "type": "main", "index": 0 }]
+      ]
+    },
+    "Merge With Pelagic": {
+      "main": [
+        [{ "node": "Merge With Reef", "type": "main", "index": 0 }]
+      ]
+    },
+    "Merge With Reef": {
+      "main": [
+        [{ "node": "Merge All Data", "type": "main", "index": 0 }]
+      ]
+    },
+    "Merge All Data": {
+      "main": [
+        [{ "node": "Safety Override", "type": "main", "index": 0 }]
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate",
+    "availableInMCP": false
+  },
+  "versionId": "starisda-minimal-v2",
+  "meta": {
+    "templateCredsSetupCompleted": true
+  },
+  "id": "starisda-workflow",
+  "tags": []
+}
