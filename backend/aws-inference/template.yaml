@@ -1,0 +1,53 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Transform: AWS::Serverless-2016-10-31
+Description: >
+  parola-inference-pipeline
+  
+  SAM Template for the Parola Project Pelagic Model daily inference pipeline.
+
+Resources:
+  ParolaInferenceFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      PackageType: Image
+      Architectures:
+        - arm64
+      MemorySize: 3008
+      Timeout: 900
+      Environment:
+        Variables:
+          MODEL_BUCKET_NAME: !Ref ParolaDataBucket
+      Policies:
+        - S3ReadPolicy:
+            BucketName: !Ref ParolaDataBucket
+        - S3WritePolicy:
+            BucketName: !Ref ParolaDataBucket
+      Events:
+        DailyInferenceSchedule:
+          Type: Schedule
+          Properties:
+            Schedule: 'cron(0 3 * * ? *)'
+            Name: ParolaDailyInferenceSchedule
+            Description: Trigger the model inference every morning at 3:00 AM UTC
+    Metadata:
+      Dockerfile: Dockerfile
+      DockerContext: .
+      DockerTag: latest
+
+  ParolaDataBucket:
+    Type: AWS::S3::Bucket
+    Properties:
+      BucketName: !Sub "parola-data-bucket-${AWS::AccountId}-${AWS::Region}"
+      PublicAccessBlockConfiguration:
+        BlockPublicAcls: true
+        BlockPublicPolicy: true
+        IgnorePublicAcls: true
+        RestrictPublicBuckets: true
+
+Outputs:
+  ParolaInferenceFunctionArn:
+    Description: "Parola Inference Lambda Function ARN"
+    Value: !GetAtt ParolaInferenceFunction.Arn
+  ParolaDataBucketName:
+    Description: "S3 Bucket containing the model and output advisories"
+    Value: !Ref ParolaDataBucket
