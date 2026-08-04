@@ -158,24 +158,20 @@ export async function fetchHotspots(userLat: number, userLng: number, selectedSp
   if (selectedSpecies && selectedSpecies.length > 0 && selectedSpecies[0]) {
     const apiHotspots = await fetchHotspotsFromApi(userLat, userLng, selectedSpecies);
     if (apiHotspots.length > 0) {
-      console.log(`[Hotspots] Loaded ${apiHotspots.length} species-filtered hotspots from API route for: ${selectedSpecies[0]}`);
       return apiHotspots;
     }
   }
 
   const sbHotspots = await fetchHotspotsFromSupabase(userLat, userLng, selectedSpecies);
   if (sbHotspots.length > 0) {
-    console.log(`[Hotspots] Loaded ${sbHotspots.length} hotspots (>= 0.60 prob) from Supabase direct query`);
     return sbHotspots;
   }
 
   const apiHotspots = await fetchHotspotsFromApi(userLat, userLng, selectedSpecies);
   if (apiHotspots.length > 0) {
-    console.log(`[Hotspots] Loaded ${apiHotspots.length} hotspots (>= 0.60 prob) from API route`);
     return apiHotspots;
   }
 
-  console.warn('[Hotspots] No live hotspot data available from any source');
   return [];
 }
 

@@ -6,8 +6,7 @@ import { storageService } from "../services/storageService";
 import { fetchLiveWeather } from "../services/weatherService";
 import { fetchHotspots } from "../services/supabaseHotspotService";
 import { fetchWeatherSafetyOverrides, fetchSupabaseWeatherData } from "../services/supabaseWeatherService";
-import { fetchUserProfile, createUserProfile, updateUserProfile } from "../services/profileService";
-import { supabase } from "../lib/supabase";
+import { createUserProfile } from "../services/profileService";
 
 // Default pre-configured Philippine hotspots
 export const DEFAULT_HOTSPOTS: Hotspot[] = [

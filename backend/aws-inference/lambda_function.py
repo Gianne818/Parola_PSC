@@ -1,5 +1,4 @@
 import os
-import sys
 import json
 import logging
 from datetime import datetime, date
@@ -38,10 +37,10 @@ BUCKET_NAME = os.environ.get('MODEL_BUCKET_NAME', 'parola-data-bucket-7159914115
 MODEL_KEY = os.environ.get('MODEL_KEY', 'models/parola_pelagic_model_v2.txt')
 MODEL_LOCAL_PATH = '/tmp/parola_pelagic_model_v2.txt'
 
-COPERNICUS_USER = os.environ.get('COPERNICUS_USERNAME', 'sstu')
-COPERNICUS_PASS = os.environ.get('COPERNICUS_PASSWORD', 'StarISDA!234')
+COPERNICUS_USER = os.environ.get('COPERNICUS_USERNAME')
+COPERNICUS_PASS = os.environ.get('COPERNICUS_PASSWORD')
 
-DATABASE_URL = os.environ.get('DATABASE_URL', 'postgresql://postgres.aafqdvhfycqbsvmvaxmz:StarISDA!23@aws-1-ap-southeast-2.pooler.supabase.com:6543/postgres?pgbouncer=true')
+DATABASE_URL = os.environ.get('DATABASE_URL')
 OPEN_METEO_MARINE_URL = os.environ.get('OPEN_METEO_MARINE_API_URL', 'https://marine-api.open-meteo.com/v1/marine')
 OPEN_METEO_FORECAST_URL = os.environ.get('OPEN_METEO_FORECAST_API_URL', 'https://api.open-meteo.com/v1/forecast')
 PAGASA_BULLETIN_URL = os.environ.get('PAGASA_BULLETIN_API_URL', 'https://pagasa.chlod.net/api/v1/bulletin/list')
@@ -386,6 +385,11 @@ def sync_to_database(df_hotspots, safety_override, model_type='pelagic', clear_o
 # ============================================================================
 
 def handler(event, context):
+    """
+    Main AWS Lambda handler for executing the daily Parola ML pipeline.
+    Orchestrates model loading, weather data fetching, safety evaluation,
+    ocean data processing, and database syncing.
+    """
     try:
         logger.info("Initializing Parola Daily Inference Lambda Pipeline (Pelagic + Demersal Cloud Version)...")
         
@@ -496,5 +500,3 @@ def handler(event, context):
 
 if __name__ == "__main__":
     res = handler({}, None)
-    print("\n--- LOCAL TEST EXECUTION SUCCESSFUL ---")
-    print(json.dumps(res, indent=2))

@@ -1,14 +1,18 @@
 import os
+import logging
 from dotenv import load_dotenv
 from sqlalchemy import create_engine
 from sqlalchemy.orm import declarative_base, sessionmaker
+
+logger = logging.getLogger(__name__)
+logger.setLevel(logging.WARNING)
 
 load_dotenv()
 
 DATABASE_URL = os.getenv("DATABASE_URL")
 
 if DATABASE_URL and "[YOUR-PASSWORD]" in DATABASE_URL:
-    print("[WARNING] DATABASE_URL contains '[YOUR-PASSWORD]'. Please update parola-api-service/.env with your actual Supabase database password.")
+    logger.warning("DATABASE_URL contains '[YOUR-PASSWORD]'. Please update parola-api-service/.env with your actual Supabase database password.")
 
 if DATABASE_URL and DATABASE_URL.startswith("postgresql://"):
     DATABASE_URL = DATABASE_URL.replace("postgresql://", "postgresql+psycopg://", 1)
@@ -22,7 +26,7 @@ if DATABASE_URL and ":[" in DATABASE_URL and "]@" in DATABASE_URL:
         DATABASE_URL = DATABASE_URL[:start+1] + pwd + DATABASE_URL[end+1:]
 
 if not DATABASE_URL:
-    print("WARNING: DATABASE_URL environment variable is missing. Using default placeholder.")
+    logger.warning("DATABASE_URL environment variable is missing. Using default placeholder.")
     DATABASE_URL = "postgresql+psycopg://postgres:password@localhost:5432/postgres"
 
 engine = create_engine(DATABASE_URL, pool_pre_ping=True)

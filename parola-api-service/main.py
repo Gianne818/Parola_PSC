@@ -193,7 +193,7 @@ def find_species_profile(db: Session, query_str: str) -> Optional[dict]:
                     "depth_max": sp.depth_max,
                 }
     except Exception as e:
-        print(f"Error querying species table from DB: {e}")
+        pass
 
     for sp in DEFAULT_SPECIES_SEED:
         n_match = lower in sp["species_name"].lower() or sp["species_name"].lower() in lower
@@ -303,7 +303,7 @@ def startup_db_migration():
                     db.add(sp)
             db.commit()
     except Exception as e:
-        print(f"Startup migration notice: {e}")
+        pass
 
 
 @app.exception_handler(OperationalError)
@@ -663,7 +663,7 @@ def get_all_species(db: Session = Depends(get_db)):
                 depth_max=sp.depth_max,
             ))
     except Exception as e:
-        print(f"Error reading species DB: {e}")
+        pass
 
     if not results:
         for sp in DEFAULT_SPECIES_SEED:
