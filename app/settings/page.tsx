@@ -13,11 +13,12 @@ import {
   Target,
   Check,
   Radio,
-  Sparkles,
+  Send,
+  Smartphone,
+  MessageSquare,
   RefreshCw,
-  Volume2
+  CheckCircle2
 } from "lucide-react";
-import ReactMarkdown from "react-markdown";
 
 export default function SettingsPage() {
   const {
@@ -50,9 +51,9 @@ export default function SettingsPage() {
   const [pelagicSelected, setPelagicSelected] = useState(true);
   const [demersalSelected, setDemersalSelected] = useState(false);
 
-  // AI Advisor State
-  const [aiReport, setAiReport] = useState<string | null>(null);
-  const [aiLoading, setAiLoading] = useState(false);
+  // SMS Simulation State
+  const [smsSending, setSmsSending] = useState(false);
+  const [lastSmsResult, setLastSmsResult] = useState<any>(null);
 
   const handleApplyVariables = () => {
     // Determine species target string
@@ -72,39 +73,40 @@ export default function SettingsPage() {
     showToast("SOS Distress Signal Broadcasted to Coast Guard!", "error");
   };
 
-  const handleGenerateAdvisorReport = async () => {
-    setAiLoading(true);
-    setAiReport(null);
+  const handleSimulateSmsAdvisory = async () => {
+    setSmsSending(true);
+    setLastSmsResult(null);
+
+    const recipientPhone = userProfile.phone || "09171234567";
+    const sampleMessage = `[PAROLA ADVISORY] Magandang araw ${userProfile.vesselName || 'Ka-Isda'}! Inirekomendang isdaan para sa ${userProfile.port || 'Brgy Pasil'}: Hotspot #1 (8.4km, NNE). Alon: ${weather.waveHeight}m, Hangin: ${weather.windSpeed}km/h (${weather.windDirection}). Ligtas na paglalayag!`;
 
     try {
-      const response = await fetch("/api/gemini/advisor", {
+      const response = await fetch("/api/sms/send", {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          language,
-          port: userProfile.port,
-          weather,
-          species:
-            userProfile.speciesPreference === "both"
-              ? "Tuna and Tamban"
-              : userProfile.speciesPreference,
-        }),
+          recipient: recipientPhone,
+          message: sampleMessage,
+          category: "weather"
+        })
       });
 
-      if (!response.ok) {
-        throw new Error("Failed to reach server-side Gemini gateway");
+      const data = await response.json();
+      if (!response.ok || data.error) {
+        throw new Error(data.error || "Failed to dispatch simulated SMS");
       }
 
-      const data = await response.json();
-      setAiReport(data.advice);
-      showToast("AI Lighthouse advice generated!", "success");
-    } catch (error: any) {
-      console.error(error);
-      showToast(error.message || "Failed to generate advice", "error");
+      setLastSmsResult(data);
+      showToast(
+        data.mode === "MOCK_DRY_RUN"
+          ? `[DRY-RUN] SMS Advisory Simulated to ${data.recipientFormatted || recipientPhone}!`
+          : `SMS Advisory Dispatched to ${data.recipientFormatted || recipientPhone}!`,
+        "success"
+      );
+    } catch (err: any) {
+      showToast(err.message || "Failed to send SMS advisory", "error");
     } finally {
-      setAiLoading(false);
+      setSmsSending(false);
     }
   };
 
@@ -268,41 +270,81 @@ export default function SettingsPage() {
                 </div>
               </div>
 
-              {/* AI Advisor Card */}
-              <div className="bg-slate-900 text-white rounded-[2rem] p-6 sm:p-7 space-y-5 shadow-md">
-                <div className="flex items-center gap-2">
-                  <Sparkles className="w-4 h-4 text-[#00B074]" />
-                  <h2 className="font-display font-black text-xs uppercase tracking-wider text-white">
-                    PAROLA AI ADVISOR
-                  </h2>
+              {/* SIMULATE SMS ADVISORY CARD */}
+              <div className="bg-white border border-gray-200/80 rounded-[2rem] p-6 sm:p-7 shadow-md space-y-5">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <Smartphone className="w-4 h-4 text-[#00B074]" />
+                    <h2 className="font-display font-black text-xs uppercase tracking-wider text-slate-900">
+                      SIMULATE SMS ADVISORY
+                    </h2>
+                  </div>
+                  <span className="px-2.5 py-1 bg-emerald-50 border border-emerald-200 text-[#00B074] text-[10px] font-black rounded-full uppercase">
+                    iPROG Gateway
+                  </span>
                 </div>
 
-                <p className="text-xs font-semibold text-gray-400 leading-relaxed">
-                  Generate instant live advice based on current coastal metrics, port location, and species preferences.
+                <p className="text-xs font-semibold text-gray-500 leading-relaxed">
+                  Trigger an immediate test fishing advisory SMS to your registered mobile number to verify gateway connectivity.
                 </p>
 
+                {/* Target Registered Mobile Display */}
+                <div className="bg-slate-50 border border-gray-200/80 rounded-2xl p-4 flex items-center justify-between">
+                  <div className="flex items-center gap-3">
+                    <div className="w-9 h-9 rounded-xl bg-emerald-100/70 text-[#00B074] flex items-center justify-center font-bold">
+                      <Smartphone className="w-4 h-4" />
+                    </div>
+                    <div>
+                      <span className="text-[10px] font-black text-gray-400 uppercase block tracking-wider">
+                        Registered Number
+                      </span>
+                      <span className="text-xs font-black text-slate-900">
+                        {userProfile.phone || "0917 123 4567"}
+                      </span>
+                    </div>
+                  </div>
+                  <span className="text-[10px] font-bold text-gray-400">
+                    Port: {userProfile.port || 'Brgy Pasil'}
+                  </span>
+                </div>
+
+                {/* Send Test SMS Button */}
                 <button
                   type="button"
-                  onClick={handleGenerateAdvisorReport}
-                  disabled={aiLoading}
-                  className="w-full bg-[#00B074] hover:bg-[#009B66] disabled:opacity-50 text-white font-black text-xs uppercase tracking-wider py-3.5 rounded-2xl transition flex items-center justify-center gap-2"
+                  onClick={handleSimulateSmsAdvisory}
+                  disabled={smsSending}
+                  className="w-full bg-[#00B074] hover:bg-[#009B66] disabled:opacity-50 text-white font-black text-xs uppercase tracking-wider py-4 rounded-2xl transition flex items-center justify-center gap-2 shadow-sm active:scale-95 cursor-pointer"
                 >
-                  {aiLoading ? (
+                  {smsSending ? (
                     <>
                       <RefreshCw className="w-4 h-4 animate-spin" />
-                      <span>GENERATING ADVICE...</span>
+                      <span>DISPATCHING TEST ADVISORY...</span>
                     </>
                   ) : (
                     <>
-                      <Volume2 className="w-4 h-4" />
-                      <span>GENERATE LIGHTHOUSE REPORT</span>
+                      <Send className="w-4 h-4" />
+                      <span>SIMULATE SMS DISPATCH</span>
                     </>
                   )}
                 </button>
 
-                {aiReport && (
-                  <div className="bg-slate-800/80 border border-slate-700 rounded-2xl p-4 text-xs font-semibold leading-relaxed max-h-60 overflow-y-auto text-gray-200">
-                    <ReactMarkdown>{aiReport}</ReactMarkdown>
+                {/* Result Output Card */}
+                {lastSmsResult && (
+                  <div className="bg-slate-900 text-white rounded-2xl p-4 space-y-2.5 text-xs">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-1.5 text-emerald-400 font-black">
+                        <CheckCircle2 className="w-4 h-4" />
+                        <span>Dispatched Successfully</span>
+                      </div>
+                      <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-slate-800 text-emerald-300">
+                        {lastSmsResult.mode}
+                      </span>
+                    </div>
+
+                    <div className="text-[11px] font-mono text-gray-300 space-y-1 pt-1 border-t border-slate-800">
+                      <div><strong className="text-gray-400">Recipient:</strong> {lastSmsResult.recipientFormatted}</div>
+                      <div><strong className="text-gray-400">Message ID:</strong> {lastSmsResult.messageId}</div>
+                    </div>
                   </div>
                 )}
               </div>

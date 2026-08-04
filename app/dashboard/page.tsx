@@ -32,13 +32,30 @@ import {
   ThumbsUp,
   ThumbsDown,
   Meh,
-  GripVertical
+  GripVertical,
+  Fish,
+  Anchor
 } from "lucide-react";
 
 const SPECIES_FAMILIES = [
   { id: "pelagic", label: "Surface & Open Water", local: "Pelagic Species" },
   { id: "demersal", label: "Bottom & Reef Fish", local: "Demersal Species" }
 ];
+
+const CATEGORIZED_SPECIES = {
+  pelagic: [
+    { name: "Tamban", localName: "Sardines", desc: "Surface & Open Water" },
+    { name: "Tuna", localName: "Tulingan", desc: "Oceanic Pelagic" },
+    { name: "Galunggong", localName: "Round Scad", desc: "Upper Water Column" },
+    { name: "Talakitok", localName: "Trevally", desc: "Surface & Coastal" },
+  ],
+  demersal: [
+    { name: "Lapu-Lapu", localName: "Grouper", desc: "Coral Reef Bottom" },
+    { name: "Maya-Maya", localName: "Red Snapper", desc: "Deep Reef Seabed" },
+    { name: "Alimasag", localName: "Blue Crab", desc: "Seabed & Mud Floor" },
+    { name: "Sapsap", localName: "Ponyfish", desc: "Coastal Seabed" },
+  ],
+};
 
 export default function DashboardPage() {
   const {
@@ -661,68 +678,111 @@ export default function DashboardPage() {
                   </button>
                 </div>
 
-                {/* Biological Species Groups */}
-                <div className="space-y-2 border border-gray-200 p-4 rounded-2xl bg-white shadow-md">
-                  <span className="text-[9px] font-black text-gray-400 uppercase tracking-widest block mb-2">
-                    FISH HABITAT CATEGORIES (SURFACE & BOTTOM REEF)
-                  </span>
+                {/* Categorized Species by Habitat */}
+                <div className="space-y-4 pt-1">
+                  {/* Surface Water Species Section (shown if activeTab is "pelagic" or "both") */}
+                  {(activeTab === "pelagic" || activeTab === "both") && (
+                    <div className="bg-emerald-50/60 border border-emerald-200/80 p-4 rounded-2xl space-y-3 shadow-xs">
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-2">
+                          <Fish className="w-4 h-4 text-[#00B074]" />
+                          <span className="font-display font-black text-xs uppercase tracking-wider text-slate-900">
+                            Surface Water Species (Pelagic)
+                          </span>
+                        </div>
+                        <span className="text-[9px] font-extrabold uppercase px-2.5 py-0.5 rounded-full bg-emerald-100 text-[#00B074]">
+                          Upper Ocean
+                        </span>
+                      </div>
+                      <p className="text-[10px] font-semibold text-gray-500">
+                        Fish that swim in surface & open water. Click to filter hotspots on radar:
+                      </p>
+                      <div className="grid grid-cols-2 gap-2">
+                        {CATEGORIZED_SPECIES.pelagic.map((sp) => {
+                          const isSelected = selectedSpecies.includes(sp.name);
+                          return (
+                            <button
+                              key={sp.name}
+                              onClick={() => handleSpeciesToggle(sp.name)}
+                              className={`p-2.5 rounded-xl border text-left flex items-center justify-between transition-all cursor-pointer ${isSelected
+                                ? "bg-[#00B074] text-white border-[#00B074] shadow-xs font-black"
+                                : "bg-white border-gray-200 text-slate-800 hover:border-emerald-300"
+                                }`}
+                            >
+                              <div className="min-w-0 pr-1">
+                                <span className={`text-xs font-black block truncate ${isSelected ? "text-white" : "text-slate-900"}`}>
+                                  {sp.name}
+                                </span>
+                                <span className={`text-[9px] font-bold block truncate mt-0.5 ${isSelected ? "text-emerald-100" : "text-gray-400"}`}>
+                                  {sp.localName}
+                                </span>
+                              </div>
+                              <div
+                                className={`w-4 h-4 rounded-full border flex items-center justify-center shrink-0 ${isSelected
+                                  ? "bg-white text-[#00B074] border-white"
+                                  : "border-gray-300"
+                                  }`}
+                              >
+                                {isSelected && <Check className="w-3 h-3 stroke-[3]" />}
+                              </div>
+                            </button>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  )}
 
-                  <div className="grid grid-cols-2 gap-2">
-                    {SPECIES_FAMILIES.map((family) => {
-                      const isChecked = checkedFamilies.includes(family.id);
-                      return (
-                        <button
-                          key={family.id}
-                          onClick={() => toggleFamilyCheckbox(family.id)}
-                          className={`p-2.5 rounded-xl border text-left flex items-center justify-between transition-all cursor-pointer ${isChecked
-                            ? "bg-white border-[#00B074] text-[#00B074] font-bold"
-                            : "bg-white border-gray-200 text-gray-500"
-                            }`}
-                        >
-                          <div className="truncate pr-1">
-                            <div className={`text-xs font-black truncate ${isChecked ? "text-[#00B074]" : family.id === "demersal" ? "text-[#E07A5F]" : "text-slate-800"}`}>
-                              {family.label}
-                            </div>
-                            <div className={`text-[9px] font-semibold leading-none truncate mt-0.5 ${isChecked ? "text-[#00B074]/80" : family.id === "demersal" ? "text-[#E07A5F]/80" : "text-gray-400"}`}>
-                              {family.local}
-                            </div>
-                          </div>
-                          <div
-                            className={`w-4 h-4 rounded border flex items-center justify-center shrink-0 ${isChecked
-                              ? "border-[#00B074] bg-[#00B074] text-white"
-                              : "border-gray-300"
-                              }`}
-                          >
-                            {isChecked && <Check className="w-3 h-3 stroke-[3]" />}
-                          </div>
-                        </button>
-                      );
-                    })}
-                  </div>
-                </div>
-
-                {/* Tag Filter List */}
-                <div className="space-y-1.5 pt-1">
-                  <span className="text-[9px] font-black text-gray-400 uppercase tracking-widest block">
-                    TAG FILTERING (SPECIES TARGET LIST)
-                  </span>
-                  <div className="flex flex-wrap gap-1.5 max-h-28 overflow-y-auto pr-1">
-                    {allSpeciesList.map((sp) => {
-                      const isSelected = selectedSpecies.includes(sp);
-                      return (
-                        <button
-                          key={sp}
-                          onClick={() => handleSpeciesToggle(sp)}
-                          className={`px-3 py-1 rounded-full text-[9px] font-black uppercase tracking-wider border transition cursor-pointer ${isSelected
-                            ? "bg-[#00B074] text-white border-[#00B074] shadow-sm"
-                            : "bg-white border-gray-200 text-slate-600 hover:bg-slate-50"
-                            }`}
-                        >
-                          {sp}
-                        </button>
-                      );
-                    })}
-                  </div>
+                  {/* Bottom & Reef Species Section (shown if activeTab is "demersal" or "both") */}
+                  {(activeTab === "demersal" || activeTab === "both") && (
+                    <div className="bg-amber-50/60 border border-amber-200/80 p-4 rounded-2xl space-y-3 shadow-xs">
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-2">
+                          <Anchor className="w-4 h-4 text-[#D97706]" />
+                          <span className="font-display font-black text-xs uppercase tracking-wider text-slate-900">
+                            Bottom & Reef Species (Demersal)
+                          </span>
+                        </div>
+                        <span className="text-[9px] font-extrabold uppercase px-2.5 py-0.5 rounded-full bg-amber-100 text-[#D97706]">
+                          Seabed & Coral
+                        </span>
+                      </div>
+                      <p className="text-[10px] font-semibold text-gray-500">
+                        Fish that live near seabed, coral reefs & rocky ocean floors. Click to filter:
+                      </p>
+                      <div className="grid grid-cols-2 gap-2">
+                        {CATEGORIZED_SPECIES.demersal.map((sp) => {
+                          const isSelected = selectedSpecies.includes(sp.name);
+                          return (
+                            <button
+                              key={sp.name}
+                              onClick={() => handleSpeciesToggle(sp.name)}
+                              className={`p-2.5 rounded-xl border text-left flex items-center justify-between transition-all cursor-pointer ${isSelected
+                                ? "bg-[#D97706] text-white border-[#D97706] shadow-xs font-black"
+                                : "bg-white border-gray-200 text-slate-800 hover:border-amber-300"
+                                }`}
+                            >
+                              <div className="min-w-0 pr-1">
+                                <span className={`text-xs font-black block truncate ${isSelected ? "text-white" : "text-slate-900"}`}>
+                                  {sp.name}
+                                </span>
+                                <span className={`text-[9px] font-bold block truncate mt-0.5 ${isSelected ? "text-amber-100" : "text-gray-400"}`}>
+                                  {sp.localName}
+                                </span>
+                              </div>
+                              <div
+                                className={`w-4 h-4 rounded-full border flex items-center justify-center shrink-0 ${isSelected
+                                  ? "bg-white text-[#D97706] border-white"
+                                  : "border-gray-300"
+                                  }`}
+                              >
+                                {isSelected && <Check className="w-3 h-3 stroke-[3]" />}
+                              </div>
+                            </button>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  )}
                 </div>
               </div>
 
