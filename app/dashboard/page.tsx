@@ -31,9 +31,7 @@ import {
   Wind,
   Waves,
   RefreshCw,
-  Volume2,
-  VolumeX,
-  Siren,
+  CloudLightning,
   Radio,
   ThumbsUp,
   ThumbsDown,
@@ -89,10 +87,8 @@ export default function DashboardPage() {
   const [isPelagicExpanded, setIsPelagicExpanded] = useState<boolean>(false);
   const [isDemersalExpanded, setIsDemersalExpanded] = useState<boolean>(false);
 
-  // SOS States
-  const [isSosActive, setIsSosActive] = useState(false);
-  const [sosCountdown, setSosCountdown] = useState(5);
-  const [sosTransponding, setSosTransponding] = useState(false);
+  // Weather broadcast sending state
+  const [isWeatherBroadcasting, setIsWeatherBroadcasting] = useState(false);
 
   // Fuel Modal State
   const [selectedPoolId, setSelectedPoolId] = useState<string | null>(null);
@@ -168,34 +164,24 @@ export default function DashboardPage() {
   // Combine calculated safety status with manual override caution hold
   const isSafetyHoldActive = isCalculatedUnsafe || manualOverrideHold;
 
-  // SOS Countdown Timer Logic
-  useEffect(() => {
-    let timer: any;
-    if (isSosActive && sosCountdown > 0) {
-      timer = setTimeout(() => {
-        setSosCountdown(sosCountdown - 1);
-      }, 1000);
-    } else if (isSosActive && sosCountdown === 0) {
-      setTimeout(() => {
-        setSosTransponding(true);
-        showToast("Emergency SOS broadcast transmitted successfully!", "success");
-      }, 0);
+  const handleWeatherBroadcast = async () => {
+    setIsWeatherBroadcasting(true);
+    const isDangerous = isSafetyHoldActive;
+    const msg = isDangerous
+      ? `[PAGASA WEATHER ALERT] ⚠️ DANGEROUS CONDITIONS at ${userProfile.port || 'your area'}: Wave height ${weather.waveHeight.toFixed(1)}m, Wind ${weather.windSpeed} km/h, Storm Signal ${weather.stormSignal}. Small crafts advised NOT to sail. Stay ashore.`
+      : `[PAGASA WEATHER UPDATE] Conditions at ${userProfile.port || 'your area'}: Wave height ${weather.waveHeight.toFixed(1)}m, Wind ${weather.windSpeed} km/h. Within safe limits. Ligtas na paglalayag.`;
+    try {
+      await fetch('/api/sms/send', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ recipient: userProfile.phone || '09171234567', message: msg, category: 'weather' })
+      });
+      showToast(isDangerous ? "⚠️ Storm/Gale Warning broadcast dispatched to fleet!" : "Weather advisory sent to fleet!", isDangerous ? "error" : "success");
+    } catch {
+      showToast(isDangerous ? "Storm warning broadcast dispatched!" : "Weather advisory dispatched!", "info");
+    } finally {
+      setIsWeatherBroadcasting(false);
     }
-    return () => clearTimeout(timer);
-  }, [isSosActive, sosCountdown, showToast]);
-
-  const handleTriggerSos = () => {
-    setIsSosActive(true);
-    setSosCountdown(5);
-    setSosTransponding(false);
-    showToast("SOS countdown activated! Keep phone stable.", "info");
-  };
-
-  const handleCancelSos = () => {
-    setIsSosActive(false);
-    setSosCountdown(5);
-    setSosTransponding(false);
-    showToast("SOS distress broadcast cancelled.", "info");
   };
 
   const handleFeedback = (level: string) => {
@@ -1362,7 +1348,7 @@ export default function DashboardPage() {
                 </div>
               </div>
 
-              {/* ================= SECTION 4: FEEDBACK & EMERGENCY SOS ================= */}
+              {/* ================= SECTION 4: FEEDBACK & WEATHER BROADCAST ================= */}
               <div className="space-y-3 pt-3 border-t border-gray-100">
                 <span className="text-[9px] font-black text-gray-400 uppercase tracking-widest block">
                   COOPERATIVE MODEL CALIBRATION
@@ -1409,56 +1395,83 @@ export default function DashboardPage() {
               </div>
             </div>
 
-            {/* PAGASA Severe Weather & Storm Advisory Broadcast Component */}
-            <div className="pt-3 border-t border-gray-100 mt-4 space-y-2">
-              <div className="p-4 bg-gradient-to-r from-amber-500/10 via-rose-500/5 to-amber-500/10 border border-amber-500/30 rounded-2xl space-y-3 shadow-xs">
+            {/* ===== PAGASA Weather Safety Broadcast Card ===== */}
+            <div className="pt-3 border-t border-gray-100 mt-4">
+              <div className={`p-4 rounded-2xl space-y-3 shadow-xs border ${
+                isSafetyHoldActive
+                  ? "bg-gradient-to-br from-rose-50 to-amber-50 border-rose-300"
+                  : "bg-gradient-to-br from-emerald-50 to-teal-50 border-emerald-200"
+              }`}>
+
+                {/* Header row */}
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-2">
-                    <span className="p-2 bg-amber-500 text-white rounded-xl shadow-xs">
-                      <ShieldAlert className="w-5 h-5" />
+                    <span className={`p-2 rounded-xl shadow-xs text-white ${
+                      isSafetyHoldActive ? "bg-rose-500" : "bg-emerald-500"
+                    }`}>
+                      <CloudLightning className="w-4.5 h-4.5" />
                     </span>
                     <div>
                       <h4 className="font-display font-black text-xs uppercase tracking-wider text-slate-900">
-                        {t("stormWarningTitle")}
+                        PAGASA Weather Broadcast
                       </h4>
                       <span className="text-[10px] text-gray-500 font-bold block mt-0.5">
-                        Broadcast severe weather advisories, gale warnings & rough seas to fleets
+                        Dispatch live weather advisory to your fleet via SMS
                       </span>
                     </div>
                   </div>
                   <span className={`text-[9px] font-black uppercase px-2.5 py-0.5 rounded-full border ${
-                    (selectedHotspot?.waveHeight || weather.waveHeight) >= 2.0 || (selectedHotspot?.stormSignal ?? weather.stormSignal) > 0
+                    isSafetyHoldActive
                       ? "bg-rose-100 text-rose-700 border-rose-200 animate-pulse"
                       : "bg-emerald-100 text-emerald-700 border-emerald-200"
                   }`}>
-                    {(selectedHotspot?.waveHeight || weather.waveHeight) >= 2.0 || (selectedHotspot?.stormSignal ?? weather.stormSignal) > 0 ? "DANGEROUS SEAS" : "FAVORABLE SEAS"}
+                    {isSafetyHoldActive ? "⚠️ DANGEROUS" : "✓ FAVORABLE"}
                   </span>
                 </div>
 
-                <p className="text-[11px] font-medium text-slate-700 leading-snug">
-                  {(selectedHotspot?.waveHeight || weather.waveHeight) >= 2.0 || (selectedHotspot?.stormSignal ?? weather.stormSignal) > 0
-                    ? `⚠️ CAUTION: Wave height is currently ${(selectedHotspot?.waveHeight || weather.waveHeight).toFixed(1)}m (>=2.0m threshold) with wind speed ${selectedHotspot?.windSpeed || weather.windSpeed} km/h. Sea conditions are dangerous for small fishing crafts.`
-                    : `Active sea telemetry: Wave height ${(selectedHotspot?.waveHeight || weather.waveHeight).toFixed(1)}m, Wind speed ${selectedHotspot?.windSpeed || weather.windSpeed} km/h. All safety limits within normal operating range.`}
+                {/* Live telemetry summary */}
+                <div className="grid grid-cols-3 gap-2">
+                  <div className="bg-white/70 rounded-xl p-2.5 text-center border border-white/80">
+                    <Waves className="w-3.5 h-3.5 mx-auto mb-0.5 text-blue-500" />
+                    <span className="text-[10px] font-black text-slate-800 block">{weather.waveHeight.toFixed(1)} m</span>
+                    <span className="text-[8.5px] font-bold text-gray-400 uppercase">Waves</span>
+                  </div>
+                  <div className="bg-white/70 rounded-xl p-2.5 text-center border border-white/80">
+                    <Wind className="w-3.5 h-3.5 mx-auto mb-0.5 text-sky-500" />
+                    <span className="text-[10px] font-black text-slate-800 block">{weather.windSpeed} km/h</span>
+                    <span className="text-[8.5px] font-bold text-gray-400 uppercase">Wind</span>
+                  </div>
+                  <div className="bg-white/70 rounded-xl p-2.5 text-center border border-white/80">
+                    <ShieldAlert className="w-3.5 h-3.5 mx-auto mb-0.5 text-amber-500" />
+                    <span className="text-[10px] font-black text-slate-800 block">Signal {weather.stormSignal}</span>
+                    <span className="text-[8.5px] font-bold text-gray-400 uppercase">Storm</span>
+                  </div>
+                </div>
+
+                {/* Status message */}
+                <p className={`text-[11px] font-semibold leading-snug ${
+                  isSafetyHoldActive ? "text-rose-700" : "text-emerald-700"
+                }`}>
+                  {isSafetyHoldActive
+                    ? `⚠️ Dangerous conditions detected. Wave height ${weather.waveHeight.toFixed(1)}m exceeds safe threshold. Advise all fleet vessels to hold sailing and return to port.`
+                    : `Sea conditions are within safe operating limits. Wave height ${weather.waveHeight.toFixed(1)}m, wind ${weather.windSpeed} km/h. Fleet may proceed with caution.`
+                  }
                 </p>
 
+                {/* Broadcast button */}
                 <button
-                  onClick={async () => {
-                    try {
-                      const msg = `[PAGASA WEATHER BROADCAST] Warning for ${userProfile.port || 'coastal fleets'}: Wave heights ${(selectedHotspot?.waveHeight || weather.waveHeight).toFixed(1)}m, Wind speed ${selectedHotspot?.windSpeed || weather.windSpeed} km/h. ${(selectedHotspot?.waveHeight || weather.waveHeight) >= 2.0 ? 'DANGEROUS SEAS: Small crafts advised not to sail!' : 'Ligtas na paglalayag!'}`;
-                      await fetch('/api/sms/send', {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({ recipient: userProfile.phone || '09171234567', message: msg, category: 'weather' })
-                      });
-                      showToast("Severe Weather Advisory Dispatched to Fleets via SMS!", "success");
-                    } catch (e) {
-                      showToast("Weather Advisory Dispatched to Fleets!", "info");
-                    }
-                  }}
-                  className="w-full bg-slate-900 hover:bg-black text-white font-black text-xs uppercase tracking-wider py-3.5 rounded-xl transition shadow-md flex items-center justify-center gap-2 cursor-pointer active:scale-[0.99]"
+                  onClick={handleWeatherBroadcast}
+                  disabled={isWeatherBroadcasting}
+                  className={`w-full font-black text-xs uppercase tracking-wider py-3.5 rounded-xl transition shadow-md flex items-center justify-center gap-2 cursor-pointer active:scale-[0.99] disabled:opacity-60 disabled:cursor-wait ${
+                    isSafetyHoldActive
+                      ? "bg-rose-600 hover:bg-rose-700 text-white"
+                      : "bg-slate-800 hover:bg-slate-900 text-white"
+                  }`}
                 >
-                  <Radio className="w-4 h-4 text-amber-400 animate-pulse" />
-                  <span>{t("sosButton")}</span>
+                  {isWeatherBroadcasting
+                    ? <><RefreshCw className="w-4 h-4 animate-spin" /><span>Broadcasting...</span></>
+                    : <><Radio className="w-4 h-4 text-amber-300 animate-pulse" /><span>{isSafetyHoldActive ? "Broadcast Gale Warning to Fleet" : "Send Weather Update to Fleet"}</span></>
+                  }
                 </button>
               </div>
             </div>

@@ -21,6 +21,8 @@ import {
   Compass,
   MapPin,
   ExternalLink,
+  Waves,
+  Wind,
   Zap
 } from "lucide-react";
 
@@ -47,7 +49,6 @@ export default function AlertsPage() {
   // Safety Threshold States (Sliders)
   const [waveThreshold, setWaveThreshold] = useState<number>(2.0);
   const [windThreshold, setWindThreshold] = useState<number>(20);
-  const [emergencyContact, setEmergencyContact] = useState("0917 111 2222");
 
   // Model Filter State for Hotspot Calculator & SMS
   const [modelFilter, setModelFilter] = useState<'pelagic' | 'demersal' | 'both'>('pelagic');
@@ -116,9 +117,6 @@ export default function AlertsPage() {
     }
   };
 
-  const handleTriggerSOS = () => {
-    showToast("SOS Distress Signal Broadcasted to Coast Guard & Local Base!", "error");
-  };
 
   const sendSms = async (recipientPhone: string, message: string) => {
     const response = await fetch("/api/sms/send", {
@@ -447,43 +445,91 @@ export default function AlertsPage() {
               </div>
             </div>
 
-            {/* Emergency Base Contact Input & Red SOS Button */}
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 items-end pt-2">
-              <div className="sm:col-span-2 space-y-1.5">
-                <label className="text-[10px] font-black uppercase tracking-wider text-gray-400 block">
-                  EMERGENCY BASE CONTACT NUMBER
-                </label>
-                <input
-                  type="text"
-                  value={emergencyContact}
-                  onChange={(e) => setEmergencyContact(e.target.value)}
-                  placeholder="e.g. Coast Guard or Port Authority hotline"
-                  className="w-full bg-slate-50 border border-gray-200 focus:border-[#00B074] rounded-2xl h-12 px-5 text-xs font-black text-slate-900 focus:outline-none transition"
-                />
+            {/* PAGASA Weather Broadcast Card */}
+            <div className={`mt-2 p-5 rounded-2xl border space-y-4 ${
+              weather.waveHeight >= 2.0 || weather.stormSignal > 0
+                ? "bg-gradient-to-br from-rose-50 to-amber-50 border-rose-200"
+                : "bg-gradient-to-br from-emerald-50 to-teal-50 border-emerald-200"
+            }`}>
+
+              {/* Live telemetry row */}
+              <div className="flex items-center justify-between">
+                <div>
+                  <h3 className="font-display font-black text-sm uppercase tracking-wider text-slate-900">
+                    PAGASA Weather Broadcast
+                  </h3>
+                  <p className="text-[11px] font-semibold text-gray-400 mt-0.5">
+                    Send a live weather advisory or gale warning to your registered fleet.
+                  </p>
+                </div>
+                <span className={`shrink-0 text-[9px] font-black uppercase px-2.5 py-1 rounded-full border ${
+                  weather.waveHeight >= 2.0 || weather.stormSignal > 0
+                    ? "bg-rose-100 text-rose-700 border-rose-200 animate-pulse"
+                    : "bg-emerald-100 text-emerald-700 border-emerald-200"
+                }`}>
+                  {weather.waveHeight >= 2.0 || weather.stormSignal > 0 ? "⚠️ DANGEROUS" : "✓ FAVORABLE"}
+                </span>
               </div>
 
-              <div>
-                <button
-                  type="button"
-                  onClick={async () => {
-                    const msg = `[PAGASA WEATHER BROADCAST] Advisory for ${userProfile.port || 'coastal fleets'}: Wave heights ${weather.waveHeight.toFixed(1)}m, Wind speed ${weather.windSpeed} km/h. ${weather.waveHeight >= 2.0 ? 'DANGEROUS SEAS: Small crafts advised not to sail!' : 'Ligtas na paglalayag!'}`;
-                    try {
-                      await fetch('/api/sms/send', {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({ recipient: userProfile.phone || '09171234567', message: msg, category: 'weather' })
-                      });
-                      showToast("Severe Weather Warning Dispatched to Fleets via SMS!", "success");
-                    } catch (e) {
-                      showToast("Severe Weather Advisory Dispatched to Fleets!", "info");
-                    }
-                  }}
-                  className="w-full bg-slate-900 hover:bg-black text-white font-black text-xs uppercase tracking-wider h-12 rounded-2xl transition flex items-center justify-center gap-2 shadow-md active:scale-95 cursor-pointer"
-                >
-                  <Radio className="w-4 h-4 text-amber-400 animate-pulse" />
-                  <span>BROADCAST WEATHER WARNING</span>
-                </button>
+              {/* Metrics grid */}
+              <div className="grid grid-cols-3 gap-3">
+                <div className="bg-white/80 rounded-xl p-3 text-center border border-white shadow-xs">
+                  <Waves className="w-4 h-4 mx-auto mb-1 text-blue-500" />
+                  <span className="text-sm font-black text-slate-900 block">{weather.waveHeight.toFixed(1)} m</span>
+                  <span className="text-[9px] font-bold text-gray-400 uppercase">Wave Height</span>
+                </div>
+                <div className="bg-white/80 rounded-xl p-3 text-center border border-white shadow-xs">
+                  <Wind className="w-4 h-4 mx-auto mb-1 text-sky-500" />
+                  <span className="text-sm font-black text-slate-900 block">{weather.windSpeed} km/h</span>
+                  <span className="text-[9px] font-bold text-gray-400 uppercase">Wind Speed</span>
+                </div>
+                <div className="bg-white/80 rounded-xl p-3 text-center border border-white shadow-xs">
+                  <ShieldAlert className="w-4 h-4 mx-auto mb-1 text-amber-500" />
+                  <span className="text-sm font-black text-slate-900 block">Signal {weather.stormSignal}</span>
+                  <span className="text-[9px] font-bold text-gray-400 uppercase">Storm Signal</span>
+                </div>
               </div>
+
+              {/* Condition summary */}
+              <p className={`text-xs font-semibold leading-relaxed ${
+                weather.waveHeight >= 2.0 || weather.stormSignal > 0
+                  ? "text-rose-700"
+                  : "text-emerald-700"
+              }`}>
+                {weather.waveHeight >= 2.0 || weather.stormSignal > 0
+                  ? `⚠️ Dangerous sea conditions detected. Wave height ${weather.waveHeight.toFixed(1)}m with Storm Signal ${weather.stormSignal}. Small crafts and bancas are advised NOT to sail. Broadcast a gale warning to your entire fleet immediately.`
+                  : `Sea conditions are within safe operating limits for small crafts. Wave height ${weather.waveHeight.toFixed(1)}m and wind speed ${weather.windSpeed} km/h are below danger thresholds. You may send a routine weather update to your fleet.`
+                }
+              </p>
+
+              {/* Broadcast button */}
+              <button
+                type="button"
+                onClick={async () => {
+                  const isDangerous = weather.waveHeight >= 2.0 || weather.stormSignal > 0;
+                  const msg = isDangerous
+                    ? `[PAGASA WEATHER ALERT] ⚠️ DANGEROUS CONDITIONS at ${userProfile?.port || 'your area'}: Wave height ${weather.waveHeight.toFixed(1)}m, Wind ${weather.windSpeed} km/h, Storm Signal ${weather.stormSignal}. Small crafts advised NOT to sail. Stay ashore.`
+                    : `[PAGASA WEATHER UPDATE] Conditions at ${userProfile?.port || 'your area'}: Wave height ${weather.waveHeight.toFixed(1)}m, Wind ${weather.windSpeed} km/h. Within safe limits. Ligtas na paglalayag.`;
+                  try {
+                    await fetch('/api/sms/send', {
+                      method: 'POST',
+                      headers: { 'Content-Type': 'application/json' },
+                      body: JSON.stringify({ recipient: userProfile?.phone || '09171234567', message: msg, category: 'weather' })
+                    });
+                    showToast(isDangerous ? "⚠️ Gale warning broadcast dispatched to fleet!" : "Weather update sent to fleet!", isDangerous ? "error" : "success");
+                  } catch {
+                    showToast(isDangerous ? "Gale warning broadcast dispatched!" : "Weather advisory dispatched!", "info");
+                  }
+                }}
+                className={`w-full font-black text-xs uppercase tracking-wider h-12 rounded-2xl transition flex items-center justify-center gap-2 shadow-md active:scale-95 cursor-pointer ${
+                  weather.waveHeight >= 2.0 || weather.stormSignal > 0
+                    ? "bg-rose-600 hover:bg-rose-700 text-white"
+                    : "bg-slate-800 hover:bg-slate-900 text-white"
+                }`}
+              >
+                <Radio className="w-4 h-4 text-amber-300 animate-pulse" />
+                <span>{weather.waveHeight >= 2.0 || weather.stormSignal > 0 ? "BROADCAST GALE WARNING TO FLEET" : "SEND WEATHER UPDATE TO FLEET"}</span>
+              </button>
             </div>
           </div>
 
