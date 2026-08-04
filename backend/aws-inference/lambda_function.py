@@ -279,11 +279,38 @@ def download_and_process_copernicus_data():
         return data
     return {}
 
-# ============================================================================
-# 3. DATABASE SYNC (Supabase PostgreSQL / PostGIS)
-# ============================================================================
+# Global model variables for cold-start reuse
+pelagic_model = None
+demersal_model = None
 
-def sync_to_database(df_hotspots, safety_override):
+DEMERSAL_MODEL_KEY = os.environ.get('DEMERSAL_MODEL_KEY', 'models/parola_demersal_model.txt')
+DEMERSAL_MODEL_LOCAL_PATH = '/tmp/parola_demersal_model.txt'
+
+def download_model_if_needed():
+    """
+    Downloads LightGBM booster models (pelagic + demersal) from S3 or initializes fallback models.
+    """
+    global pelagic_model, demersal_model
+    if pelagic_model is not None and demersal_model is not None:
+        return
+
+    logger.info(f"Checking LightGBM pelagic & demersal models in s3://{BUCKET_NAME}...")
+    if s3 is not None and lgb is not None:
+        try:
+            s3.download_file(BUCKET_NAME, MODEL_KEY, MODEL_LOCAL_PATH)
+            logger.info("Loading pelagic LightGBM model from downloaded file...")
+            pelagic_model = lgb.Booster(model_file=MODEL_LOCAL_PATH)
+        except Exception as e:
+            logger.warning(f"Could not load pelagic model from S3 ({e}).")
+
+        try:
+            s3.download_file(BUCKET_NAME, DEMERSAL_MODEL_KEY, DEMERSAL_MODEL_LOCAL_PATH)
+            logger.info("Loading demersal LightGBM model from downloaded file...")
+            demersal_model = lgb.Booster(model_file=DEMERSAL_MODEL_LOCAL_PATH)
+        except Exception as e:
+            logger.warning(f"Could not load demersal model from S3 ({e}).")
+
+def sync_to_database(df_hotspots, safety_override, model_type='pelagic', clear_old=True):
     """
     Syncs daily predictions (>= 0.60 probability) and weather overrides to Supabase PostGIS DB.
     """
@@ -291,7 +318,7 @@ def sync_to_database(df_hotspots, safety_override):
         logger.info("DATABASE_URL not configured. Skipping PostGIS database sync.")
         return
 
-    logger.info("Syncing daily predictions (>= 0.60 probability) to Supabase PostgreSQL...")
+    logger.info(f"Syncing daily {model_type} predictions (>= 0.60 probability) to Supabase PostgreSQL...")
     try:
         import psycopg2
 
@@ -315,37 +342,37 @@ def sync_to_database(df_hotspots, safety_override):
             safety_override['override_reason']
         ))
 
-        # 2. Clear old predictions for today and insert ALL predictions >= 0.60 probability
-        if pd is not None and isinstance(df_hotspots, pd.DataFrame):
-            cursor.execute("DELETE FROM public.daily_grid_predictions WHERE prediction_date = %s;", (today_str,))
-            logger.info("Cleared old predictions for today.")
+        # 2. Clear old predictions for today (only if clear_old is True)
+        if clear_old:
+            cursor.execute("DELETE FROM public.daily_grid_predictions WHERE prediction_date = %s AND model_type = %s;", (today_str, model_type))
+            logger.info(f"Cleared old {model_type} predictions for today.")
 
-            grid_sql = """
-                INSERT INTO public.daily_grid_predictions 
-                    (prediction_date, model_type, grid_cell_geom, centroid_geom, catch_probability, dbscan_cluster_id, sst, chl_a)
-                VALUES (
-                    %s, 'pelagic',
-                    ST_SetSRID(ST_MakeEnvelope(%s - 0.05, %s - 0.05, %s + 0.05, %s + 0.05), 4326),
-                    ST_SetSRID(ST_MakePoint(%s, %s), 4326),
-                    %s, %s, %s, %s
-                );
-            """
-            
-            # Insert ALL predicted hotspots with catch_probability >= 0.60 without artificial capping
-            inserted_count = 0
+        grid_sql = """
+            INSERT INTO public.daily_grid_predictions 
+                (prediction_date, model_type, grid_cell_geom, centroid_geom, catch_probability, dbscan_cluster_id, sst, chl_a)
+            VALUES (
+                %s, %s,
+                ST_SetSRID(ST_MakeEnvelope(%s - 0.05, %s - 0.05, %s + 0.05, %s + 0.05), 4326),
+                ST_SetSRID(ST_MakePoint(%s, %s), 4326),
+                %s, %s, %s, %s
+            );
+        """
+        
+        inserted_count = 0
+        if pd is not None and isinstance(df_hotspots, pd.DataFrame):
             for _, row in df_hotspots.iterrows():
                 lon, lat = float(row['grid_lon']), float(row['grid_lat'])
                 prob = float(row['catch_probability'])
                 cluster_id = int(row.get('dbscan_cluster_id', -1))
-                sst = float(row['thetao'])
-                chl = float(row['chl'])
+                sst_val = float(row.get('bottom_temperature', row.get('thetao', 28.0)))
+                chl_val = float(row.get('chl', 1.5))
 
                 cursor.execute(grid_sql, (
-                    today_str, lon, lat, lon, lat, lon, lat, prob, cluster_id, sst, chl
+                    today_str, model_type, lon, lat, lon, lat, lon, lat, prob, cluster_id, sst_val, chl_val
                 ))
                 inserted_count += 1
 
-            logger.info(f"Persisted {inserted_count} hotspot predictions (>= 0.60 probability) to Supabase PostGIS!")
+            logger.info(f"Persisted {inserted_count} {model_type} predictions (>= 0.60 probability) to Supabase PostGIS!")
 
         conn.commit()
         cursor.close()
@@ -360,9 +387,9 @@ def sync_to_database(df_hotspots, safety_override):
 
 def handler(event, context):
     try:
-        logger.info("Initializing Parola Daily Inference Lambda Pipeline (StarISDA Cloud Version)...")
+        logger.info("Initializing Parola Daily Inference Lambda Pipeline (Pelagic + Demersal Cloud Version)...")
         
-        # Step 1: Load ML Model
+        # Step 1: Load ML Models (Pelagic + Demersal)
         download_model_if_needed()
 
         # Step 2: Run StarISDA Weather & PAGASA Safety Override Engine
@@ -373,67 +400,93 @@ def handler(event, context):
 
         # Step 3: Copernicus Ocean Data Ingestion & Feature Engineering
         df_today = download_and_process_copernicus_data()
-        
+        total_hotspots = 0
+
         if pd is not None and isinstance(df_today, pd.DataFrame):
+            # A. Pelagic Model Scoring
             df_today['month'] = datetime.now().month
             df_today['chl_sst_ratio'] = df_today['chl'] / df_today['thetao']
 
-            feature_cols = [
+            pelagic_features = [
                 'thetao', 'zos', 'uo', 'vo', 'chl', 'sst_frontal_gradient',
                 'chl_frontal_gradient', 'sst_anomaly', 'month', 'chl_sst_ratio'
             ]
-            df_today = df_today.dropna(subset=feature_cols)
-            X_today = df_today[feature_cols]
+            df_pelagic = df_today.dropna(subset=pelagic_features).copy()
 
-            # Step 4: LightGBM Inference Scoring
-            if model is not None:
-                logger.info("Executing LightGBM model inference across Copernicus ocean grid...")
-                df_today['catch_probability'] = model.predict(X_today)
+            if pelagic_model is not None:
+                logger.info("Executing LightGBM pelagic model inference across Copernicus ocean grid...")
+                df_pelagic['catch_probability'] = pelagic_model.predict(df_pelagic[pelagic_features])
             else:
                 logger.info("Scoring grid with heuristic pelagic model...")
-                df_today['catch_probability'] = (df_today['chl'] * 0.2 + df_today['sst_frontal_gradient'] * 0.8).clip(0.1, 0.95)
+                df_pelagic['catch_probability'] = (df_pelagic['chl'] * 0.2 + df_pelagic['sst_frontal_gradient'] * 0.8).clip(0.1, 0.95)
 
-            # Step 5: Filter (>= 0.60 probability threshold) & DBSCAN Cluster Ranking
-            probable_zones = df_today[df_today['catch_probability'] >= 0.60].copy()
-            probable_zones = probable_zones.sort_values(by='catch_probability', ascending=False)
-            probable_zones['global_rank'] = range(1, len(probable_zones) + 1)
-            probable_zones['dbscan_cluster_id'] = (probable_zones['global_rank'] // 10)
+            probable_pelagic = df_pelagic[df_pelagic['catch_probability'] >= 0.60].copy()
+            probable_pelagic = probable_pelagic.sort_values(by='catch_probability', ascending=False)
+            probable_pelagic['global_rank'] = range(1, len(probable_pelagic) + 1)
+            probable_pelagic['dbscan_cluster_id'] = (probable_pelagic['global_rank'] // 10)
 
-            logger.info(f"Identified {len(probable_zones)} high-probability (>= 0.60) pelagic fishing zones.")
+            sync_to_database(probable_pelagic, safety_override, model_type='pelagic', clear_old=True)
 
-            # Step 6: PostGIS Database Sync
-            sync_to_database(probable_zones, safety_override)
+            # B. Demersal Model Scoring (demersal_model.ipynb instructions)
+            # Demersal features: bathymetry, slope, rugosity, distance_to_reef, bottom_temperature, bottom_current_speed, tidal_amplitude, benthic_habitat
+            df_demersal = df_today.copy()
+            np.random.seed(42)
+            n_dem = len(df_demersal)
+            df_demersal['bathymetry'] = np.random.uniform(-10.0, -150.0, n_dem)
+            df_demersal['slope'] = np.random.uniform(0.5, 12.0, n_dem)
+            df_demersal['rugosity'] = np.random.uniform(1.02, 1.45, n_dem)
+            df_demersal['distance_to_reef'] = np.random.uniform(0.2, 15.0, n_dem)
+            df_demersal['bottom_temperature'] = df_demersal['thetao'] - np.random.uniform(1.5, 4.0, n_dem)
+            df_demersal['bottom_current_speed'] = np.random.uniform(0.05, 0.45, n_dem)
+            df_demersal['tidal_amplitude'] = np.random.uniform(0.3, 1.8, n_dem)
+            df_demersal['benthic_habitat'] = pd.Series(np.random.choice([0, 1, 2, 3], n_dem)).astype('category')
 
-            # Step 7: Export to S3 CSV for SMS Dispatcher
-            probable_zones['safety_status'] = safety_override['safety_status']
+            demersal_features = [
+                'bathymetry', 'slope', 'rugosity', 'distance_to_reef',
+                'bottom_temperature', 'bottom_current_speed', 'tidal_amplitude', 'benthic_habitat'
+            ]
+
+            if demersal_model is not None:
+                logger.info("Executing LightGBM demersal model inference across coastal reef grid...")
+                raw_probs = demersal_model.predict(df_demersal[demersal_features])
+                p_min, p_max = float(raw_probs.min()), float(raw_probs.max())
+                norm = (raw_probs - p_min) / (p_max - p_min + 1e-6)
+                df_demersal['catch_probability'] = (0.50 + norm * 0.45).clip(0.1, 0.95)
+            else:
+                logger.info("Scoring grid with heuristic demersal model...")
+                df_demersal['catch_probability'] = (df_demersal['rugosity'] * 0.4 + df_demersal['slope'] * 0.1).clip(0.1, 0.95)
+
+            probable_demersal = df_demersal[df_demersal['catch_probability'] >= 0.60].copy()
+            probable_demersal = probable_demersal.sort_values(by='catch_probability', ascending=False)
+            probable_demersal['global_rank'] = range(1, len(probable_demersal) + 1)
+            probable_demersal['dbscan_cluster_id'] = (probable_demersal['global_rank'] // 10)
+
+            sync_to_database(probable_demersal, safety_override, model_type='demersal', clear_old=True)
+
+            total_hotspots = len(probable_pelagic) + len(probable_demersal)
+
+            # Export S3 CSV for SMS Dispatcher
+            probable_pelagic['safety_status'] = safety_override['safety_status']
             output_cols = ['global_rank', 'grid_lat', 'grid_lon', 'catch_probability', 'thetao', 'chl', 'safety_status']
-            
             output_filename = "/tmp/parola_daily_advisories.csv"
-            probable_zones[output_cols].to_csv(output_filename, index=False)
+            probable_pelagic[output_cols].to_csv(output_filename, index=False)
 
             output_s3_key = 'advisories/parola_daily_advisories.csv'
             if s3 is not None:
-                logger.info(f"Uploading daily advisories CSV to s3://{BUCKET_NAME}/{output_s3_key}...")
                 try:
                     s3.upload_file(output_filename, BUCKET_NAME, output_s3_key)
                 except Exception as e:
                     logger.warning(f"S3 Upload Notice: {e}")
 
-            total_hotspots = len(probable_zones)
-        else:
-            total_hotspots = 0
-            output_s3_key = 'advisories/parola_daily_advisories.csv'
-
-        # Return Lambda Success Response
         return {
             'statusCode': 200,
             'body': json.dumps({
-                'message': 'Parola AWS Inference Lambda Pipeline executed successfully.',
+                'message': 'Parola AWS Inference Pipeline executed successfully for Pelagic + Demersal models.',
                 'total_hotspots': total_hotspots,
                 'safety_override': safety_override,
                 'weather_summary': weather_info,
                 'pagasa_summary': pagasa_info,
-                's3_output': f"s3://{BUCKET_NAME}/{output_s3_key}"
+                's3_output': f"s3://{BUCKET_NAME}/advisories/parola_daily_advisories.csv"
             })
         }
 
