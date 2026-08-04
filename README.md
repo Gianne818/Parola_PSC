@@ -130,13 +130,15 @@ Ensure your local environment has the following installed:
 
 ### 1. Environment Configuration
 
-Copy the sample environment file to create your `.env` configuration:
+A pre-configured `.env` file containing active API credentials (including iPROG SMS Gateway and Supabase configuration) is already included in the repository for evaluation by mentor judges.
+
+If setting up a new environment, copy the sample environment file to create your `.env` configuration:
 
 ```bash
 cp .env.example .env
 ```
 
-Ensure your `.env` file contains your credentials:
+The `.env` file structure:
 
 ```env
 # iPROG SMS Gateway Configuration
