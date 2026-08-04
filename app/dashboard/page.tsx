@@ -375,6 +375,21 @@ export default function DashboardPage() {
                 <span>LIST VIEW</span>
               </button>
             </div>
+
+            {/* 9 km Prediction Radius Indicator — only shown on map view */}
+            {mapView && (
+              <div className="bg-white/95 border border-emerald-200 shadow-md rounded-2xl px-3 py-2 flex items-center gap-2 pointer-events-none">
+                <Globe className="w-3.5 h-3.5 text-[#00B074] shrink-0" />
+                <div>
+                  <span className="text-[10px] font-black uppercase tracking-wider text-emerald-700 block leading-tight">
+                    9 km Prediction Radius
+                  </span>
+                  <span className="text-[8.5px] font-bold text-gray-400 leading-tight block">
+                    Zoom in to see boundaries
+                  </span>
+                </div>
+              </div>
+            )}
           </div>
 
             {/* Map Canvas / Grid List - Strictly match height */}

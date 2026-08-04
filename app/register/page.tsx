@@ -38,7 +38,7 @@ const LANGUAGES = [
 
 export default function RegisterPage() {
   const router = useRouter();
-  const { isInitialized, isAuthenticated, language, changeLanguage, register, showToast } = useApp();
+  const { isInitialized, isAuthenticated, userProfile, logout, language, changeLanguage, register, showToast } = useApp();
 
   const [showPassword, setShowPassword] = useState(false);
   const [phone, setPhone] = useState('+63 ');
@@ -60,13 +60,17 @@ export default function RegisterPage() {
 
 
 
-  // If already authenticated, redirect to dashboard
+  // Show "already signed in" overlay instead of blindly redirecting —
+  // lets the user choose to go to dashboard or register a new account.
+  const [showAlreadyIn, setShowAlreadyIn] = useState(false);
+
+  // If already authenticated, show overlay (don't auto-redirect)
   useEffect(() => {
     const justRegistered = typeof window !== "undefined" ? sessionStorage.getItem('just-registered') === 'true' : false;
     if (isInitialized && isAuthenticated && !justRegistered) {
-      router.push("/dashboard");
+      setShowAlreadyIn(true);
     }
-  }, [isInitialized, isAuthenticated, router]);
+  }, [isInitialized, isAuthenticated]);
 
   // Handle click on background to spawn water ripple
   const handleBackgroundClick = (e: React.MouseEvent<HTMLDivElement>) => {
@@ -225,6 +229,45 @@ export default function RegisterPage() {
   };
 
   const activeLang = LANGUAGES.find(l => l.code === language) || LANGUAGES[0];
+
+  // Already signed-in gate — shown as overlay instead of instant redirect
+  if (showAlreadyIn) {
+    return (
+      <div className="min-h-screen bg-white flex flex-col items-center justify-center p-6 relative overflow-hidden font-sans antialiased">
+        <div className="absolute inset-0 bg-[radial-gradient(#e5e7eb_1px,transparent_1px)] [background-size:24px_24px] opacity-60 pointer-events-none" />
+        <div className="relative z-10 w-full max-w-sm bg-white border border-gray-100 rounded-3xl shadow-[0_20px_60px_-15px_rgba(0,0,0,0.1)] p-8 flex flex-col items-center text-center space-y-5">
+          <div className="w-16 h-16 rounded-2xl bg-brand-green/10 border border-brand-green/20 flex items-center justify-center">
+            <Anchor className="w-8 h-8 text-brand-green" />
+          </div>
+          <div>
+            <p className="text-[10px] font-black uppercase tracking-widest text-gray-400 mb-1">Active Session</p>
+            <h2 className="text-xl font-display font-black text-slate-900 uppercase tracking-tight">
+              Already Signed In
+            </h2>
+            <p className="text-sm text-gray-500 font-medium mt-1.5 leading-snug">
+              You are signed in as <span className="font-black text-slate-800">{userProfile?.phone || 'Captain'}</span>.
+            </p>
+          </div>
+          <button
+            onClick={() => router.push('/dashboard')}
+            className="w-full bg-brand-green hover:bg-brand-green/90 text-white font-black text-xs uppercase tracking-widest py-3.5 rounded-2xl transition shadow-md active:scale-95 cursor-pointer flex items-center justify-center gap-2"
+          >
+            <UserPlus className="w-4 h-4" />
+            Continue to Dashboard
+          </button>
+          <button
+            onClick={() => {
+              logout();
+              setShowAlreadyIn(false);
+            }}
+            className="w-full bg-gray-50 hover:bg-gray-100 border border-gray-200 text-gray-700 font-black text-xs uppercase tracking-widest py-3.5 rounded-2xl transition active:scale-95 cursor-pointer"
+          >
+            Register a New Account
+          </button>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div

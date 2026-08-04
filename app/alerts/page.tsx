@@ -553,97 +553,134 @@ export default function AlertsPage() {
             </div>
 
             {/* Calculated Nearest Hotspot & Efficiency Metrics Breakdown Card */}
-            {targetHotspot ? (
+            {(modelFilter === 'both' ? (pelagicTarget || demersalTarget) : targetHotspot) ? (
               <div className="bg-gradient-to-br from-emerald-950 via-slate-900 to-slate-950 text-white rounded-2xl p-5 space-y-4 shadow-md">
-                <div className="flex flex-wrap items-center justify-between gap-2 border-b border-emerald-800/40 pb-3">
-                  <div className="flex items-center gap-2">
-                    <Zap className="w-4 h-4 text-emerald-400" />
-                    <span className="font-display font-black text-xs uppercase tracking-wider text-emerald-400">
-                      CALCULATED NEAREST HOTSPOT METRICS
-                    </span>
-                  </div>
-                  <span className="px-2.5 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 text-[10px] font-black uppercase">
-                    Haversine Spatial Engine
+                <div className="flex items-center gap-2 border-b border-emerald-800/40 pb-3">
+                  <Zap className="w-4 h-4 text-emerald-400" />
+                  <span className="font-display font-black text-xs uppercase tracking-wider text-emerald-400">
+                    CALCULATED NEAREST HOTSPOT METRICS
                   </span>
                 </div>
 
-                <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 text-left">
-                  <div className="bg-slate-900/80 p-3 rounded-xl border border-slate-800">
-                    <span className="text-[9px] font-black text-gray-400 uppercase block tracking-wider">
-                      Haversine Distance
-                    </span>
-                    <span className="text-sm font-black text-emerald-400">
-                      {targetHotspot.distanceKm} km
-                    </span>
-                    <span className="text-[10px] font-bold text-gray-400 block mt-0.5">
-                      Vector: {targetHotspot.compassBearing}
-                    </span>
-                  </div>
+                {modelFilter === 'both' ? (
+                  /* Dual-column view: Pelagic + Demersal */
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    {/* Pelagic Column */}
+                    {pelagicTarget && (
+                      <div className="space-y-2">
+                        <span className="text-[10px] font-black uppercase tracking-wider text-emerald-400 block">
+                          🐟 Pelagic (Surface &amp; Open Water)
+                        </span>
+                        <div className="grid grid-cols-2 gap-2">
+                          <div className="bg-slate-900/80 p-3 rounded-xl border border-emerald-900/60">
+                            <span className="text-[9px] font-black text-gray-400 uppercase block tracking-wider">Distance</span>
+                            <span className="text-sm font-black text-emerald-400">{pelagicTarget.distanceKm} km</span>
+                            <span className="text-[10px] font-bold text-gray-400 block mt-0.5">{pelagicTarget.compassBearing}</span>
+                          </div>
+                          <div className="bg-slate-900/80 p-3 rounded-xl border border-emerald-900/60">
+                            <span className="text-[9px] font-black text-gray-400 uppercase block tracking-wider">Probability</span>
+                            <span className="text-sm font-black text-emerald-300">{pelagicTarget.catchProbability}%</span>
+                            <span className="text-[10px] font-bold text-gray-400 block mt-0.5">Efficiency: {pelagicTarget.efficiencyRatio} %/km</span>
+                          </div>
+                        </div>
+                        <div className="bg-slate-900/80 p-2.5 rounded-xl border border-emerald-900/60 space-y-1">
+                          <span className="text-[9px] font-black text-gray-400 uppercase block tracking-wider">Hotspot</span>
+                          <span className="text-xs font-extrabold text-white truncate block">{pelagicTarget.hotspot.name}</span>
+                          <span className="text-[10px] font-bold text-emerald-400 block">{pelagicTarget.gpsCoordinatesFormatted}</span>
+                          <a href={pelagicTarget.googleMapsUrl} target="_blank" rel="noopener noreferrer"
+                            className="text-blue-400 text-[10px] font-bold hover:underline flex items-center gap-1 truncate">
+                            {pelagicTarget.googleMapsUrl.replace('https://', '')}
+                            <ExternalLink className="w-3 h-3 shrink-0" />
+                          </a>
+                        </div>
+                      </div>
+                    )}
 
-                  <div className="bg-slate-900/80 p-3 rounded-xl border border-slate-800">
-                    <span className="text-[9px] font-black text-gray-400 uppercase block tracking-wider">
-                      Catch Probability
-                    </span>
-                    <span className="text-sm font-black text-emerald-300">
-                      {targetHotspot.catchProbability}%
-                    </span>
-                    <span className="text-[10px] font-bold text-gray-400 block mt-0.5">
-                      LightGBM ML Confidence
-                    </span>
+                    {/* Demersal Column */}
+                    {demersalTarget && (
+                      <div className="space-y-2">
+                        <span className="text-[10px] font-black uppercase tracking-wider text-blue-400 block">
+                          🐡 Demersal (Bottom &amp; Reef Fish)
+                        </span>
+                        <div className="grid grid-cols-2 gap-2">
+                          <div className="bg-slate-900/80 p-3 rounded-xl border border-blue-900/60">
+                            <span className="text-[9px] font-black text-gray-400 uppercase block tracking-wider">Distance</span>
+                            <span className="text-sm font-black text-blue-400">{demersalTarget.distanceKm} km</span>
+                            <span className="text-[10px] font-bold text-gray-400 block mt-0.5">{demersalTarget.compassBearing}</span>
+                          </div>
+                          <div className="bg-slate-900/80 p-3 rounded-xl border border-blue-900/60">
+                            <span className="text-[9px] font-black text-gray-400 uppercase block tracking-wider">Probability</span>
+                            <span className="text-sm font-black text-blue-300">{demersalTarget.catchProbability}%</span>
+                            <span className="text-[10px] font-bold text-gray-400 block mt-0.5">Efficiency: {demersalTarget.efficiencyRatio} %/km</span>
+                          </div>
+                        </div>
+                        <div className="bg-slate-900/80 p-2.5 rounded-xl border border-blue-900/60 space-y-1">
+                          <span className="text-[9px] font-black text-gray-400 uppercase block tracking-wider">Hotspot</span>
+                          <span className="text-xs font-extrabold text-white truncate block">{demersalTarget.hotspot.name}</span>
+                          <span className="text-[10px] font-bold text-blue-400 block">{demersalTarget.gpsCoordinatesFormatted}</span>
+                          <a href={demersalTarget.googleMapsUrl} target="_blank" rel="noopener noreferrer"
+                            className="text-blue-400 text-[10px] font-bold hover:underline flex items-center gap-1 truncate">
+                            {demersalTarget.googleMapsUrl.replace('https://', '')}
+                            <ExternalLink className="w-3 h-3 shrink-0" />
+                          </a>
+                        </div>
+                      </div>
+                    )}
                   </div>
+                ) : (
+                  /* Single-model view */
+                  <>
+                    <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 text-left">
+                      <div className="bg-slate-900/80 p-3 rounded-xl border border-slate-800">
+                        <span className="text-[9px] font-black text-gray-400 uppercase block tracking-wider">Distance</span>
+                        <span className="text-sm font-black text-emerald-400">{targetHotspot!.distanceKm} km</span>
+                        <span className="text-[10px] font-bold text-gray-400 block mt-0.5">Vector: {targetHotspot!.compassBearing}</span>
+                      </div>
 
-                  <div className="bg-slate-900/80 p-3 rounded-xl border border-slate-800">
-                    <span className="text-[9px] font-black text-gray-400 uppercase block tracking-wider">
-                      Efficiency Ratio
-                    </span>
-                    <span className="text-sm font-black text-yellow-400">
-                      {targetHotspot.efficiencyRatio} %/km
-                    </span>
-                    <span className="text-[10px] font-bold text-gray-400 block mt-0.5">
-                      Yield / Dist Index
-                    </span>
-                  </div>
+                      <div className="bg-slate-900/80 p-3 rounded-xl border border-slate-800">
+                        <span className="text-[9px] font-black text-gray-400 uppercase block tracking-wider">Catch Probability</span>
+                        <span className="text-sm font-black text-emerald-300">{targetHotspot!.catchProbability}%</span>
+                        <span className="text-[10px] font-bold text-gray-400 block mt-0.5">LightGBM ML Confidence</span>
+                      </div>
 
-                  <div className="bg-slate-900/80 p-3 rounded-xl border border-slate-800">
-                    <span className="text-[9px] font-black text-gray-400 uppercase block tracking-wider">
-                      Hotspot Grid Name
-                    </span>
-                    <span className="text-xs font-extrabold text-white truncate block">
-                      {targetHotspot.hotspot.name}
-                    </span>
-                    <span className="text-[10px] font-bold text-emerald-400 block mt-0.5 capitalize">
-                      {targetHotspot.hotspot.type} Zone
-                    </span>
-                  </div>
-                </div>
+                      <div className="bg-slate-900/80 p-3 rounded-xl border border-slate-800">
+                        <span className="text-[9px] font-black text-gray-400 uppercase block tracking-wider">Efficiency Ratio</span>
+                        <span className="text-sm font-black text-yellow-400">{targetHotspot!.efficiencyRatio} %/km</span>
+                        <span className="text-[10px] font-bold text-gray-400 block mt-0.5">Yield / Dist Index</span>
+                      </div>
 
-                {/* 4 SMS Direction Parameters Breakdown */}
-                <div className="pt-2 border-t border-slate-800 grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs font-mono">
-                  <div className="bg-slate-900 p-2.5 rounded-lg border border-slate-800 flex items-center justify-between">
-                    <span className="text-gray-400 font-sans text-[11px]">1. Haversine Distance & Bearing:</span>
-                    <span className="text-emerald-400 font-bold">{targetHotspot.distanceKm} km ({targetHotspot.compassBearing})</span>
-                  </div>
+                      <div className="bg-slate-900/80 p-3 rounded-xl border border-slate-800">
+                        <span className="text-[9px] font-black text-gray-400 uppercase block tracking-wider">Hotspot Grid Name</span>
+                        <span className="text-xs font-extrabold text-white truncate block">{targetHotspot!.hotspot.name}</span>
+                        <span className="text-[10px] font-bold text-emerald-400 block mt-0.5 capitalize">{targetHotspot!.hotspot.type} Zone</span>
+                      </div>
+                    </div>
 
-                  <div className="bg-slate-900 p-2.5 rounded-lg border border-slate-800 flex items-center justify-between">
-                    <span className="text-gray-400 font-sans text-[11px]">2. Compass App GPS Coordinate:</span>
-                    <span className="text-emerald-300 font-bold">{targetHotspot.gpsCoordinatesFormatted}</span>
-                  </div>
+                    <div className="pt-2 border-t border-slate-800 grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs font-mono">
+                      <div className="bg-slate-900 p-2.5 rounded-lg border border-slate-800 flex items-center justify-between">
+                        <span className="text-gray-400 font-sans text-[11px]">1. Distance &amp; Bearing:</span>
+                        <span className="text-emerald-400 font-bold">{targetHotspot!.distanceKm} km ({targetHotspot!.compassBearing})</span>
+                      </div>
 
-                  <div className="bg-slate-900 p-2.5 rounded-lg border border-slate-800 flex items-center justify-between sm:col-span-2">
-                    <span className="text-gray-400 font-sans text-[11px]">3. Smartphone Google Maps Link:</span>
-                    <a
-                      href={targetHotspot.googleMapsUrl}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="text-blue-400 font-bold hover:underline flex items-center gap-1 truncate max-w-[240px]"
-                    >
-                      {targetHotspot.googleMapsUrl.replace('https://', '')}
-                      <ExternalLink className="w-3 h-3 shrink-0" />
-                    </a>
-                  </div>
-                </div>
+                      <div className="bg-slate-900 p-2.5 rounded-lg border border-slate-800 flex items-center justify-between">
+                        <span className="text-gray-400 font-sans text-[11px]">2. Compass App GPS Coordinate:</span>
+                        <span className="text-emerald-300 font-bold">{targetHotspot!.gpsCoordinatesFormatted}</span>
+                      </div>
+
+                      <div className="bg-slate-900 p-2.5 rounded-lg border border-slate-800 flex items-center justify-between sm:col-span-2">
+                        <span className="text-gray-400 font-sans text-[11px]">3. Smartphone Google Maps Link:</span>
+                        <a href={targetHotspot!.googleMapsUrl} target="_blank" rel="noopener noreferrer"
+                          className="text-blue-400 font-bold hover:underline flex items-center gap-1 truncate max-w-[240px]">
+                          {targetHotspot!.googleMapsUrl.replace('https://', '')}
+                          <ExternalLink className="w-3 h-3 shrink-0" />
+                        </a>
+                      </div>
+                    </div>
+                  </>
+                )}
               </div>
             ) : null}
+
 
             {/* Generated Concise SMS Payload Preview Box */}
             <div className="bg-slate-100 border border-slate-300/80 rounded-2xl p-4 space-y-3">

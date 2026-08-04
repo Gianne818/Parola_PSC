@@ -8,6 +8,10 @@ import { Hotspot } from "../../../types";
 import { isWithinPhilippineGeofence } from "../../../utils/spatial";
 import { getSpeciesColor, getSpeciesConfig, getHotspotDisplayColor, GENERAL_PELAGIC_COLOR, GENERAL_DEMERSAL_COLOR } from "../../../utils/speciesColors";
 
+/** Prediction radius the ML model was trained on — 9 km */
+export const PREDICTION_RADIUS_KM = 9;
+export const PREDICTION_RADIUS_METERS = PREDICTION_RADIUS_KM * 1000;
+
 // Custom marker icon definitions
 const safeHotspotIcon = typeof window !== "undefined" ? L.divIcon({
   className: "custom-hotspot-marker-safe",
@@ -88,6 +92,11 @@ interface MapInnerProps {
   // Custom props from onboarding / search map
   center?: [number, number];
   onMapClick?: (lat: number, lng: number) => void;
+
+  /** Called whenever the Leaflet map zoom level changes */
+  onZoomChange?: (zoom: number) => void;
+  /** Whether to show 9 km prediction radius circles on hotspots */
+  showPredictionRadius?: boolean;
 }
 
 const isValidLatLng = (lat: number, lng: number): boolean => {
@@ -172,6 +181,16 @@ function MapResizeHandler() {
   return null;
 }
 
+// ZoomTracker fires the onZoomChange callback whenever the map zoom changes
+function ZoomTracker({ onZoomChange }: { onZoomChange?: (zoom: number) => void }) {
+  useMapEvents({
+    zoomend(e) {
+      onZoomChange?.(e.target.getZoom());
+    },
+  });
+  return null;
+}
+
 export default function MapInner({
   hotspots,
   selectedHotspot,
@@ -184,7 +203,9 @@ export default function MapInner({
   showToast,
   manualOverrideHold,
   center,
-  onMapClick
+  onMapClick,
+  onZoomChange,
+  showPredictionRadius = true,
 }: MapInnerProps) {
   // Validate and fall back on home port coordinates
   const homeLat = userProfile?.lat ?? 14.0122;
@@ -254,6 +275,7 @@ export default function MapInner({
           showToast={showToast}
         />
         <MapResizeHandler />
+        <ZoomTracker onZoomChange={onZoomChange} />
         
         {/* Soft elegant basemap for dark/light dashboard integration */}
         <TileLayer
@@ -365,6 +387,31 @@ export default function MapInner({
             </Popup>
           </Marker>
         )}
+
+        {/* 9 km Prediction Radius Circles — auto-scale with zoom since Leaflet Circle uses real-world meters */}
+        {showPredictionRadius && filteredHotspots.map((spot) => {
+          const lat = spot.lat ?? (spot as any).position?.[0];
+          const lng = spot.lng ?? (spot as any).position?.[1];
+          const type = spot.type || ((spot as any).group === "pelagic" ? "pelagic" : "demersal");
+          const speciesColor = getHotspotDisplayColor(type, selectedSpecies, spot.species || [], spot.catchProbability);
+          const isSelected = selectedHotspot?.id === spot.id;
+          if (!isValidLatLng(lat, lng)) return null;
+          return (
+            <Circle
+              key={`radius-${spot.id}`}
+              center={[lat, lng]}
+              radius={PREDICTION_RADIUS_METERS}
+              pathOptions={{
+                color: speciesColor,
+                fillColor: speciesColor,
+                fillOpacity: isSelected ? 0.08 : 0.04,
+                weight: isSelected ? 1.5 : 1,
+                opacity: isSelected ? 0.55 : 0.30,
+                dashArray: "4, 5",
+              }}
+            />
+          );
+        })}
 
         {/* Active Hotspot Pin Markers */}
         {filteredHotspots.map((spot) => {

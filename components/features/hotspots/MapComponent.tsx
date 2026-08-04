@@ -5,8 +5,9 @@ import dynamic from "next/dynamic";
 import { Hotspot } from "../../../types";
 import { calculateDistance, calculateBearing } from "../../../utils/spatial";
 import { useApp } from "../../../context/AppContext";
-import { Anchor, Compass, Info, Navigation, ShieldCheck } from "lucide-react";
+import { Anchor, Compass, Crosshair, Info, Navigation, ShieldCheck } from "lucide-react";
 import { ALL_SPECIES_CONFIGS, GENERAL_PELAGIC_COLOR, GENERAL_DEMERSAL_COLOR, GENERAL_PELAGIC_SHADES, GENERAL_DEMERSAL_SHADES, getSpeciesConfig } from "../../../utils/speciesColors";
+import { PREDICTION_RADIUS_KM } from "./MapInner";
 
 // Dynamically import the real Leaflet map component with SSR disabled
 const MapInner = dynamic(() => import("./MapInner"), {
@@ -46,6 +47,7 @@ export const MapComponent: React.FC<MapComponentProps> = ({
 }) => {
   const { userProfile, updateProfile, showToast, manualOverrideHold } = useApp();
   const [customWaypoint, setCustomWaypoint] = useState<{ lat: number; lng: number } | null>(null);
+  const [currentZoom, setCurrentZoom] = useState<number>(10);
 
   return (
     <div className={`relative w-full h-full bg-blue-50/30 flex flex-col md:flex-row select-none ${hideSidebar ? 'border-none rounded-none' : 'border border-slate-200 dark:border-teal-950 rounded-[2rem] overflow-hidden shadow-inner'}`}>
@@ -65,6 +67,8 @@ export const MapComponent: React.FC<MapComponentProps> = ({
           manualOverrideHold={manualOverrideHold}
           center={center}
           onMapClick={onMapClick}
+          onZoomChange={setCurrentZoom}
+          showPredictionRadius={true}
         />
 
         {/* Floating Controls Overlay */}
@@ -74,6 +78,23 @@ export const MapComponent: React.FC<MapComponentProps> = ({
             <span className="text-[10px] font-black uppercase tracking-wider text-[#12211E] dark:text-[#F7FAF9]">
               ECDIS GPS ACTIVE
             </span>
+          </div>
+        </div>
+
+        {/* 9 km Prediction Radius Badge */}
+        <div className="absolute top-4 left-[168px] bg-white/90 dark:bg-[#12211E]/90 backdrop-blur border border-emerald-200 dark:border-emerald-900/60 px-3 py-2 rounded-2xl shadow-md pointer-events-none z-10">
+          <div className="flex items-center gap-1.5">
+            <Crosshair className="w-3 h-3 text-brand-green shrink-0" />
+            <span className="text-[10px] font-black uppercase tracking-wider text-emerald-700 dark:text-emerald-400">
+              {PREDICTION_RADIUS_KM} km Prediction Radius
+            </span>
+          </div>
+          <div className="text-[8.5px] font-bold text-gray-400 mt-0.5">
+            {currentZoom >= 12
+              ? "Zoomed in — radius detail visible"
+              : currentZoom >= 10
+              ? "Zoom in to see radius boundaries"
+              : "Zoom in for precise radius view"}
           </div>
         </div>
 
