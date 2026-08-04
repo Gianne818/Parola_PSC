@@ -6,6 +6,7 @@ import { Hotspot } from "../../../types";
 import { calculateDistance, calculateBearing } from "../../../utils/spatial";
 import { useApp } from "../../../context/AppContext";
 import { Anchor, Compass, Info, Navigation, ShieldCheck } from "lucide-react";
+import { ALL_SPECIES_CONFIGS } from "../../../utils/speciesColors";
 
 // Dynamically import the real Leaflet map component with SSR disabled
 const MapInner = dynamic(() => import("./MapInner"), {
@@ -240,7 +241,7 @@ export const MapComponent: React.FC<MapComponentProps> = ({
               Chart Legend
             </span>
             <div className="flex items-center gap-2 text-xs font-bold text-gray-600 dark:text-gray-300">
-              <span className="w-3 h-3 rounded-full bg-brand-green border border-white shrink-0" />
+              <span className="w-3 h-3 rounded-full bg-[#00B074] border border-white shrink-0" />
               <span>Surface & Open Water (Pelagic Hotspot)</span>
             </div>
             <div className="flex items-center gap-2 text-xs font-bold text-gray-600 dark:text-gray-300">

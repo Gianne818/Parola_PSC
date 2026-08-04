@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState, useMemo } from "react";
+import Link from "next/link";
 import { AuthLayout } from "../../components/layouts/AuthLayout";
 import { useApp } from "../../context/AppContext";
 import { useTranslation } from "../../hooks/use-translation";
@@ -11,7 +12,7 @@ import {
   Search,
   Zap,
   RotateCw,
-  Settings,
+  Sliders,
   MapPin,
   ChevronRight,
   CloudRain,
@@ -24,6 +25,7 @@ export default function NotificationsPage() {
     notifications,
     markNotificationRead,
     purgeNotifications,
+    simulateNotification,
     language
   } = useApp();
 
@@ -107,7 +109,7 @@ export default function NotificationsPage() {
 
   return (
     <AuthLayout>
-      <div className="space-y-6 md:space-y-8 pb-12 pt-2">
+      <div className="space-y-6 md:space-y-8 pb-12 pt-2 max-w-5xl mx-auto">
 
           {/* Header Section */}
           <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-gray-100 pb-6">
@@ -118,7 +120,7 @@ export default function NotificationsPage() {
               <div>
                 <div className="flex items-center gap-2.5">
                   <h1 className="font-display font-black text-2xl md:text-3xl tracking-tight text-slate-900">
-                    NOTIFICATIONS
+                    NOTIFICATIONS HISTORY
                   </h1>
                   {unreadCount > 0 && (
                     <span className="px-2.5 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider bg-[#FF4D6D] text-white">
@@ -127,21 +129,24 @@ export default function NotificationsPage() {
                   )}
                 </div>
                 <p className="text-xs font-semibold text-gray-400 mt-0.5">
-                  Keep track of critical water hazards, collective fueling benefits, and community reports.
+                  View past weather warnings, fuel pool milestone alerts, and community reports.
                 </p>
               </div>
             </div>
 
             {/* Header Action Buttons */}
             <div className="flex items-center gap-2 self-start md:self-auto flex-wrap">
-              <button className="flex items-center gap-1.5 px-4 py-2 rounded-full border border-emerald-100 bg-emerald-50/50 text-[#00B074] hover:bg-emerald-100/60 text-xs font-bold transition">
+              <button
+                onClick={simulateNotification}
+                className="flex items-center gap-1.5 px-4 py-2 rounded-full border border-emerald-100 bg-emerald-50/50 text-[#00B074] hover:bg-emerald-100/60 text-xs font-bold transition cursor-pointer"
+              >
                 <Zap className="w-3.5 h-3.5 fill-current" />
-                <span>Simulate</span>
+                <span>Simulate Alert</span>
               </button>
 
               <button
                 onClick={() => notifications.forEach((n) => markNotificationRead(n.id))}
-                className="flex items-center gap-1.5 px-4 py-2 rounded-full border border-gray-200 hover:bg-gray-50 text-gray-700 text-xs font-bold transition"
+                className="flex items-center gap-1.5 px-4 py-2 rounded-full border border-gray-200 hover:bg-gray-50 text-gray-700 text-xs font-bold transition cursor-pointer"
               >
                 <Check className="w-3.5 h-3.5 text-[#00B074]" />
                 <span>Mark Read</span>
@@ -150,20 +155,20 @@ export default function NotificationsPage() {
               {notifications.length > 0 && (
                 <button
                   onClick={purgeNotifications}
-                  className="flex items-center gap-1.5 px-4 py-2 rounded-full border border-gray-200 hover:bg-rose-50 text-gray-600 hover:text-rose-600 text-xs font-bold transition"
+                  className="flex items-center gap-1.5 px-4 py-2 rounded-full border border-gray-200 hover:bg-rose-50 text-gray-600 hover:text-rose-600 text-xs font-bold transition cursor-pointer"
                 >
                   <Trash2 className="w-3.5 h-3.5" />
                   <span>Purge</span>
                 </button>
               )}
 
-              <button className="p-2 rounded-full border border-gray-200 hover:bg-gray-50 text-gray-400 hover:text-gray-600 transition">
-                <Settings className="w-4 h-4" />
-              </button>
-
-              <button className="p-2 rounded-full border border-gray-200 hover:bg-gray-50 text-gray-400 hover:text-gray-600 transition">
-                <RotateCw className="w-4 h-4" />
-              </button>
+              <Link
+                href="/alerts"
+                title="Alert Configuration"
+                className="p-2 rounded-full border border-gray-200 hover:bg-gray-50 text-gray-500 hover:text-[#00B074] transition"
+              >
+                <Sliders className="w-4 h-4" />
+              </Link>
             </div>
           </div>
 
