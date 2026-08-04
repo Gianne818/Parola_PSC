@@ -1,7 +1,5 @@
 import { NextResponse } from 'next/server';
-import { IProgSmsService } from '@/services/iprogSmsService';
-
-const smsService = new IProgSmsService();
+import { smsService } from '@/services/smsServiceInstance';
 
 export async function GET() {
   const currentConfig = smsService.getConfig();

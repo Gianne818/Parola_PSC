@@ -420,10 +420,10 @@ export default function SettingsPage() {
                   >
                     <div>
                       <span className="font-display font-black text-xs text-slate-800 block">
-                        Pelagic
+                        Surface & Open Water
                       </span>
                       <span className="text-[9px] font-bold text-gray-400 block mt-0.5">
-                        Surface & Open Ocean
+                        Pelagic Species
                       </span>
                     </div>
                     <input
@@ -441,10 +441,10 @@ export default function SettingsPage() {
                   >
                     <div>
                       <span className="font-display font-black text-xs text-slate-800 block">
-                        Demersal
+                        Bottom & Reef Fish
                       </span>
                       <span className="text-[9px] font-bold text-gray-400 block mt-0.5">
-                        Bottom & Reef Species
+                        Demersal Species
                       </span>
                     </div>
                     <input

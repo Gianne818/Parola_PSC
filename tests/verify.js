@@ -83,9 +83,9 @@ async function runTests() {
 
   // Test 3: Mock Mode
   const service = new IProgSmsService({ mockMode: true });
-  const res = await service.sendSms({ recipient: '09171234567', message: 'Dry-run test message' });
+  const res = await service.sendSms({ recipient: '09150262014', message: 'Dry-run test message' });
   if (res.success && res.mode === 'MOCK_DRY_RUN' && res.remainingQuotaEstimate === 5) {
-    console.log('✅ [PASS] Mock dry-run mode executed cleanly (5 free credits preserved)');
+    console.log('✅ [PASS] Mock dry-run mode executed cleanly for 09150262014 -> 639150262014 (5 free credits preserved)');
     passed++;
   }
 

@@ -36,8 +36,8 @@ import {
 } from "lucide-react";
 
 const SPECIES_FAMILIES = [
-  { id: "pelagic", label: "Pelagic", local: "Surface & Open Ocean" },
-  { id: "demersal", label: "Demersal", local: "Bottom & Reef Species" }
+  { id: "pelagic", label: "Surface & Open Water", local: "Pelagic Species" },
+  { id: "demersal", label: "Bottom & Reef Fish", local: "Demersal Species" }
 ];
 
 export default function DashboardPage() {
@@ -585,20 +585,33 @@ export default function DashboardPage() {
                   </button>
                 </div>
 
-                {/* Tabs: PELAGIC, DEMERSAL, BOTH */}
+                {/* Tabs: SURFACE WATER, BOTTOM & REEF, ALL FISH */}
                 <div className="flex gap-1.5 w-full bg-gray-100 p-1 rounded-xl">
-                  {(["pelagic", "demersal", "both"] as const).map((tab) => (
-                    <button
-                      key={tab}
-                      onClick={() => setActiveTab(tab)}
-                      className={`flex-1 py-2 rounded-lg text-xs font-black uppercase tracking-wider transition cursor-pointer ${activeTab === tab
-                        ? "bg-white text-slate-900 shadow-sm"
-                        : "text-gray-500 hover:text-slate-800"
-                        }`}
-                    >
-                      {tab === "both" ? "BOTH" : tab}
-                    </button>
-                  ))}
+                  {(["pelagic", "demersal", "both"] as const).map((tab) => {
+                    const tabLabels = {
+                      pelagic: { main: "Surface Water", sub: "Pelagic" },
+                      demersal: { main: "Bottom & Reef", sub: "Demersal" },
+                      both: { main: "All Fish", sub: "Both Types" }
+                    };
+                    const info = tabLabels[tab];
+                    return (
+                      <button
+                        key={tab}
+                        onClick={() => setActiveTab(tab)}
+                        className={`flex-1 py-1.5 px-1 rounded-lg text-center transition cursor-pointer flex flex-col items-center justify-center ${activeTab === tab
+                          ? "bg-white text-slate-900 shadow-sm"
+                          : "text-gray-500 hover:text-slate-800"
+                          }`}
+                      >
+                        <span className="text-[11px] font-black uppercase tracking-wider block leading-tight truncate w-full">
+                          {info.main}
+                        </span>
+                        <span className="text-[9px] font-bold text-gray-400 block truncate w-full mt-0.5">
+                          ({info.sub})
+                        </span>
+                      </button>
+                    );
+                  })}
                 </div>
 
                 {/* General Grids Toggles */}
@@ -611,11 +624,11 @@ export default function DashboardPage() {
                       }`}
                   >
                     <div className="min-w-0">
-                      <span className="text-[9px] block opacity-75 font-black uppercase">
-                        PELAGIC GRIDS
-                      </span>
                       <span className={`text-xs font-black block truncate ${showGeneralPelagic ? "text-[#00B074]" : "text-slate-800"}`}>
-                        General Pelagic
+                        Surface & Open Water
+                      </span>
+                      <span className="text-[9px] font-bold block opacity-75 text-gray-400 mt-0.5">
+                        Pelagic Fishing Grids
                       </span>
                     </div>
                     {showGeneralPelagic ? (
@@ -633,11 +646,11 @@ export default function DashboardPage() {
                       }`}
                   >
                     <div className="min-w-0">
-                      <span className="text-[9px] block opacity-75 font-black uppercase">
-                        DEMERSAL GRIDS
-                      </span>
                       <span className={`text-xs font-black block truncate ${showGeneralDemersal ? "text-[#00B074]" : "text-slate-800"}`}>
-                        General Demersal
+                        Bottom & Reef Fish
+                      </span>
+                      <span className="text-[9px] font-bold block opacity-75 text-gray-400 mt-0.5">
+                        Demersal Fishing Grids
                       </span>
                     </div>
                     {showGeneralDemersal ? (
@@ -651,7 +664,7 @@ export default function DashboardPage() {
                 {/* Biological Species Groups */}
                 <div className="space-y-2 border border-gray-200 p-4 rounded-2xl bg-white shadow-md">
                   <span className="text-[9px] font-black text-gray-400 uppercase tracking-widest block mb-2">
-                    BIOLOGICAL SPECIES GROUPS (PELAGIC & DEMERSAL)
+                    FISH HABITAT CATEGORIES (SURFACE & BOTTOM REEF)
                   </span>
 
                   <div className="grid grid-cols-2 gap-2">

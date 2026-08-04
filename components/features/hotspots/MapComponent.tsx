@@ -112,7 +112,7 @@ export const MapComponent: React.FC<MapComponentProps> = ({
                         ? "bg-brand-green/10 text-brand-green border-brand-green/20 dark:bg-brand-green/20 dark:text-brand-green/80 dark:border-brand-green/30"
                         : "bg-blue-50 text-blue-600 border-blue-100 dark:bg-blue-950/20 dark:text-blue-400 dark:border-blue-900/40"
                     }`}>
-                      {selectedHotspot.type}
+                      {selectedHotspot.type === "pelagic" ? "Surface Water (Pelagic)" : selectedHotspot.type === "demersal" ? "Bottom & Reef (Demersal)" : selectedHotspot.type}
                     </span>
                     <h5 className="font-display font-black text-xl text-slate-900 dark:text-[#F7FAF9] mt-2">
                       {selectedHotspot.name}
@@ -241,11 +241,11 @@ export const MapComponent: React.FC<MapComponentProps> = ({
             </span>
             <div className="flex items-center gap-2 text-xs font-bold text-gray-600 dark:text-gray-300">
               <span className="w-3 h-3 rounded-full bg-brand-green border border-white shrink-0" />
-              <span>Pelagic Hotspot (Surface/Upper waters)</span>
+              <span>Surface & Open Water (Pelagic Hotspot)</span>
             </div>
             <div className="flex items-center gap-2 text-xs font-bold text-gray-600 dark:text-gray-300">
               <span className="w-3 h-3 rounded-full bg-[#3B82F6] border border-white shrink-0" />
-              <span>Demersal Hotspot (Bottom waters/Reefs)</span>
+              <span>Bottom & Reef Fish (Demersal Hotspot)</span>
             </div>
           </div>
         </div>

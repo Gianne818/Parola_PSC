@@ -1,8 +1,5 @@
 import { NextResponse } from 'next/server';
-import { IProgSmsService } from '@/services/iprogSmsService';
-
-// Module-level instance
-const smsService = new IProgSmsService();
+import { smsService } from '@/services/smsServiceInstance';
 
 export async function POST(request: Request) {
   try {

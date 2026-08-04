@@ -77,7 +77,7 @@ export class IProgSmsService {
 
   constructor(customConfig?: Partial<IProgSmsConfig>) {
     this.config = {
-      endpoint: customConfig?.endpoint || process.env.IPROG_API_ENDPOINT || 'https://iprogtech.com/api/v1/sms_messages',
+      endpoint: customConfig?.endpoint || process.env.IPROG_API_ENDPOINT || 'https://sms.iprogtech.com/api/v1/sms_messages',
       apiKey: customConfig?.apiKey !== undefined ? customConfig.apiKey : (process.env.IPROG_API_KEY || ''),
       senderName: customConfig?.senderName || process.env.IPROG_SENDER_NAME || 'PAROLA',
       mockMode: customConfig?.mockMode !== undefined ? customConfig.mockMode : (process.env.IPROG_MOCK_MODE !== 'false'), // Default to true for safety
@@ -119,12 +119,15 @@ export class IProgSmsService {
       throw new Error('IPROG_API_KEY environment variable is missing or unconfigured for live dispatch.');
     }
 
-    const payload = {
-      api_key: this.config.apiKey,
-      sender_name: this.config.senderName,
-      recipient: formattedPhone,
+    const payload: Record<string, any> = {
+      api_token: this.config.apiKey,
+      phone_number: formattedPhone,
       message: req.message,
     };
+
+    if (this.config.senderName && this.config.senderName !== 'PAROLA') {
+      payload.sender_name = this.config.senderName;
+    }
 
     try {
       const response = await fetch(this.config.endpoint, {
@@ -146,6 +149,16 @@ export class IProgSmsService {
       }
 
       const resData = await response.json();
+
+      if (resData.status && resData.status !== 200) {
+        return {
+          success: false,
+          recipientFormatted: formattedPhone,
+          mode: 'LIVE_DISPATCH',
+          error: `iPROG API Error: ${resData.message || 'Dispatch failed'}`,
+        };
+      }
+
       return {
         success: true,
         messageId: resData.message_id || resData.id || `LIVE-${Date.now()}`,

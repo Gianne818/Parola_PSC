@@ -121,8 +121,8 @@ export default function SmsStudioPage() {
   const [quotaRemaining, setQuotaRemaining] = useState<number>(5);
 
   // Payload Tester State
-  const [phoneInput, setPhoneInput] = useState<string>("09171234567");
-  const [normalizedPhone, setNormalizedPhone] = useState<string>("639171234567");
+  const [phoneInput, setPhoneInput] = useState<string>("09150262014");
+  const [normalizedPhone, setNormalizedPhone] = useState<string>("639150262014");
   const [phoneError, setPhoneError] = useState<string | null>(null);
   const [messageText, setMessageText] = useState<string>(
     "[PAROLA ALERT] Babala sa mga mangingisda: Malalaking alon (3.5m-4.5m) sa Look ng Maynila. Mangyaring manatili muna sa daungan."
