@@ -304,6 +304,85 @@ export default function AlertsPage() {
           <hr className="border-t border-gray-100" />
 
           {/* ============================================================ */}
+          {/* SECTION: OFFLINE GOOGLE MAPS INSTRUCTIONS FOR FISHERMEN */}
+          {/* ============================================================ */}
+          <div className="space-y-4 bg-gradient-to-br from-[#EEF5F3] via-emerald-50/50 to-teal-50/60 p-5 sm:p-6 rounded-2xl border border-emerald-200/80 shadow-xs">
+            <div className="flex items-start gap-3">
+              <div className="p-2.5 bg-[#00B074] rounded-xl text-white shadow-xs shrink-0">
+                <MapPin className="w-5 h-5" />
+              </div>
+              <div>
+                <h2 className="font-display font-black text-sm uppercase tracking-wider text-slate-900 flex items-center gap-2 flex-wrap">
+                  <span>How to Download Offline Maps for Sea Navigation</span>
+                  <span className="text-[9px] font-black uppercase tracking-widest px-2 py-0.5 rounded-full bg-emerald-100 text-[#00B074] border border-emerald-200">
+                    Google Maps Guide
+                  </span>
+                </h2>
+                <p className="text-xs font-semibold text-gray-500 mt-0.5">
+                  Cell signal often drops at sea. Download your area map on Google Maps before sailing so your map works everywhere offline!
+                </p>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-3 pt-1 text-xs">
+              {/* Step 1 */}
+              <div className="bg-white p-3.5 rounded-xl border border-emerald-100 shadow-2xs space-y-1.5 flex flex-col justify-between">
+                <div>
+                  <div className="flex items-center gap-1.5 font-black text-[#00B074] text-xs">
+                    <span className="w-5 h-5 rounded-full bg-emerald-50 flex items-center justify-center text-[10px] font-black border border-emerald-200">1</span>
+                    <span>Open Google Maps</span>
+                  </div>
+                  <p className="text-[11px] font-medium text-gray-600 mt-1 leading-snug">
+                    Open the <strong>Google Maps</strong> app on your smartphone before leaving your home port.
+                  </p>
+                </div>
+              </div>
+
+              {/* Step 2 */}
+              <div className="bg-white p-3.5 rounded-xl border border-emerald-100 shadow-2xs space-y-1.5 flex flex-col justify-between">
+                <div>
+                  <div className="flex items-center gap-1.5 font-black text-[#00B074] text-xs">
+                    <span className="w-5 h-5 rounded-full bg-emerald-50 flex items-center justify-center text-[10px] font-black border border-emerald-200">2</span>
+                    <span>Tap Profile Icon</span>
+                  </div>
+                  <p className="text-[11px] font-medium text-gray-600 mt-1 leading-snug">
+                    Tap your <strong>Profile Picture</strong> or account icon in the top right corner of the screen.
+                  </p>
+                </div>
+              </div>
+
+              {/* Step 3 */}
+              <div className="bg-white p-3.5 rounded-xl border border-emerald-100 shadow-2xs space-y-1.5 flex flex-col justify-between">
+                <div>
+                  <div className="flex items-center gap-1.5 font-black text-[#00B074] text-xs">
+                    <span className="w-5 h-5 rounded-full bg-emerald-50 flex items-center justify-center text-[10px] font-black border border-emerald-200">3</span>
+                    <span>Select Offline Maps</span>
+                  </div>
+                  <p className="text-[11px] font-medium text-gray-600 mt-1 leading-snug">
+                    Tap <strong>Offline maps</strong> from the menu, then tap <strong>SELECT YOUR OWN MAP</strong>.
+                  </p>
+                </div>
+              </div>
+
+              {/* Step 4 */}
+              <div className="bg-white p-3.5 rounded-xl border border-emerald-100 shadow-2xs space-y-1.5 flex flex-col justify-between">
+                <div>
+                  <div className="flex items-center gap-1.5 font-black text-[#00B074] text-xs">
+                    <span className="w-5 h-5 rounded-full bg-emerald-50 flex items-center justify-center text-[10px] font-black border border-emerald-200">4</span>
+                    <span>Download Area</span>
+                  </div>
+                  <p className="text-[11px] font-medium text-gray-600 mt-1 leading-snug">
+                    Move the box over your fishing area and home port, then tap <strong>Download</strong>. Done!
+                  </p>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* DIVIDER */}
+          <hr className="border-t border-gray-100" />
+
+          {/* ============================================================ */}
           {/* SECTION 2: TARGET BIOLOGICAL FAMILIES */}
           {/* ============================================================ */}
           <div className="space-y-5">

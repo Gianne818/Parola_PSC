@@ -276,6 +276,7 @@ function OnboardingContent() {
           filterType="both"
           selectedSpecies={[]}
           hideSidebar={true}
+          hideLegend={true}
           center={coordinates}
           onMapClick={handleMapClick}
         />

@@ -609,33 +609,76 @@ export default function DashboardPage() {
 
               {/* Quick Onboarding Banner for Fishermen / First-Time Users */}
               {showOnboardingHint && (
-                <div className="bg-gradient-to-r from-emerald-50/90 via-teal-50/60 to-emerald-50/90 border border-emerald-200/80 rounded-2xl p-4 relative space-y-2.5 shadow-xs">
+                <div className="bg-gradient-to-r from-emerald-50 via-teal-50/80 to-emerald-50 border border-emerald-200/90 rounded-2xl p-5 relative space-y-3.5 shadow-sm">
                   <button
                     onClick={() => setShowOnboardingHint(false)}
-                    className="absolute top-3 right-3 text-gray-400 hover:text-slate-700 transition cursor-pointer"
+                    className="absolute top-3.5 right-3.5 text-gray-400 hover:text-slate-700 transition cursor-pointer p-1 rounded-lg hover:bg-emerald-100/50"
                     title="Dismiss guide"
                   >
-                    <X className="w-4 h-4" />
+                    <X className="w-4.5 h-4.5" />
                   </button>
-                  <div className="flex items-center gap-2">
-                    <span className="p-1 bg-[#00B074] text-white rounded-lg">
-                      <Lightbulb className="w-3.5 h-3.5" />
+                  <div className="flex items-center gap-2.5">
+                    <span className="p-1.5 bg-[#00B074] text-white rounded-xl shadow-xs">
+                      <Lightbulb className="w-4 h-4" />
                     </span>
-                    <h4 className="font-display font-black text-xs uppercase tracking-wider text-slate-900">
-                      Quick Guide for Fisherfolk / Gabay sa Pagpalaot
-                    </h4>
-                  </div>
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 pt-1 text-[11px] font-medium text-slate-700">
-                    <div className="bg-white/80 p-2.5 rounded-xl border border-emerald-100/60 space-y-1">
-                      <span className="font-bold text-[#00B074] block">1. Station Status</span>
-                      <p className="text-[10px] text-gray-500 leading-tight">
-                        Check your localized home anchorage coordinates and active weather telemetry.
+                    <div>
+                      <h4 className="font-display font-black text-sm uppercase tracking-wider text-slate-900">
+                        Fishermen Quick Guide: How to Use Parola at Sea
+                      </h4>
+                      <p className="text-[11px] font-semibold text-gray-500">
+                        Follow these 5 simple steps to find fish safely and navigate the ocean.
                       </p>
                     </div>
-                    <div className="bg-white/80 p-2.5 rounded-xl border border-emerald-100/60 space-y-1">
-                      <span className="font-bold text-[#00B074] block">2. Find Fish</span>
-                      <p className="text-[10px] text-gray-500 leading-tight">
-                        Filter by Surface Fish (Pelagic) or Bottom Fish (Demersal) to locate active spots.
+                  </div>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-2.5 pt-1 text-[11px] font-medium text-slate-700">
+                    {/* Step 1 */}
+                    <div className="bg-white p-3 rounded-xl border border-emerald-100/80 shadow-2xs space-y-1">
+                      <span className="font-bold text-[#00B074] block text-xs">
+                        1. Check Sea Safety First
+                      </span>
+                      <p className="text-[10.5px] text-gray-600 leading-relaxed">
+                        Look at wave height and wind speed. If waves reach <strong>2.0m or higher</strong>, or if a red warning badge shows, stay safe ashore!
+                      </p>
+                    </div>
+
+                    {/* Step 2 */}
+                    <div className="bg-white p-3 rounded-xl border border-emerald-100/80 shadow-2xs space-y-1">
+                      <span className="font-bold text-[#00B074] block text-xs">
+                        2. Choose Your Target Fish
+                      </span>
+                      <p className="text-[10.5px] text-gray-600 leading-relaxed">
+                        Tap <strong>Surface Fish (Pelagic)</strong> for Tamban & Tulingan, or <strong>Bottom Fish (Demersal)</strong> for Lapu-lapu & Maya-maya.
+                      </p>
+                    </div>
+
+                    {/* Step 3 */}
+                    <div className="bg-white p-3 rounded-xl border border-emerald-100/80 shadow-2xs space-y-1">
+                      <span className="font-bold text-[#00B074] block text-xs">
+                        3. Read the Map Colors
+                      </span>
+                      <p className="text-[10.5px] text-gray-600 leading-relaxed">
+                        Green and dark circles show top fishing spots. Higher scores (<strong>60% to 90%+</strong>) mean more fish in that area!
+                      </p>
+                    </div>
+
+                    {/* Step 4 */}
+                    <div className="bg-white p-3 rounded-xl border border-emerald-100/80 shadow-2xs space-y-1">
+                      <span className="font-bold text-[#00B074] block text-xs">
+                        4. Check Distance & Steering
+                      </span>
+                      <p className="text-[10.5px] text-gray-600 leading-relaxed">
+                        Tap any circle to see how many kilometers it is from your port, and check the compass direction to steer your boat.
+                      </p>
+                    </div>
+
+                    {/* Step 5 */}
+                    <div className="bg-white p-3 rounded-xl border border-emerald-100/80 shadow-2xs space-y-1 col-span-1 sm:col-span-2 md:col-span-1">
+                      <span className="font-bold text-[#00B074] block text-xs">
+                        5. Download Offline Maps
+                      </span>
+                      <p className="text-[10.5px] text-gray-600 leading-relaxed">
+                        Go to the <strong>Alerts</strong> page to see how to save Google Maps on your phone so your map works at sea without signal.
                       </p>
                     </div>
                   </div>

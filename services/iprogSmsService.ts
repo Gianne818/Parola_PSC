@@ -119,12 +119,12 @@ export class IProgSmsService {
       message: req.message,
     };
 
-    if (this.config.senderName && this.config.senderName !== 'PAROLA') {
+    if (this.config.senderName) {
       payload.sender_name = this.config.senderName;
     }
 
     try {
-      const response = await fetch(this.config.endpoint, {
+      let response = await fetch(this.config.endpoint, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -132,17 +132,54 @@ export class IProgSmsService {
         body: JSON.stringify(payload),
       });
 
+      let errText = '';
+      let resData: any = {};
+
       if (!response.ok) {
-        const errText = await response.text();
+        errText = await response.text();
+        try { resData = JSON.parse(errText); } catch {}
+      } else {
+        resData = await response.json();
+      }
+
+      const rawErrorMessage = resData.message || errText || '';
+
+      // AUTOMATIC RETRY FOR SMART/TNT NETWORKS:
+      // Smart & TNT do not accept shared/unregistered sender names.
+      // If iPROG returns this error and sender_name was sent, retry without sender_name parameter.
+      if (
+        (rawErrorMessage.includes('Smart/TNT networks do not accept shared sender names') ||
+         rawErrorMessage.includes('sender name') ||
+         (resData.status && resData.status !== 200 && String(resData.message).includes('sender name'))) &&
+        payload.sender_name
+      ) {
+        console.warn('Smart/TNT sender name restriction encountered. Retrying iPROG dispatch without sender_name parameter...');
+        delete payload.sender_name;
+
+        response = await fetch(this.config.endpoint, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify(payload),
+        });
+
+        if (!response.ok) {
+          errText = await response.text();
+          try { resData = JSON.parse(errText); } catch {}
+        } else {
+          resData = await response.json();
+        }
+      }
+
+      if (!response.ok) {
         return {
           success: false,
           recipientFormatted: formattedPhone,
           mode: 'LIVE_DISPATCH',
-          error: `iPROG API Error (HTTP ${response.status}): ${errText}`,
+          error: `iPROG API Error (HTTP ${response.status}): ${resData.message || errText}`,
         };
       }
-
-      const resData = await response.json();
 
       if (resData.status && resData.status !== 200) {
         return {
