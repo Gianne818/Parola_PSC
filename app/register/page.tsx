@@ -126,19 +126,7 @@ export default function RegisterPage() {
 
     setIsChecking(true);
 
-    // Check local registered accounts store for duplicate phone number
-    const compactPhone = cleaned.replace(/\s+/g, '');
-    const localUsers = getLocalRegisteredUsers();
-    const existingLocal = localUsers.find(
-      u => u.phone.trim().replace(/\s+/g, '') === compactPhone
-    );
-    if (existingLocal) {
-      setIsChecking(false);
-      const errorMsg = "An account with this phone number already exists. Please sign in instead.";
-      setFormError(errorMsg);
-      showToast(errorMsg, "error");
-      return;
-    }
+
 
     // Check if phone number is already registered in backend database
     try {

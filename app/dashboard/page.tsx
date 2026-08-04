@@ -1478,6 +1478,15 @@ export default function DashboardPage() {
           </div>
         </div>
 
+        {/* Data Source Citation */}
+        <footer className="mt-6 pt-4 border-t border-gray-200/80 text-center text-xs text-gray-500 flex flex-wrap items-center justify-center gap-1.5 font-medium pb-4">
+          <Globe className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
+          <span>Live ocean and meteorological telemetry data gathered from</span>
+          <span className="font-bold text-slate-700">Copernicus Marine Service</span>
+          <span>&</span>
+          <span className="font-bold text-slate-700">Open-Meteo</span>.
+        </footer>
+
       {/* Fuel Commit Modal */}
       <Modal
         isOpen={selectedPoolId !== null}

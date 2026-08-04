@@ -464,16 +464,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     const cleanedPhone = updated.phone.trim();
     const compactPhone = cleanedPhone.replace(/\s+/g, '');
 
-    // Check duplicate in local storage first
-    const localUsers = getLocalRegisteredUsers();
-    const existingLocal = localUsers.find(
-      u => u.phone.trim().replace(/\s+/g, '') === compactPhone
-    );
-    if (existingLocal) {
-      const errorMsg = "An account with this phone number already exists. Please sign in instead.";
-      showToast(errorMsg, "error");
-      return { ok: false, error: errorMsg };
-    }
+
 
     try {
       const res = await fetch('/api/users/register', {
