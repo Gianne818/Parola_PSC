@@ -20,9 +20,10 @@ build/
 *.egg-info/
 *.egg
 
-# Environment variables
+# Environment variables (secrets — never commit these)
 .env
 .env.*
+!.env.example
 
 # Jupyter Notebooks checkpoints
 .ipynb_checkpoints/

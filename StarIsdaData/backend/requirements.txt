@@ -1,0 +1,9 @@
+fastapi
+uvicorn
+requests
+xarray
+netCDF4
+numpy
+supabase
+python-dotenv
+copernicusmarine
