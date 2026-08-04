@@ -43,8 +43,10 @@ def _download(dataset_id, variables, min_depth=None, max_depth=None):
         print(f"Cache hit for {dataset_id} [{start} -> {end}], skipping download")
         return cached_file
 
+    import shutil
+    copernicus_bin = shutil.which("copernicusmarine") or "/Users/ycanyashrat.sanchez/Library/Python/3.9/bin/copernicusmarine"
     command = [
-        "copernicusmarine",
+        copernicus_bin,
         "subset",
 
         "--dataset-id",

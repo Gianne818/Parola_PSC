@@ -451,7 +451,7 @@ def handler(event, context):
                 raw_probs = demersal_model.predict(df_demersal[demersal_features])
                 p_min, p_max = float(raw_probs.min()), float(raw_probs.max())
                 norm = (raw_probs - p_min) / (p_max - p_min + 1e-6)
-                df_demersal['catch_probability'] = (0.50 + norm * 0.45).clip(0.1, 0.95)
+                df_demersal['catch_probability'] = (0.62 + norm * 0.33).clip(0.1, 0.95)
             else:
                 logger.info("Scoring grid with heuristic demersal model...")
                 df_demersal['catch_probability'] = (df_demersal['rugosity'] * 0.4 + df_demersal['slope'] * 0.1).clip(0.1, 0.95)
