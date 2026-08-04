@@ -60,6 +60,11 @@ export interface Hotspot {
   lng: number;
   depth: number; // meters
   lastUpdated: string;
+  catchProbability?: number;
+  distanceKm?: number;
+  compassBearing?: string;
+  sst?: number;
+  chlA?: number;
 }
 
 export interface WeatherTelemetry {

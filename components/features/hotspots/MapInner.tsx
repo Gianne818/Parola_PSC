@@ -399,11 +399,22 @@ export default function MapInner({
                     {isUnsafe ? "UNSAFE BEACON" : type}
                   </div>
                   <div className="text-[10px] font-bold text-gray-500 space-y-0.5">
+                    {spot.catchProbability !== undefined && (
+                      <div className="text-emerald-700 font-extrabold text-xs bg-emerald-50 px-2 py-1 rounded-lg border border-emerald-200">
+                        ⚡ {(spot.catchProbability * 100).toFixed(0)}% AWS Catch Probability
+                      </div>
+                    )}
+                    {spot.distanceKm !== undefined && (
+                      <div>Vector: <span className="text-brand-black font-extrabold">{spot.distanceKm.toFixed(1)} km ({spot.compassBearing})</span></div>
+                    )}
+                    {spot.sst !== undefined && (
+                      <div>Sea Temp (SST): <span className="text-amber-600 font-extrabold">{spot.sst}°C</span></div>
+                    )}
                     <div>Depth: <span className="text-brand-black font-extrabold">{depth}m</span></div>
                     <div>Species: <span className="text-brand-green font-extrabold">{species.join(", ")}</span></div>
                   </div>
                   <p className="text-[10px] text-gray-400 font-medium leading-normal pt-1 border-t border-gray-100">
-                    {(spot as any).desc || "Optimal conditions observed."}
+                    {spot.lastUpdated || "Optimal oceanographic conditions observed."}
                   </p>
                 </div>
               </Popup>
