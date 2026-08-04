@@ -58,6 +58,9 @@ export default function LandingPage() {
 
             <div className="hidden md:flex items-center gap-10 font-semibold text-xs uppercase tracking-wider text-brand-black/75">
               <a href="#how-it-works" className="hover:text-brand-green transition-all duration-200">Features & Tools</a>
+              <Link href="/sms-studio" className="hover:text-brand-green transition-all duration-200 text-emerald-600 font-bold flex items-center gap-1">
+                <MessageSquare className="w-3.5 h-3.5" /> iPROG SMS Studio
+              </Link>
             </div>
 
             <div className="flex items-center gap-6">
