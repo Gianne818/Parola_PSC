@@ -46,18 +46,23 @@ export default function AlertsPage() {
   const [smsSending, setSmsSending] = useState(false);
   const [lastSmsResult, setLastSmsResult] = useState<any>(null);
 
-  const handleApplyVariables = () => {
-    // Determine species target string
-    let species: "both" | "pelagic" | "demersal" = "both";
-    if (pelagicSelected && !demersalSelected) species = "pelagic";
-    if (!pelagicSelected && demersalSelected) species = "demersal";
+  const handleApplyVariables = async () => {
+    try {
+      // Determine species target string
+      let species: "both" | "pelagic" | "demersal" = "both";
+      if (pelagicSelected && !demersalSelected) species = "pelagic";
+      if (!pelagicSelected && demersalSelected) species = "demersal";
 
-    updateProfile({
-      ...userProfile,
-      speciesPreference: species
-    });
+      await updateProfile({
+        ...userProfile,
+        speciesPreference: species
+      });
 
-    showToast("Alert preferences and safety thresholds updated!", "success");
+      showToast("Alert preferences and safety thresholds updated!", "success");
+    } catch (err: any) {
+      console.warn("Failed to apply alert settings:", err);
+      showToast("Failed to apply settings.", "error");
+    }
   };
 
   const handleTriggerSOS = () => {
@@ -68,10 +73,16 @@ export default function AlertsPage() {
     setSmsSending(true);
     setLastSmsResult(null);
 
-    const recipientPhone = userProfile.phone || "09171234567";
-    const sampleMessage = `[PAROLA ADVISORY] Magandang araw ${userProfile.vesselName || 'Ka-Isda'}! Inirekomendang isdaan para sa ${userProfile.port || 'Brgy Pasil'}: Hotspot #1 (8.4km, NNE). Alon: ${weather.waveHeight}m, Hangin: ${weather.windSpeed}km/h (${weather.windDirection}). Ligtas na paglalayag!`;
-
     try {
+      const recipientPhone = userProfile?.phone || "09171234567";
+      const waveVal = weather?.waveHeight ?? 1.2;
+      const windVal = weather?.windSpeed ?? 14.5;
+      const windDir = weather?.windDirection || "NE";
+      const vessel = userProfile?.vesselName || "Ka-Isda";
+      const portName = userProfile?.port || "Brgy Pasil";
+
+      const sampleMessage = `[PAROLA ADVISORY] Magandang araw ${vessel}! Inirekomendang isdaan para sa ${portName}: Hotspot #1 (8.4km, NNE). Alon: ${waveVal}m, Hangin: ${windVal}km/h (${windDir}). Ligtas na paglalayag!`;
+
       const response = await fetch("/api/sms/send", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -82,9 +93,15 @@ export default function AlertsPage() {
         })
       });
 
-      const data = await response.json();
-      if (!response.ok || data.error) {
-        throw new Error(data.error || "Failed to dispatch simulated SMS");
+      let data: any;
+      try {
+        data = await response.json();
+      } catch (jsonErr) {
+        throw new Error("API returned invalid JSON response.");
+      }
+
+      if (!response.ok || data?.error) {
+        throw new Error(data?.error || "Failed to dispatch simulated SMS");
       }
 
       setLastSmsResult(data);
@@ -95,7 +112,7 @@ export default function AlertsPage() {
         "success"
       );
     } catch (err: any) {
-      showToast(err.message || "Failed to send SMS advisory", "error");
+      showToast(err?.message || "Failed to send SMS advisory", "error");
     } finally {
       setSmsSending(false);
     }
@@ -242,7 +259,6 @@ export default function AlertsPage() {
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-1">
               {/* Pelagic Checkbox Card */}
               <label
-                onClick={() => setPelagicSelected(!pelagicSelected)}
                 className="flex items-center justify-between p-4 border border-gray-200/80 rounded-2xl bg-slate-50/50 hover:bg-slate-50 cursor-pointer transition select-none"
               >
                 <div>
@@ -256,14 +272,13 @@ export default function AlertsPage() {
                 <input
                   type="checkbox"
                   checked={pelagicSelected}
-                  onChange={() => { }}
+                  onChange={(e) => setPelagicSelected(e.target.checked)}
                   className="w-4.5 h-4.5 rounded border-gray-300 text-[#00B074] focus:ring-[#00B074] cursor-pointer"
                 />
               </label>
 
               {/* Demersal Checkbox Card */}
               <label
-                onClick={() => setDemersalSelected(!demersalSelected)}
                 className="flex items-center justify-between p-4 border border-gray-200/80 rounded-2xl bg-slate-50/50 hover:bg-slate-50 cursor-pointer transition select-none"
               >
                 <div>
@@ -277,7 +292,7 @@ export default function AlertsPage() {
                 <input
                   type="checkbox"
                   checked={demersalSelected}
-                  onChange={() => { }}
+                  onChange={(e) => setDemersalSelected(e.target.checked)}
                   className="w-4.5 h-4.5 rounded border-gray-300 text-[#00B074] focus:ring-[#00B074] cursor-pointer"
                 />
               </label>

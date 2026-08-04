@@ -6,7 +6,7 @@ import "leaflet/dist/leaflet.css";
 import L from "leaflet";
 import { Hotspot } from "../../../types";
 import { isWithinPhilippineGeofence } from "../../../utils/spatial";
-import { getSpeciesColor, getSpeciesConfig } from "../../../utils/speciesColors";
+import { getSpeciesColor, getSpeciesConfig, getHotspotDisplayColor, GENERAL_PELAGIC_COLOR, GENERAL_DEMERSAL_COLOR } from "../../../utils/speciesColors";
 
 // Custom marker icon definitions
 const safeHotspotIcon = typeof window !== "undefined" ? L.divIcon({
@@ -378,26 +378,8 @@ export default function MapInner({
           const isUnsafe = manualOverrideHold || (spot as any).isUnsafe;
           const isSelected = selectedHotspot?.id === spot.id;
 
-          // Resolve hotspot species color matching species assigned color
-          let speciesColor = type === "pelagic" ? "#10B981" : "#3B82F6";
-          if (selectedSpecies && selectedSpecies.length > 0) {
-            const matchedSel = selectedSpecies.find((sel) =>
-              species.some((sp: string) => {
-                const selConf = getSpeciesConfig(sel);
-                const spConf = getSpeciesConfig(sp);
-                if (selConf && spConf && selConf.family === spConf.family) return true;
-                if (selConf && (sp.toLowerCase().includes(selConf.family.toLowerCase()) || selConf.family.toLowerCase().includes(sp.toLowerCase()))) return true;
-                return sp.toLowerCase().includes(sel.toLowerCase()) || sel.toLowerCase().includes(sp.toLowerCase());
-              })
-            );
-            if (matchedSel) {
-              speciesColor = getSpeciesColor(matchedSel, speciesColor);
-            } else {
-              speciesColor = getSpeciesColor(species, speciesColor);
-            }
-          } else {
-            speciesColor = getSpeciesColor(species, speciesColor);
-          }
+          // Resolve display color: General Pelagic (#10B981), General Demersal (#3B82F6), or specific species custom color
+          const speciesColor = getHotspotDisplayColor(type, selectedSpecies, species);
 
           const markerIcon = isUnsafe
             ? unsafeHotspotIcon

@@ -1,3 +1,6 @@
+export const GENERAL_PELAGIC_COLOR = "#10B981"; // Emerald Green for General Pelagic Ocean Model Run
+export const GENERAL_DEMERSAL_COLOR = "#3B82F6"; // Ocean Blue for General Demersal Ocean Model Run
+
 export interface SpeciesConfig {
   name: string;
   family: string;
@@ -193,3 +196,35 @@ export function getSpeciesColor(species: string | string[], defaultColor: string
   const config = getSpeciesConfig(species);
   return config ? config.color : defaultColor;
 }
+
+/**
+ * Determines the display color for a hotspot on the map canvas.
+ * - If a specific species is selected by the user, and the hotspot features that species, return that specific species' custom color.
+ * - Otherwise, if no specific species is selected (or hotspot doesn't match selected species),
+ *   fall back to the General Pelagic Model Color (#10B981) or General Demersal Model Color (#3B82F6).
+ */
+export function getHotspotDisplayColor(
+  type: "pelagic" | "demersal" | string,
+  selectedSpecies: string[] = [],
+  hotspotSpecies: string[] = []
+): string {
+  const defaultZoneColor = type === "demersal" ? GENERAL_DEMERSAL_COLOR : GENERAL_PELAGIC_COLOR;
+
+  if (selectedSpecies && selectedSpecies.length > 0) {
+    const matchedSel = selectedSpecies.find((sel) =>
+      hotspotSpecies.some((sp: string) => {
+        const selConf = getSpeciesConfig(sel);
+        const spConf = getSpeciesConfig(sp);
+        if (selConf && spConf && selConf.family === spConf.family) return true;
+        if (selConf && (sp.toLowerCase().includes(selConf.family.toLowerCase()) || selConf.family.toLowerCase().includes(sp.toLowerCase()))) return true;
+        return sp.toLowerCase().includes(sel.toLowerCase()) || sel.toLowerCase().includes(sp.toLowerCase());
+      })
+    );
+    if (matchedSel) {
+      return getSpeciesColor(matchedSel, defaultZoneColor);
+    }
+  }
+
+  return defaultZoneColor;
+}
+

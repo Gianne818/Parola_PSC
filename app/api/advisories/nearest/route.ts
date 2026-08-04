@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server';
+// @ts-ignore
 import { Pool } from 'pg';
 
 // Server-side PostgreSQL pool for direct database queries

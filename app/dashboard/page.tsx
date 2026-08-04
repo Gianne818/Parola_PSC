@@ -8,7 +8,7 @@ import { MapComponent } from "../../components/features/hotspots/MapComponent";
 import { Modal } from "../../components/ui/Modal";
 import { TierProgressBar } from "../../components/ui/TierProgressBar";
 import { calculateDistance, calculateBearing } from "../../utils/spatial";
-import { CATEGORIZED_SPECIES, getSpeciesConfig, getSpeciesColor } from "../../utils/speciesColors";
+import { CATEGORIZED_SPECIES, getSpeciesConfig, getSpeciesColor, GENERAL_PELAGIC_COLOR, GENERAL_DEMERSAL_COLOR } from "../../utils/speciesColors";
 import {
   AlertTriangle,
   ChevronLeft,
@@ -246,27 +246,28 @@ export default function DashboardPage() {
     }
 
     const spotType = spot.type || "pelagic";
+
+    // 1. Top Navigation Tab Filter: Must match active tab (unless activeTab === "both")
     if (activeTab !== "both" && spotType !== activeTab) return false;
 
-    if (spotType === "pelagic" && !showGeneralPelagic) return false;
-    if (spotType === "demersal" && !showGeneralDemersal) return false;
+    // Determine if species filters exist for this spot's category
+    const categorySpeciesList = spotType === "pelagic"
+      ? CATEGORIZED_SPECIES.pelagic.map((s) => s.name)
+      : CATEGORIZED_SPECIES.demersal.map((s) => s.name);
 
-    if (checkedFamilies.length > 0 && !checkedFamilies.includes(spotType)) return false;
+    const selectedCategorySpecies = selectedSpecies.filter((sel) =>
+      categorySpeciesList.some((catSp) => catSp.toLowerCase() === sel.toLowerCase())
+    );
 
-    if (selectedSpecies.length > 0) {
-      const matchesSpecies = spot.species.some((s) => {
-        return selectedSpecies.some((sel) => {
-          if (s === sel) return true;
-          const allItems = [...CATEGORIZED_SPECIES.pelagic, ...CATEGORIZED_SPECIES.demersal];
-          const matchedItem = allItems.find(item => item.name === sel || (item as any).family === sel);
-          if (!matchedItem) return s.toLowerCase().includes(sel.toLowerCase());
-          return s.toLowerCase().includes(matchedItem.name.toLowerCase()) ||
-            s.toLowerCase().includes((matchedItem as any).family.toLowerCase()) ||
-            matchedItem.name.toLowerCase().includes(s.toLowerCase()) ||
-            (matchedItem as any).family.toLowerCase().includes(s.toLowerCase());
-        });
-      });
-      if (!matchesSpecies) return false;
+    if (selectedCategorySpecies.length > 0) {
+      // Species Habitat Database is a separate prediction pipeline from General EOG Satellite Boat Detection.
+      // General EOG vessel spots MUST NOT be reused for species habitat predictions.
+      // Since backend species prediction data is not yet loaded, return false (0 spots for species filter).
+      return false;
+    } else {
+      // No species selected for this category -> Display General EOG Satellite Boat Detection predictions ONLY if General Model Run is ON
+      if (spotType === "pelagic" && !showGeneralPelagic) return false;
+      if (spotType === "demersal" && !showGeneralDemersal) return false;
     }
 
     return true;
@@ -617,20 +618,21 @@ export default function DashboardPage() {
                 </div>
 
                 {activeTooltip === "species" && (
-                  <div className="p-3 bg-emerald-50/80 border border-emerald-200 rounded-xl text-[10px] text-slate-700 space-y-1">
-                    <p className="font-bold text-[#00B074]">🐟 Habitat Explanation:</p>
-                    <p>• **Surface Water (Pelagic)**: Fish that swim near upper ocean surface (Tamban, Galunggong, Tulingan).</p>
-                    <p>• **Bottom & Reef (Demersal)**: Fish that feed near seabed & corals (Lapu-lapu, Maya-maya, Bisugo).</p>
+                  <div className="p-3.5 bg-emerald-50/90 border border-emerald-200 rounded-xl text-[10px] text-slate-700 space-y-1.5 shadow-xs">
+                    <p className="font-bold text-[#00B074] text-xs">💡 EOG Vessel Activity vs Species Habitat Database:</p>
+                    <p>• <strong className="text-emerald-800">General PELAGIC Model (EOG Boat Detection)</strong>: Processes Earth Observation Group satellite vessel detection & surface ocean data. Displays general fishing activity hotspots in <span className="font-extrabold text-emerald-600">Emerald Green</span> (NOT species specific).</p>
+                    <p>• <strong className="text-blue-800">General DEMERSAL Model (EOG Vessel & Seabed)</strong>: Processes EOG satellite vessel detection, depth & bathymetry data. Displays general demersal fishing activity hotspots in <span className="font-extrabold text-blue-600">Ocean Blue</span> (NOT species specific).</p>
+                    <p>• <strong className="text-amber-900">Species Preference Database</strong>: Uses a separate environmental habitat database for individual species. (Pending backend data integration - selecting a species hides General EOG boat spots).</p>
                   </div>
                 )}
 
-                {/* Integrated Habitat Filter & Mode Switcher */}
+                {/* Integrated Habitat Filter & Navigation Switcher */}
                 <div className="grid grid-cols-3 gap-2 w-full bg-slate-100/80 p-1.5 rounded-2xl border border-slate-200/60">
                   {(["pelagic", "demersal", "both"] as const).map((tab) => {
                     const tabConfig = {
-                      pelagic: { main: "Surface Water", sub: "Pelagic Species" },
-                      demersal: { main: "Bottom & Reef", sub: "Demersal Species" },
-                      both: { main: "All Fish", sub: "Both Habitats" },
+                      pelagic: { main: "Surface Water", sub: "Pelagic Interface" },
+                      demersal: { main: "Bottom & Reef", sub: "Demersal Interface" },
+                      both: { main: "All Predictions", sub: "Both Interfaces" },
                     };
 
                     const info = tabConfig[tab];
@@ -640,15 +642,7 @@ export default function DashboardPage() {
                       <button
                         key={tab}
                         type="button"
-                        onClick={() => {
-                          setActiveTab(tab);
-                          if (tab === "pelagic") setShowGeneralPelagic(true);
-                          if (tab === "demersal") setShowGeneralDemersal(true);
-                          if (tab === "both") {
-                            setShowGeneralPelagic(true);
-                            setShowGeneralDemersal(true);
-                          }
-                        }}
+                        onClick={() => setActiveTab(tab)}
                         className={`py-2 px-2 rounded-xl transition cursor-pointer flex flex-col justify-center items-center text-center select-none ${
                           isActive
                             ? "bg-white text-slate-900 shadow-sm border border-gray-200/80 font-black"
@@ -679,7 +673,7 @@ export default function DashboardPage() {
                         <div className="flex items-center gap-2 min-w-0">
                           <Fish className="w-4 h-4 text-[#00B074] shrink-0" />
                           <span className="font-display font-black text-xs uppercase tracking-wider text-slate-900 truncate">
-                            Surface Water Species (Pelagic)
+                            Pelagic Zone & Surface Species
                           </span>
                         </div>
                         <div className="flex items-center gap-2 shrink-0 ml-2">
@@ -692,10 +686,16 @@ export default function DashboardPage() {
                                 className={`text-[9px] font-black uppercase px-2.5 py-0.5 rounded-full ${
                                   pelagicSel > 0
                                     ? "bg-[#00B074] text-white"
-                                    : "bg-emerald-100 text-[#00B074]"
+                                    : showGeneralPelagic
+                                      ? "bg-emerald-100 text-[#00B074]"
+                                      : "bg-gray-100 text-gray-400"
                                 }`}
                               >
-                                {pelagicSel > 0 ? `${pelagicSel} SELECTED` : "UPPER OCEAN"}
+                                {pelagicSel > 0
+                                  ? `${pelagicSel} SPECIES FILTERED`
+                                  : showGeneralPelagic
+                                    ? "EOG MODEL ACTIVE"
+                                    : "MODEL OFF"}
                               </span>
                             );
                           })()}
@@ -717,55 +717,119 @@ export default function DashboardPage() {
                       <div
                         className={`grid transition-all duration-300 ease-in-out ${
                           isPelagicExpanded
-                            ? "grid-rows-[1fr] opacity-100 p-4 pt-1 border-t border-emerald-100/80"
+                            ? "grid-rows-[1fr] opacity-100 p-4 pt-2 border-t border-emerald-100/80"
                             : "grid-rows-[0fr] opacity-0 p-0 pointer-events-none"
                         }`}
                       >
-                        <div className="overflow-hidden space-y-3">
-                          <p className="text-[10px] font-medium text-gray-500 pt-1">
-                            Click species below to filter fishing hotspots on the map:
-                          </p>
-                          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                            {CATEGORIZED_SPECIES.pelagic.map((sp) => {
-                              const isSelected = selectedSpecies.includes(sp.name);
-                              return (
-                                <button
-                                  key={sp.name}
-                                  onClick={() => handleSpeciesToggle(sp.name)}
-                                  className={`p-2.5 rounded-xl border text-left flex items-center justify-between transition-all cursor-pointer select-none ${
-                                    isSelected
-                                      ? "bg-slate-50/90 text-slate-900 font-black shadow-sm"
-                                      : "bg-white border-gray-200 text-slate-800 hover:border-slate-300 hover:shadow-xs"
+                        <div className="overflow-hidden space-y-3.5">
+                          {/* Interactive General Pelagic Model Run Toggle Card */}
+                          <button
+                            type="button"
+                            onClick={() => setShowGeneralPelagic(!showGeneralPelagic)}
+                            className={`w-full p-3.5 rounded-xl border text-left flex items-center justify-between transition-all cursor-pointer select-none ${
+                              showGeneralPelagic
+                                ? "bg-emerald-50/90 border-[#10B981] ring-2 ring-[#10B981]/20 shadow-sm"
+                                : "bg-white/90 border-gray-200 hover:border-emerald-300 hover:bg-emerald-50/30"
+                            }`}
+                          >
+                            <div className="min-w-0 pr-2">
+                              <div className="flex items-center gap-2">
+                                <span
+                                  className={`w-3 h-3 rounded-full inline-block shrink-0 transition-all ${
+                                    showGeneralPelagic
+                                      ? "bg-[#10B981] ring-2 ring-emerald-200 shadow-sm animate-pulse"
+                                      : "bg-gray-300 border border-gray-400"
                                   }`}
-                                  style={isSelected ? { borderColor: sp.color, boxShadow: `0 2px 8px ${sp.color}25` } : {}}
+                                />
+                                <span
+                                  className={`text-xs font-black uppercase ${
+                                    showGeneralPelagic ? "text-emerald-950" : "text-slate-800"
+                                  }`}
                                 >
-                                  <div className="min-w-0 pr-2">
-                                    <span className={`text-xs font-black block truncate ${isSelected ? "text-slate-950" : "text-slate-900"}`}>
-                                      {sp.name}
-                                    </span>
-                                    <span className="text-[9px] font-bold block truncate mt-0.5 text-gray-400">
-                                      {sp.localName}
-                                    </span>
-                                  </div>
+                                  General PELAGIC Model Run (EOG Vessel Detection)
+                                </span>
+                              </div>
+                              <p className="text-[10px] text-gray-500 font-medium leading-snug mt-1">
+                                Processes Earth Observation Group (EOG) satellite boat detection and surface ocean data (SST, Chlorophyll). Predicts general fishing activity, NOT specific fish species.
+                              </p>
+                            </div>
+                            <div className="shrink-0 flex items-center gap-1.5 ml-2">
+                              <span
+                                className={`text-[9px] font-black uppercase px-2.5 py-1 rounded-full border transition-all ${
+                                  showGeneralPelagic
+                                    ? "bg-[#10B981] text-white border-[#10B981] shadow-xs"
+                                    : "bg-gray-100 text-gray-500 border-gray-200"
+                                }`}
+                              >
+                                {showGeneralPelagic ? "EOG MODEL ACTIVE" : "CLICK TO RUN MODEL"}
+                              </span>
+                            </div>
+                          </button>
 
-                                  {/* Right-side Colored Circle (acts as both selection indicator & map color legend, NO CHECKMARK) */}
-                                  <div className="shrink-0 flex items-center justify-center ml-1">
-                                    {isSelected ? (
-                                      <span
-                                        className="w-4 h-4 rounded-full inline-block shadow-sm ring-2 ring-white"
-                                        style={{ backgroundColor: sp.color }}
-                                        title={`Selected species & map hotspot color: ${sp.color}`}
-                                      />
-                                    ) : (
-                                      <span
-                                        className="w-4 h-4 rounded-full border-2 border-gray-300 bg-transparent inline-block"
-                                        title={`Map hotspot color if selected: ${sp.color}`}
-                                      />
-                                    )}
-                                  </div>
-                                </button>
-                              );
-                            })}
+                          {/* Species Specific Preferences Section */}
+                          <div className="pt-1 space-y-2">
+                            <div className="flex items-center justify-between">
+                              <span className="text-[10px] font-black uppercase tracking-wider text-slate-700">
+                                Filter By Specific Species (Habitat Preference Database)
+                              </span>
+                              <span className="text-[9px] text-gray-400 font-bold">Separate Pipeline</span>
+                            </div>
+
+                            {/* Informative Banner when pelagic species selected */}
+                            {CATEGORIZED_SPECIES.pelagic.some((sp) => selectedSpecies.includes(sp.name)) && (
+                              <div className="bg-amber-50/90 border border-amber-200/90 p-3 rounded-xl space-y-1 text-[10px] text-amber-900 shadow-xs">
+                                <div className="flex items-center gap-1.5 font-bold">
+                                  <AlertTriangle className="w-3.5 h-3.5 text-amber-600 shrink-0" />
+                                  <span>Species Habitat Data Pending Backend Integration</span>
+                                </div>
+                                <p className="text-[9.5px] text-amber-800 leading-snug">
+                                  Selecting a species switches to the separate Species Habitat Database pipeline (currently not loaded in backend). General EOG Satellite Boat Detection hotspots are hidden while a species filter is active.
+                                </p>
+                              </div>
+                            )}
+
+                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                              {CATEGORIZED_SPECIES.pelagic.map((sp) => {
+                                const isSelected = selectedSpecies.includes(sp.name);
+                                return (
+                                  <button
+                                    key={sp.name}
+                                    onClick={() => handleSpeciesToggle(sp.name)}
+                                    className={`p-2.5 rounded-xl border text-left flex items-center justify-between transition-all cursor-pointer select-none ${
+                                      isSelected
+                                        ? "bg-slate-50/90 text-slate-900 font-black shadow-sm"
+                                        : "bg-white border-gray-200 text-slate-800 hover:border-slate-300 hover:shadow-xs"
+                                    }`}
+                                    style={isSelected ? { borderColor: sp.color, boxShadow: `0 2px 8px ${sp.color}25` } : {}}
+                                  >
+                                    <div className="min-w-0 pr-2">
+                                      <span className={`text-xs font-black block truncate ${isSelected ? "text-slate-950" : "text-slate-900"}`}>
+                                        {sp.name}
+                                      </span>
+                                      <span className="text-[9px] font-bold block truncate mt-0.5 text-gray-400">
+                                        {sp.localName}
+                                      </span>
+                                    </div>
+
+                                    {/* Right-side Colored Circle */}
+                                    <div className="shrink-0 flex items-center justify-center ml-1">
+                                      {isSelected ? (
+                                        <span
+                                          className="w-4 h-4 rounded-full inline-block shadow-sm ring-2 ring-white"
+                                          style={{ backgroundColor: sp.color }}
+                                          title={`Selected species map color: ${sp.color}`}
+                                        />
+                                      ) : (
+                                        <span
+                                          className="w-4 h-4 rounded-full border-2 border-gray-300 bg-transparent inline-block"
+                                          title={`Species custom map color: ${sp.color}`}
+                                        />
+                                      )}
+                                    </div>
+                                  </button>
+                                );
+                              })}
+                            </div>
                           </div>
                         </div>
                       </div>
@@ -783,7 +847,7 @@ export default function DashboardPage() {
                         <div className="flex items-center gap-2 min-w-0">
                           <Anchor className="w-4 h-4 text-[#D97706] shrink-0" />
                           <span className="font-display font-black text-xs uppercase tracking-wider text-slate-900 truncate">
-                            Bottom & Reef Species (Demersal)
+                            Demersal Zone & Bottom Species
                           </span>
                         </div>
                         <div className="flex items-center gap-2 shrink-0 ml-2">
@@ -796,10 +860,16 @@ export default function DashboardPage() {
                                 className={`text-[9px] font-black uppercase px-2.5 py-0.5 rounded-full ${
                                   demersalSel > 0
                                     ? "bg-[#D97706] text-white"
-                                    : "bg-amber-100 text-[#D97706]"
+                                    : showGeneralDemersal
+                                      ? "bg-amber-100 text-[#D97706]"
+                                      : "bg-gray-100 text-gray-400"
                                 }`}
                               >
-                                {demersalSel > 0 ? `${demersalSel} SELECTED` : "SEABED & CORAL"}
+                                {demersalSel > 0
+                                  ? `${demersalSel} SPECIES FILTERED`
+                                  : showGeneralDemersal
+                                    ? "EOG MODEL ACTIVE"
+                                    : "MODEL OFF"}
                               </span>
                             );
                           })()}
@@ -821,55 +891,118 @@ export default function DashboardPage() {
                       <div
                         className={`grid transition-all duration-300 ease-in-out ${
                           isDemersalExpanded
-                            ? "grid-rows-[1fr] opacity-100 p-4 pt-1 border-t border-amber-100/80"
+                            ? "grid-rows-[1fr] opacity-100 p-4 pt-2 border-t border-amber-100/80"
                             : "grid-rows-[0fr] opacity-0 p-0 pointer-events-none"
                         }`}
                       >
-                        <div className="overflow-hidden space-y-3">
-                          <p className="text-[10px] font-medium text-gray-500 pt-1">
-                            Click species below to filter fishing hotspots on the map:
-                          </p>
-                          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                            {CATEGORIZED_SPECIES.demersal.map((sp) => {
-                              const isSelected = selectedSpecies.includes(sp.name);
-                              return (
-                                <button
-                                  key={sp.name}
-                                  onClick={() => handleSpeciesToggle(sp.name)}
-                                  className={`p-2.5 rounded-xl border text-left flex items-center justify-between transition-all cursor-pointer select-none ${
-                                    isSelected
-                                      ? "bg-slate-50/90 text-slate-900 font-black shadow-sm"
-                                      : "bg-white border-gray-200 text-slate-800 hover:border-slate-300 hover:shadow-xs"
+                        <div className="overflow-hidden space-y-3.5">
+                          {/* Interactive General Demersal Model Run Toggle Card */}
+                          <button
+                            type="button"
+                            onClick={() => setShowGeneralDemersal(!showGeneralDemersal)}
+                            className={`w-full p-3.5 rounded-xl border text-left flex items-center justify-between transition-all cursor-pointer select-none ${
+                              showGeneralDemersal
+                                ? "bg-blue-50/90 border-[#3B82F6] ring-2 ring-[#3B82F6]/20 shadow-sm"
+                                : "bg-white/90 border-gray-200 hover:border-blue-300 hover:bg-blue-50/30"
+                            }`}
+                          >
+                            <div className="min-w-0 pr-2">
+                              <div className="flex items-center gap-2">
+                                <span
+                                  className={`w-3 h-3 rounded-full inline-block shrink-0 transition-all ${
+                                    showGeneralDemersal
+                                      ? "bg-[#3B82F6] ring-2 ring-blue-200 shadow-sm animate-pulse"
+                                      : "bg-gray-300 border border-gray-400"
                                   }`}
-                                  style={isSelected ? { borderColor: sp.color, boxShadow: `0 2px 8px ${sp.color}25` } : {}}
+                                />
+                                <span
+                                  className={`text-xs font-black uppercase ${
+                                    showGeneralDemersal ? "text-blue-950" : "text-slate-800"
+                                  }`}
                                 >
-                                  <div className="min-w-0 pr-2">
-                                    <span className={`text-xs font-black block truncate ${isSelected ? "text-slate-950" : "text-slate-900"}`}>
-                                      {sp.name}
-                                    </span>
-                                    <span className="text-[9px] font-bold block truncate mt-0.5 text-gray-400">
-                                      {sp.localName}
-                                    </span>
-                                  </div>
+                                  General DEMERSAL Model Run (EOG Vessel & Seabed)
+                                </span>
+                              </div>
+                              <p className="text-[10px] text-gray-500 font-medium leading-snug mt-1">
+                                Processes Earth Observation Group (EOG) satellite boat detection, depth, and bathymetry data. Predicts general demersal vessel activity, NOT specific fish species.
+                              </p>
+                            </div>
+                            <div className="shrink-0 flex items-center gap-1.5 ml-2">
+                              <span
+                                className={`text-[9px] font-black uppercase px-2.5 py-1 rounded-full border transition-all ${
+                                  showGeneralDemersal
+                                    ? "bg-[#3B82F6] text-white border-[#3B82F6] shadow-xs"
+                                    : "bg-gray-100 text-gray-400 border-gray-200"
+                                }`}
+                              >
+                                {showGeneralDemersal ? "EOG MODEL ACTIVE" : "CLICK TO RUN MODEL"}
+                              </span>
+                            </div>
+                          </button>
 
-                                  {/* Right-side Colored Circle (acts as both selection indicator & map color legend, NO CHECKMARK) */}
-                                  <div className="shrink-0 flex items-center justify-center ml-1">
-                                    {isSelected ? (
-                                      <span
-                                        className="w-4 h-4 rounded-full inline-block shadow-sm ring-2 ring-white"
-                                        style={{ backgroundColor: sp.color }}
-                                        title={`Selected species & map hotspot color: ${sp.color}`}
-                                      />
-                                    ) : (
-                                      <span
-                                        className="w-4 h-4 rounded-full border-2 border-gray-300 bg-transparent inline-block"
-                                        title={`Map hotspot color if selected: ${sp.color}`}
-                                      />
-                                    )}
-                                  </div>
-                                </button>
-                              );
-                            })}
+                          {/* Species Specific Preferences Section */}
+                          <div className="pt-1 space-y-2">
+                            <div className="flex items-center justify-between">
+                              <span className="text-[10px] font-black uppercase tracking-wider text-slate-700">
+                                Filter By Specific Species (Habitat Preference Database)
+                              </span>
+                              <span className="text-[9px] text-gray-400 font-bold">Separate Pipeline</span>
+                            </div>
+
+                            {/* Informative Banner when demersal species selected */}
+                            {CATEGORIZED_SPECIES.demersal.some((sp) => selectedSpecies.includes(sp.name)) && (
+                              <div className="bg-amber-50/90 border border-amber-200/90 p-3 rounded-xl space-y-1 text-[10px] text-amber-900 shadow-xs">
+                                <div className="flex items-center gap-1.5 font-bold">
+                                  <AlertTriangle className="w-3.5 h-3.5 text-amber-600 shrink-0" />
+                                  <span>Species Habitat Data Pending Backend Integration</span>
+                                </div>
+                                <p className="text-[9.5px] text-amber-800 leading-snug">
+                                  Selecting a species switches to the separate Species Habitat Database pipeline (currently not loaded in backend). General EOG Satellite Boat Detection hotspots are hidden while a species filter is active.
+                                </p>
+                              </div>
+                            )}
+                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                              {CATEGORIZED_SPECIES.demersal.map((sp) => {
+                                const isSelected = selectedSpecies.includes(sp.name);
+                                return (
+                                  <button
+                                    key={sp.name}
+                                    onClick={() => handleSpeciesToggle(sp.name)}
+                                    className={`p-2.5 rounded-xl border text-left flex items-center justify-between transition-all cursor-pointer select-none ${
+                                      isSelected
+                                        ? "bg-slate-50/90 text-slate-900 font-black shadow-sm"
+                                        : "bg-white border-gray-200 text-slate-800 hover:border-slate-300 hover:shadow-xs"
+                                    }`}
+                                    style={isSelected ? { borderColor: sp.color, boxShadow: `0 2px 8px ${sp.color}25` } : {}}
+                                  >
+                                    <div className="min-w-0 pr-2">
+                                      <span className={`text-xs font-black block truncate ${isSelected ? "text-slate-950" : "text-slate-900"}`}>
+                                        {sp.name}
+                                      </span>
+                                      <span className="text-[9px] font-bold block truncate mt-0.5 text-gray-400">
+                                        {sp.localName}
+                                      </span>
+                                    </div>
+
+                                    {/* Right-side Colored Circle */}
+                                    <div className="shrink-0 flex items-center justify-center ml-1">
+                                      {isSelected ? (
+                                        <span
+                                          className="w-4 h-4 rounded-full inline-block shadow-sm ring-2 ring-white"
+                                          style={{ backgroundColor: sp.color }}
+                                          title={`Selected species map color: ${sp.color}`}
+                                        />
+                                      ) : (
+                                        <span
+                                          className="w-4 h-4 rounded-full border-2 border-gray-300 bg-transparent inline-block"
+                                          title={`Species custom map color: ${sp.color}`}
+                                        />
+                                      )}
+                                    </div>
+                                  </button>
+                                );
+                              })}
+                            </div>
                           </div>
                         </div>
                       </div>

@@ -6,7 +6,7 @@ import { Hotspot } from "../../../types";
 import { calculateDistance, calculateBearing } from "../../../utils/spatial";
 import { useApp } from "../../../context/AppContext";
 import { Anchor, Compass, Info, Navigation, ShieldCheck } from "lucide-react";
-import { ALL_SPECIES_CONFIGS } from "../../../utils/speciesColors";
+import { ALL_SPECIES_CONFIGS, GENERAL_PELAGIC_COLOR, GENERAL_DEMERSAL_COLOR, getSpeciesConfig } from "../../../utils/speciesColors";
 
 // Dynamically import the real Leaflet map component with SSR disabled
 const MapInner = dynamic(() => import("./MapInner"), {
@@ -74,6 +74,43 @@ export const MapComponent: React.FC<MapComponentProps> = ({
             <span className="text-[10px] font-black uppercase tracking-wider text-[#12211E] dark:text-[#F7FAF9]">
               ECDIS GPS ACTIVE
             </span>
+          </div>
+        </div>
+
+        {/* Map Model & Species Prediction Color Legend Overlay */}
+        <div className="absolute top-4 right-4 bg-white/95 dark:bg-[#12211E]/95 backdrop-blur border border-slate-200 dark:border-teal-950 p-2.5 rounded-2xl shadow-md z-10 text-[10px] space-y-1.5 max-w-[225px]">
+          <span className="font-black text-gray-400 uppercase tracking-widest block text-[9px]">
+            Map Prediction Sources
+          </span>
+          <div className="space-y-1 font-bold text-gray-700 dark:text-gray-200">
+            <div className="flex items-center gap-1.5">
+              <span className="w-2.5 h-2.5 rounded-full inline-block shrink-0 shadow-xs" style={{ backgroundColor: GENERAL_PELAGIC_COLOR }} />
+              <span className="truncate">Pelagic (EOG Satellite Boat Data)</span>
+            </div>
+            <div className="flex items-center gap-1.5">
+              <span className="w-2.5 h-2.5 rounded-full inline-block shrink-0 shadow-xs" style={{ backgroundColor: GENERAL_DEMERSAL_COLOR }} />
+              <span className="truncate">Demersal (EOG Seabed & Vessel Data)</span>
+            </div>
+            {selectedSpecies && selectedSpecies.length > 0 && (
+              <div className="pt-1.5 mt-1 border-t border-gray-100 dark:border-teal-950/80 space-y-1">
+                <span className="text-[8.5px] font-black text-amber-600 dark:text-amber-400 uppercase block tracking-wider">
+                  Species Database Filter:
+                </span>
+                {selectedSpecies.map((spName) => {
+                  const cfg = getSpeciesConfig(spName);
+                  const color = cfg ? cfg.color : "#00B074";
+                  return (
+                    <div key={spName} className="flex items-center gap-1.5">
+                      <span className="w-2.5 h-2.5 rounded-full inline-block shrink-0 ring-1 ring-white shadow-xs" style={{ backgroundColor: color }} />
+                      <span className="truncate text-[9.5px]">{spName}</span>
+                    </div>
+                  );
+                })}
+                <div className="text-[8.5px] text-amber-700 dark:text-amber-300 font-semibold leading-tight pt-0.5">
+                  ⚠️ Separate species habitat database pending backend integration. EOG vessel detection spots hidden.
+                </div>
+              </div>
+            )}
           </div>
         </div>
 

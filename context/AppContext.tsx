@@ -232,58 +232,70 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     const loadTelemetryAndHotspots = async () => {
       if (!userProfile.lat || !userProfile.lng) return;
 
-      // 1. Fetch live weather from Open-Meteo
-      const live = await fetchLiveWeather(userProfile.lat, userProfile.lng);
-
       try {
-        // 2. Fetch latest weather data from Supabase
-        const sbWeather = await fetchSupabaseWeatherData(userProfile.lat, userProfile.lng);
-        if (sbWeather) {
-          live.temp = sbWeather.temperature ?? live.temp;
-          live.windSpeed = sbWeather.wind_speed ?? live.windSpeed;
-          live.waveHeight = sbWeather.wave_height ?? live.waveHeight;
-          live.stormSignal = sbWeather.storm_signal ?? live.stormSignal;
+        // 1. Fetch live weather from Open-Meteo
+        let live: WeatherTelemetry;
+        try {
+          live = await fetchLiveWeather(userProfile.lat, userProfile.lng);
+        } catch (weatherErr) {
+          console.warn("Could not fetch live weather, fallback to default weather:", weatherErr);
+          live = DEFAULT_WEATHER;
         }
-      } catch (e) {
-        console.warn("Could not load Supabase weather telemetry:", e);
-      }
 
-      setWeather(live);
-
-      try {
-        // 3. Fetch safety overrides from Supabase
-        const overrides = await fetchWeatherSafetyOverrides();
-        const hasActiveOverride = overrides.some(o => o.isActive);
-        if (hasActiveOverride) {
-          setManualOverrideHold(true);
-          const activeOverride = overrides.find(o => o.isActive);
-          if (activeOverride) {
-            showToast(`⚠️ Safety Override: ${activeOverride.reason}`, "error");
+        try {
+          // 2. Fetch latest weather data from Supabase
+          const sbWeather = await fetchSupabaseWeatherData(userProfile.lat, userProfile.lng);
+          if (sbWeather) {
+            live.temp = sbWeather.temperature ?? live.temp;
+            live.windSpeed = sbWeather.wind_speed ?? live.windSpeed;
+            live.waveHeight = sbWeather.wave_height ?? live.waveHeight;
+            live.stormSignal = sbWeather.storm_signal ?? live.stormSignal;
           }
+        } catch (e) {
+          console.warn("Could not load Supabase weather telemetry:", e);
         }
-      } catch (e) {
-        console.warn("Could not load weather safety overrides:", e);
-      }
 
-      try {
-        // 4. Fetch hotspots from Supabase/API
-        const sbHotspots = await fetchHotspots(userProfile.lat, userProfile.lng);
-        if (sbHotspots && sbHotspots.length > 0) {
-          const mapped = sbHotspots.map(h => ({
-            ...h,
-            type: (h.type === 'pelagic' || h.type === 'demersal' || h.type === 'both') ? h.type : 'both'
-          })) as Hotspot[];
-          setHotspots(mapped);
-        } else {
+        setWeather(live);
+
+        try {
+          // 3. Fetch safety overrides from Supabase
+          const overrides = await fetchWeatherSafetyOverrides();
+          const hasActiveOverride = overrides.some(o => o.isActive);
+          if (hasActiveOverride) {
+            setManualOverrideHold(true);
+            const activeOverride = overrides.find(o => o.isActive);
+            if (activeOverride) {
+              showToast(`⚠️ Safety Override: ${activeOverride.reason}`, "error");
+            }
+          }
+        } catch (e) {
+          console.warn("Could not load weather safety overrides:", e);
+        }
+
+        try {
+          // 4. Fetch hotspots from Supabase/API
+          const sbHotspots = await fetchHotspots(userProfile.lat, userProfile.lng);
+          if (sbHotspots && sbHotspots.length > 0) {
+            const mapped = sbHotspots.map(h => ({
+              ...h,
+              type: (h.type === 'pelagic' || h.type === 'demersal' || h.type === 'both') ? h.type : 'both'
+            })) as Hotspot[];
+            setHotspots(mapped);
+          } else {
+            setHotspots(DEFAULT_HOTSPOTS);
+          }
+        } catch (e) {
+          console.warn("Could not load fishing hotspots:", e);
           setHotspots(DEFAULT_HOTSPOTS);
         }
-      } catch (e) {
-        console.warn("Could not load fishing hotspots:", e);
-        setHotspots(DEFAULT_HOTSPOTS);
+      } catch (err) {
+        console.warn("Error loading telemetry and hotspots:", err);
       }
     };
 
-    loadTelemetryAndHotspots();
+    loadTelemetryAndHotspots().catch((err) => {
+      console.warn("Unhandled rejection in loadTelemetryAndHotspots:", err);
+    });
   }, [userProfile.port, userProfile.lat, userProfile.lng]);
 
   const showToast = (message: string, type: "success" | "error" | "info") => {
@@ -438,11 +450,15 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   };
 
   const updateProfile = async (profile: Partial<UserProfile>) => {
-    const updated = { ...userProfile, ...profile };
-    setUserProfile(updated);
-    storageService.setItem("parola-profile", updated);
-    showToast("Vessel profile updated.", "success");
-    updateUserWithBackend(updated);
+    try {
+      const updated = { ...userProfile, ...profile };
+      setUserProfile(updated);
+      storageService.setItem("parola-profile", updated);
+      showToast("Vessel profile updated.", "success");
+      await updateUserWithBackend(updated);
+    } catch (err) {
+      console.warn("Failed to update profile backend sync:", err);
+    }
   };
 
   const changeLanguage = (lang: 'en' | 'tl' | 'ceb' | 'hil') => {
@@ -607,9 +623,14 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   };
 
   const refreshWeather = async () => {
-    const live = await fetchLiveWeather(userProfile.lat, userProfile.lng);
-    setWeather(live);
-    showToast("Live PAGASA weather metrics refreshed.", "success");
+    try {
+      const live = await fetchLiveWeather(userProfile.lat, userProfile.lng);
+      setWeather(live);
+      showToast("Live PAGASA weather metrics refreshed.", "success");
+    } catch (err) {
+      console.warn("Failed to refresh weather metrics:", err);
+      showToast("Could not refresh live weather metrics.", "error");
+    }
   };
 
   return (
