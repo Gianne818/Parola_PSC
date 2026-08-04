@@ -10,7 +10,7 @@ import { TierProgressBar } from "../../components/ui/TierProgressBar";
 import { calculateDistance, calculateBearing } from "../../utils/spatial";
 import { calculateHotspotMetrics, calculateEfficiencyRatio } from "../../utils/hotspotCalculator";
 import { fetchHotspots } from "../../services/supabaseHotspotService";
-import { CATEGORIZED_SPECIES, getSpeciesConfig, getSpeciesColor, GENERAL_PELAGIC_COLOR, GENERAL_DEMERSAL_COLOR } from "../../utils/speciesColors";
+import { CATEGORIZED_SPECIES, getSpeciesConfig, getSpeciesColor, getHotspotDisplayColor, GENERAL_PELAGIC_COLOR, GENERAL_DEMERSAL_COLOR } from "../../utils/speciesColors";
 import {
   AlertTriangle,
   ChevronLeft,
@@ -240,6 +240,10 @@ export default function DashboardPage() {
     if (selectedSpecies.includes(species)) {
       setSelectedSpecies(selectedSpecies.filter((s) => s !== species));
     } else {
+      if (selectedSpecies.length >= 3) {
+        showToast("Maximum of 3 target species can be selected at once.", "info");
+        return;
+      }
       setSelectedSpecies([...selectedSpecies, species]);
     }
   };
@@ -448,61 +452,79 @@ export default function DashboardPage() {
                     </div>
                   ) : (
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                      {filteredHotspots.map((spot: any) => (
-                        <div
-                          key={spot.id}
-                          className={`bg-white p-4 rounded-2xl border transition-all flex flex-col justify-between shadow-sm relative ${isSafetyHoldActive
-                            ? "hover:border-rose-300 border-gray-200"
-                            : "hover:border-emerald-300 border-gray-200"
-                            }`}
-                        >
-                          <div className="space-y-1">
-                            <div className="flex items-center gap-1.5 justify-between">
-                              <div className="flex items-center gap-1.5">
-                                <span className="text-lg leading-none">
-                                  {(spot as any).icon || "🐟"}
-                                </span>
-                                <span className="text-xs font-black text-slate-800 uppercase tracking-tight">
-                                  {spot.name}
-                                </span>
+                      {filteredHotspots.map((spot: any) => {
+                        const itemColor = getHotspotDisplayColor(spot.type || "pelagic", selectedSpecies, spot.species || [], spot.catchProbability);
+                        return (
+                          <div
+                            key={spot.id}
+                            className={`bg-white p-4 rounded-2xl border transition-all flex flex-col justify-between shadow-sm relative ${isSafetyHoldActive
+                              ? "hover:border-rose-300 border-gray-200"
+                              : "hover:border-slate-300 border-gray-200"
+                              }`}
+                            style={{ borderLeftWidth: "4px", borderLeftColor: itemColor }}
+                          >
+                            <div className="space-y-1.5">
+                              <div className="flex items-center gap-1.5 justify-between">
+                                <div className="flex items-center gap-1.5">
+                                  <span className="text-lg leading-none">
+                                    {(spot as any).icon || "🐟"}
+                                  </span>
+                                  <span className="text-xs font-black text-slate-800 uppercase tracking-tight">
+                                    {spot.name}
+                                  </span>
+                                </div>
+                                {spot.catchProbPercent !== undefined && (
+                                  <span className="text-[10px] font-black text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded-full border border-emerald-100">
+                                    {spot.catchProbPercent}% PROB
+                                  </span>
+                                )}
                               </div>
-                              <span className="text-[10px] font-black text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded-full border border-emerald-100">
-                                {spot.catchProbPercent}% PROB
+                              <div className="flex flex-wrap items-center gap-1.5 pt-0.5">
+                                <span className="inline-block text-[9px] font-black text-[#00B074] bg-emerald-50 px-2 py-0.5 rounded uppercase border border-emerald-100 tracking-wider">
+                                  DEPTH: {spot.depth}M
+                                </span>
+                                {spot.efficiencyRatio !== undefined && (
+                                  <span className="inline-block text-[9px] font-black text-amber-700 bg-amber-50 px-2 py-0.5 rounded uppercase border border-amber-200 tracking-wider">
+                                    RATIO: {spot.efficiencyRatio} %/km
+                                  </span>
+                                )}
+                                {spot.catchProbability !== undefined && (
+                                  <span
+                                    className="inline-block text-[9px] font-black px-2 py-0.5 rounded uppercase border tracking-wider"
+                                    style={{
+                                      backgroundColor: `${itemColor}15`,
+                                      borderColor: `${itemColor}50`,
+                                      color: itemColor
+                                    }}
+                                  >
+                                    ⚡ {(spot.catchProbability * (spot.catchProbability <= 1 ? 100 : 1)).toFixed(0)}% Catch Prob
+                                  </span>
+                                )}
+                              </div>
+                              <p className="text-[11px] text-gray-500 font-medium leading-relaxed pt-1">
+                                {(spot as any).desc || `Target species group: ${(spot.species || []).join(", ")}`}
+                              </p>
+                            </div>
+
+                            <div className="flex items-center justify-between border-t border-gray-100 pt-2.5 mt-3 text-[10px] font-bold">
+                              <span className="text-gray-400">BEARING: {spot.bearing}</span>
+                              <span
+                                className={`font-black ${isSafetyHoldActive ? "text-rose-500" : "text-[#00B074]"}`}
+                              >
+                                {spot.distance}
                               </span>
                             </div>
-                            
-                            <div className="flex items-center gap-1.5 pt-0.5">
-                              <span className="inline-block text-[9px] font-black text-[#00B074] bg-emerald-50 px-2 py-0.5 rounded uppercase border border-emerald-100 tracking-wider">
-                                DEPTH: {spot.depth}M
-                              </span>
-                              <span className="inline-block text-[9px] font-black text-amber-700 bg-amber-50 px-2 py-0.5 rounded uppercase border border-amber-200 tracking-wider">
-                                RATIO: {spot.efficiencyRatio} %/km
-                              </span>
+
+                            <div className="absolute top-4 right-4">
+                              <span
+                                className="w-3 h-3 rounded-full block shadow-xs ring-2 ring-white"
+                                style={{ backgroundColor: isSafetyHoldActive ? "#F43F5E" : itemColor }}
+                                title={`Catch Probability Color: ${itemColor}`}
+                              />
                             </div>
-
-                            <p className="text-[11px] text-gray-500 font-medium leading-relaxed pt-1">
-                              {(spot as any).desc || `Target species group: ${spot.species.join(", ")}`}
-                            </p>
                           </div>
-
-                          <div className="flex items-center justify-between border-t border-gray-100 pt-2.5 mt-3 text-[10px] font-bold">
-                            <span className="text-gray-400">BEARING: {spot.bearing}</span>
-                            <span
-                              className={`font-black ${isSafetyHoldActive ? "text-rose-500" : "text-[#00B074]"
-                                }`}
-                            >
-                              {spot.distance}
-                            </span>
-                          </div>
-
-                          <div className="absolute top-4 right-4">
-                            <span
-                              className={`w-2.5 h-2.5 rounded-full block ${isSafetyHoldActive ? "bg-rose-500" : "bg-[#00B074]"
-                                }`}
-                            />
-                          </div>
-                        </div>
-                      ))}
+                        );
+                      })}
                     </div>
                   )}
                 </div>
@@ -875,20 +897,20 @@ export default function DashboardPage() {
                           <div className="pt-1 space-y-2">
                             <div className="flex items-center justify-between">
                               <span className="text-[10px] font-black uppercase tracking-wider text-slate-700">
-                                Filter By Specific Species (Habitat Preference Database)
+                                Filter By Specific Species (Probability Gradient Active)
                               </span>
-                              <span className="text-[9px] text-gray-400 font-bold">Separate Pipeline</span>
+                              <span className="text-[9px] text-[#00B074] font-bold">AWS ML Model Live</span>
                             </div>
 
                             {/* Informative Banner when pelagic species selected */}
                             {CATEGORIZED_SPECIES.pelagic.some((sp) => selectedSpecies.includes(sp.name)) && (
-                              <div className="bg-amber-50/90 border border-amber-200/90 p-3 rounded-xl space-y-1 text-[10px] text-amber-900 shadow-xs">
-                                <div className="flex items-center gap-1.5 font-bold">
-                                  <AlertTriangle className="w-3.5 h-3.5 text-amber-600 shrink-0" />
-                                  <span>Species Habitat Data Pending Backend Integration</span>
+                              <div className="bg-emerald-50/90 border border-emerald-200/90 p-3 rounded-xl space-y-1 text-[10px] text-emerald-950 shadow-xs">
+                                <div className="flex items-center gap-1.5 font-bold text-emerald-800">
+                                  <Check className="w-3.5 h-3.5 text-[#00B074] shrink-0" />
+                                  <span>Species-Specific Catch Probability Gradient Active</span>
                                 </div>
-                                <p className="text-[9.5px] text-amber-800 leading-snug">
-                                  Selecting a species switches to the separate Species Habitat Database pipeline (currently not loaded in backend). General EOG Satellite Boat Detection hotspots are hidden while a species filter is active.
+                                <p className="text-[9.5px] text-emerald-800 leading-snug">
+                                  Map hotspot colors dynamically reflect the selected species and its catch probability (Light: 60-69%, Medium: 70-79%, Dark: 80-89%, Deepest: 90-100%).
                                 </p>
                               </div>
                             )}
@@ -900,36 +922,42 @@ export default function DashboardPage() {
                                   <button
                                     key={sp.name}
                                     onClick={() => handleSpeciesToggle(sp.name)}
-                                    className={`p-2.5 rounded-xl border text-left flex items-center justify-between transition-all cursor-pointer select-none ${
+                                    className={`p-3 rounded-2xl border text-left flex flex-col justify-between transition-all cursor-pointer select-none ${
                                       isSelected
                                         ? "bg-slate-50/90 text-slate-900 font-black shadow-sm"
                                         : "bg-white border-gray-200 text-slate-800 hover:border-slate-300 hover:shadow-xs"
                                     }`}
-                                    style={isSelected ? { borderColor: sp.color, boxShadow: `0 2px 8px ${sp.color}25` } : {}}
+                                    style={isSelected ? { borderColor: sp.color, boxShadow: `0 2px 10px ${sp.color}30` } : {}}
                                   >
-                                    <div className="min-w-0 pr-2">
-                                      <span className={`text-xs font-black block truncate ${isSelected ? "text-slate-950" : "text-slate-900"}`}>
-                                        {sp.name}
-                                      </span>
-                                      <span className="text-[9px] font-bold block truncate mt-0.5 text-gray-400">
-                                        {sp.localName}
-                                      </span>
+                                    <div className="flex items-center justify-between w-full">
+                                      <div className="min-w-0 pr-2">
+                                        <span className={`text-xs font-black block truncate ${isSelected ? "text-slate-950" : "text-slate-900"}`}>
+                                          {sp.name}
+                                        </span>
+                                        <span className="text-[9px] font-bold block truncate mt-0.5 text-gray-400">
+                                          {sp.localName}
+                                        </span>
+                                      </div>
+
+                                      {/* Right-side Base Color Circle */}
+                                      <div className="shrink-0 flex items-center justify-center ml-1">
+                                        <span
+                                          className={`w-4 h-4 rounded-full inline-block shadow-sm transition-transform ${isSelected ? "scale-110 ring-2 ring-white" : ""}`}
+                                          style={{ backgroundColor: sp.color }}
+                                          title={`${sp.name} base color palette (${sp.color})`}
+                                        />
+                                      </div>
                                     </div>
 
-                                    {/* Right-side Colored Circle */}
-                                    <div className="shrink-0 flex items-center justify-center ml-1">
-                                      {isSelected ? (
-                                        <span
-                                          className="w-4 h-4 rounded-full inline-block shadow-sm ring-2 ring-white"
-                                          style={{ backgroundColor: sp.color }}
-                                          title={`Selected species map color: ${sp.color}`}
-                                        />
-                                      ) : (
-                                        <span
-                                          className="w-4 h-4 rounded-full border-2 border-gray-300 bg-transparent inline-block"
-                                          title={`Species custom map color: ${sp.color}`}
-                                        />
-                                      )}
+                                    {/* Catch Probability Gradient Swatch Bar */}
+                                    <div className="mt-2.5 pt-2 border-t border-gray-100 flex items-center justify-between gap-1 w-full">
+                                      <span className="text-[8px] font-black uppercase text-gray-400">Probability:</span>
+                                      <div className="flex-1 flex gap-0.5 h-1.5 rounded-full overflow-hidden bg-gray-100 max-w-[130px]" title="Gradient Scale: 60-69% (Light) → 70-79% (Medium) → 80-89% (Dark) → 90-100% (Deepest)">
+                                        <span className="flex-1 h-full" style={{ backgroundColor: sp.shades.light }} />
+                                        <span className="flex-1 h-full" style={{ backgroundColor: sp.shades.medium }} />
+                                        <span className="flex-1 h-full" style={{ backgroundColor: sp.shades.dark }} />
+                                        <span className="flex-1 h-full" style={{ backgroundColor: sp.shades.deepest }} />
+                                      </div>
                                     </div>
                                   </button>
                                 );
@@ -1049,23 +1077,24 @@ export default function DashboardPage() {
                           <div className="pt-1 space-y-2">
                             <div className="flex items-center justify-between">
                               <span className="text-[10px] font-black uppercase tracking-wider text-slate-700">
-                                Filter By Specific Species (Habitat Preference Database)
+                                Filter By Specific Species (Probability Gradient Active)
                               </span>
-                              <span className="text-[9px] text-gray-400 font-bold">Separate Pipeline</span>
+                              <span className="text-[9px] text-[#D97706] font-bold">AWS ML Model Live</span>
                             </div>
 
                             {/* Informative Banner when demersal species selected */}
                             {CATEGORIZED_SPECIES.demersal.some((sp) => selectedSpecies.includes(sp.name)) && (
-                              <div className="bg-amber-50/90 border border-amber-200/90 p-3 rounded-xl space-y-1 text-[10px] text-amber-900 shadow-xs">
-                                <div className="flex items-center gap-1.5 font-bold">
-                                  <AlertTriangle className="w-3.5 h-3.5 text-amber-600 shrink-0" />
-                                  <span>Species Habitat Data Pending Backend Integration</span>
+                              <div className="bg-amber-50/90 border border-amber-200/90 p-3 rounded-xl space-y-1 text-[10px] text-amber-950 shadow-xs">
+                                <div className="flex items-center gap-1.5 font-bold text-amber-900">
+                                  <Check className="w-3.5 h-3.5 text-[#D97706] shrink-0" />
+                                  <span>Species-Specific Catch Probability Gradient Active</span>
                                 </div>
-                                <p className="text-[9.5px] text-amber-800 leading-snug">
-                                  Selecting a species switches to the separate Species Habitat Database pipeline (currently not loaded in backend). General EOG Satellite Boat Detection hotspots are hidden while a species filter is active.
+                                <p className="text-[9.5px] text-amber-900 leading-snug">
+                                  Map hotspot colors dynamically reflect the selected species and its catch probability (Light: 60-69%, Medium: 70-79%, Dark: 80-89%, Deepest: 90-100%).
                                 </p>
                               </div>
                             )}
+
                             <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                               {CATEGORIZED_SPECIES.demersal.map((sp) => {
                                 const isSelected = selectedSpecies.includes(sp.name);
@@ -1073,36 +1102,42 @@ export default function DashboardPage() {
                                   <button
                                     key={sp.name}
                                     onClick={() => handleSpeciesToggle(sp.name)}
-                                    className={`p-2.5 rounded-xl border text-left flex items-center justify-between transition-all cursor-pointer select-none ${
+                                    className={`p-3 rounded-2xl border text-left flex flex-col justify-between transition-all cursor-pointer select-none ${
                                       isSelected
                                         ? "bg-slate-50/90 text-slate-900 font-black shadow-sm"
                                         : "bg-white border-gray-200 text-slate-800 hover:border-slate-300 hover:shadow-xs"
                                     }`}
-                                    style={isSelected ? { borderColor: sp.color, boxShadow: `0 2px 8px ${sp.color}25` } : {}}
+                                    style={isSelected ? { borderColor: sp.color, boxShadow: `0 2px 10px ${sp.color}30` } : {}}
                                   >
-                                    <div className="min-w-0 pr-2">
-                                      <span className={`text-xs font-black block truncate ${isSelected ? "text-slate-950" : "text-slate-900"}`}>
-                                        {sp.name}
-                                      </span>
-                                      <span className="text-[9px] font-bold block truncate mt-0.5 text-gray-400">
-                                        {sp.localName}
-                                      </span>
+                                    <div className="flex items-center justify-between w-full">
+                                      <div className="min-w-0 pr-2">
+                                        <span className={`text-xs font-black block truncate ${isSelected ? "text-slate-950" : "text-slate-900"}`}>
+                                          {sp.name}
+                                        </span>
+                                        <span className="text-[9px] font-bold block truncate mt-0.5 text-gray-400">
+                                          {sp.localName}
+                                        </span>
+                                      </div>
+
+                                      {/* Right-side Base Color Circle */}
+                                      <div className="shrink-0 flex items-center justify-center ml-1">
+                                        <span
+                                          className={`w-4 h-4 rounded-full inline-block shadow-sm transition-transform ${isSelected ? "scale-110 ring-2 ring-white" : ""}`}
+                                          style={{ backgroundColor: sp.color }}
+                                          title={`${sp.name} base color palette (${sp.color})`}
+                                        />
+                                      </div>
                                     </div>
 
-                                    {/* Right-side Colored Circle */}
-                                    <div className="shrink-0 flex items-center justify-center ml-1">
-                                      {isSelected ? (
-                                        <span
-                                          className="w-4 h-4 rounded-full inline-block shadow-sm ring-2 ring-white"
-                                          style={{ backgroundColor: sp.color }}
-                                          title={`Selected species map color: ${sp.color}`}
-                                        />
-                                      ) : (
-                                        <span
-                                          className="w-4 h-4 rounded-full border-2 border-gray-300 bg-transparent inline-block"
-                                          title={`Species custom map color: ${sp.color}`}
-                                        />
-                                      )}
+                                    {/* Catch Probability Gradient Swatch Bar */}
+                                    <div className="mt-2.5 pt-2 border-t border-gray-100 flex items-center justify-between gap-1 w-full">
+                                      <span className="text-[8px] font-black uppercase text-gray-400">Probability:</span>
+                                      <div className="flex-1 flex gap-0.5 h-1.5 rounded-full overflow-hidden bg-gray-100 max-w-[130px]" title="Gradient Scale: 60-69% (Light) → 70-79% (Medium) → 80-89% (Dark) → 90-100% (Deepest)">
+                                        <span className="flex-1 h-full" style={{ backgroundColor: sp.shades.light }} />
+                                        <span className="flex-1 h-full" style={{ backgroundColor: sp.shades.medium }} />
+                                        <span className="flex-1 h-full" style={{ backgroundColor: sp.shades.dark }} />
+                                        <span className="flex-1 h-full" style={{ backgroundColor: sp.shades.deepest }} />
+                                      </div>
                                     </div>
                                   </button>
                                 );

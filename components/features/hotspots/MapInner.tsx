@@ -378,15 +378,15 @@ export default function MapInner({
           const isUnsafe = manualOverrideHold || (spot as any).isUnsafe;
           const isSelected = selectedHotspot?.id === spot.id;
 
-          // Resolve display color: General Pelagic (#10B981), General Demersal (#3B82F6), or specific species custom color
-          const speciesColor = getHotspotDisplayColor(type, selectedSpecies, species);
+          // Resolve display color using catch probability gradient shade
+          const speciesColor = getHotspotDisplayColor(type, selectedSpecies, species, spot.catchProbability);
 
           const markerIcon = isUnsafe
             ? unsafeHotspotIcon
             : typeof window !== "undefined"
               ? L.divIcon({
                   className: `custom-hotspot-marker-${isSelected ? "active" : "normal"}`,
-                  html: `<div style="width: ${isSelected ? 28 : 24}px; height: ${isSelected ? 28 : 24}px; background-color: ${speciesColor}40; border-radius: 50%; display: flex; justify-content: center; align-items: center; border: ${isSelected ? 2 : 1.5}px solid ${speciesColor}; ${isSelected ? `box-shadow: 0 0 12px ${speciesColor};` : ''}"><div style="width: ${isSelected ? 12 : 10}px; height: ${isSelected ? 12 : 10}px; background-color: ${speciesColor}; border-radius: 50%; border: 1.5px solid white; box-shadow: 0 1px 4px rgba(0,0,0,0.3);"></div></div>`,
+                  html: `<div style="width: ${isSelected ? 28 : 24}px; height: ${isSelected ? 28 : 24}px; background-color: ${speciesColor}33; border-radius: 50%; display: flex; justify-content: center; align-items: center; border: ${isSelected ? 2.5 : 1.5}px solid ${speciesColor}; ${isSelected ? `box-shadow: 0 0 14px ${speciesColor};` : ''}"><div style="width: ${isSelected ? 12 : 10}px; height: ${isSelected ? 12 : 10}px; background-color: ${speciesColor}; border-radius: 50%; border: 1.5px solid white; box-shadow: 0 1px 4px rgba(0,0,0,0.35);"></div></div>`,
                   iconSize: [isSelected ? 28 : 24, isSelected ? 28 : 24],
                   iconAnchor: [isSelected ? 14 : 12, isSelected ? 14 : 12],
                 })
@@ -421,10 +421,17 @@ export default function MapInner({
                   }`}>
                     {isUnsafe ? "UNSAFE BEACON" : type}
                   </div>
-                  <div className="text-[10px] font-bold text-gray-500 space-y-0.5">
+                  <div className="text-[10px] font-bold text-gray-500 space-y-1">
                     {spot.catchProbability !== undefined && (
-                      <div className="text-emerald-700 font-extrabold text-xs bg-emerald-50 px-2 py-1 rounded-lg border border-emerald-200">
-                        ⚡ {(spot.catchProbability <= 1 ? spot.catchProbability * 100 : spot.catchProbability).toFixed(0)}% LightGBM Catch Probability
+                      <div 
+                        className="font-extrabold text-xs px-2 py-1 rounded-lg border flex items-center justify-between shadow-xs"
+                        style={{
+                          backgroundColor: `${speciesColor}18`,
+                          borderColor: `${speciesColor}60`,
+                          color: speciesColor
+                        }}
+                      >
+                        <span>⚡ {(spot.catchProbability <= 1 ? spot.catchProbability * 100 : spot.catchProbability).toFixed(0)}% LightGBM Catch Probability</span>
                       </div>
                     )}
                     {spot.distanceKm !== undefined && (
