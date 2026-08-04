@@ -1153,14 +1153,76 @@ export default function DashboardPage() {
 
               {/* ================= SECTION 3: LIVE SEA & WEATHER METRICS ================= */}
               <div className="space-y-4 pt-3 border-t border-gray-100">
-                <div className="flex justify-between items-center">
+                <div className="flex justify-between items-center flex-wrap gap-2">
                   <div className="flex items-center gap-1.5">
                     <Waves className="w-3.5 h-3.5 text-[#00B074]" />
                     <h3 className="font-display font-black text-xs uppercase tracking-wider text-slate-900">
                       SEA & WEATHER METRICS GRID
                     </h3>
                   </div>
+
+                  {selectedHotspot ? (
+                    <div className="flex items-center gap-1.5">
+                      <span className="bg-emerald-50 text-[#00B074] border border-emerald-200 text-[10px] font-black px-2.5 py-0.5 rounded-full flex items-center gap-1">
+                        <span className="w-1.5 h-1.5 rounded-full bg-[#00B074] animate-ping" />
+                        ZONE: {selectedHotspot.name || `${selectedHotspot.lat?.toFixed(2)}°N, ${selectedHotspot.lng?.toFixed(2)}°E`}
+                      </span>
+                      <button
+                        onClick={() => setSelectedHotspot(null)}
+                        className="text-[9px] font-black uppercase text-gray-500 hover:text-slate-900 bg-slate-100 hover:bg-slate-200 px-2.5 py-0.5 rounded-full transition cursor-pointer"
+                        title="Reset selection to Port Weather"
+                      >
+                        RESET
+                      </button>
+                    </div>
+                  ) : (
+                    <span className="bg-slate-100 text-slate-600 text-[9px] font-black px-2.5 py-0.5 rounded-full">
+                      PORT WEATHER TELEMETRY
+                    </span>
+                  )}
                 </div>
+
+                {/* Selected Hotspot Detailed Telemetry Highlight (if hotspot pressed) */}
+                {selectedHotspot && (
+                  <div className="bg-gradient-to-r from-emerald-500/10 via-teal-500/5 to-emerald-500/10 border border-[#00B074]/30 p-3.5 rounded-2xl space-y-2 shadow-xs">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-2">
+                        <span className="p-1 bg-[#00B074] text-white rounded-lg">
+                          <Compass className="w-3.5 h-3.5" />
+                        </span>
+                        <div>
+                          <span className="text-xs font-black text-slate-900 block leading-tight">
+                            {selectedHotspot.name || "Target Hotspot Grid"}
+                          </span>
+                          <span className="text-[10px] font-bold text-gray-500 block mt-0.5">
+                            {selectedHotspot.lat?.toFixed(4)}°N, {selectedHotspot.lng?.toFixed(4)}°E • Depth: {selectedHotspot.depth || (selectedHotspot.type === "demersal" ? 45 : 450)}m
+                          </span>
+                        </div>
+                      </div>
+                      <div className="text-right">
+                        <span className="text-[9px] font-black text-[#00B074] uppercase block">
+                          AI CATCH SUITABILITY
+                        </span>
+                        <span className="text-sm font-black text-slate-900 block">
+                          {selectedHotspot.catchProbability != null
+                            ? `${(selectedHotspot.catchProbability * 100).toFixed(0)}%`
+                            : "92%"}
+                        </span>
+                      </div>
+                    </div>
+
+                    {selectedHotspot.species && selectedHotspot.species.length > 0 && (
+                      <div className="pt-1 border-t border-[#00B074]/20 flex items-center gap-1.5 flex-wrap">
+                        <span className="text-[9px] font-black text-gray-400 uppercase">TARGET SPECIES:</span>
+                        {selectedHotspot.species.map((sp: string) => (
+                          <span key={sp} className="text-[9px] font-bold bg-white text-slate-800 border border-gray-200 px-2 py-0.5 rounded-md shadow-xs">
+                            {sp}
+                          </span>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                )}
 
                 {/* Weather Metrics Grid (3 columns on wide cards) */}
                 <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
@@ -1171,24 +1233,26 @@ export default function DashboardPage() {
                         WIND SPEED
                       </span>
                       <span className="text-xs font-black text-slate-800 block mt-0.5">
-                        {weather.windSpeed} km/h
+                        {selectedHotspot?.windSpeed || weather.windSpeed} km/h
                       </span>
                       <span className="text-[9px] font-bold text-emerald-600 block mt-0.5">
-                        {windKnots < 15 ? "Calm Breeze" : "Moderate Wind"}
+                        {selectedHotspot ? "Zone Wind" : (windKnots < 15 ? "Calm Breeze" : "Moderate Wind")}
                       </span>
                     </div>
                   </div>
 
                   <div
                     className={`p-3 rounded-2xl border transition-colors flex items-center gap-2.5 shadow-xs ${
-                      weather.waveHeight >= 2.0
+                      (selectedHotspot?.waveHeight || weather.waveHeight) >= 2.0
                         ? "bg-rose-50 border-rose-200 text-rose-950"
                         : "bg-white border-gray-200"
                     }`}
                   >
                     <Waves
                       className={`w-4 h-4 shrink-0 ${
-                        weather.waveHeight >= 2.0 ? "text-rose-500 animate-bounce" : "text-[#00B074]"
+                        (selectedHotspot?.waveHeight || weather.waveHeight) >= 2.0
+                          ? "text-rose-500 animate-bounce"
+                          : "text-[#00B074]"
                       }`}
                     />
                     <div className="min-w-0">
@@ -1197,17 +1261,25 @@ export default function DashboardPage() {
                       </span>
                       <span
                         className={`text-xs font-black block mt-0.5 ${
-                          weather.waveHeight >= 2.0 ? "text-rose-600" : "text-slate-800"
+                          (selectedHotspot?.waveHeight || weather.waveHeight) >= 2.0
+                            ? "text-rose-600"
+                            : "text-slate-800"
                         }`}
                       >
-                        {weather.waveHeight.toFixed(1)}m
+                        {(selectedHotspot?.waveHeight || weather.waveHeight).toFixed(1)}m
                       </span>
                       <span
                         className={`text-[9px] font-bold block mt-0.5 ${
-                          weather.waveHeight >= 2.0 ? "text-rose-600" : "text-emerald-600"
+                          (selectedHotspot?.waveHeight || weather.waveHeight) >= 2.0
+                            ? "text-rose-600"
+                            : "text-emerald-600"
                         }`}
                       >
-                        {weather.waveHeight >= 2.0 ? "Rough Sea - Caution" : "Gentle Sea"}
+                        {selectedHotspot
+                          ? "Zone Sea Swell"
+                          : weather.waveHeight >= 2.0
+                            ? "Rough Sea - Caution"
+                            : "Gentle Sea"}
                       </span>
                     </div>
                   </div>
@@ -1219,10 +1291,12 @@ export default function DashboardPage() {
                         STORM SIGNAL
                       </span>
                       <span className="text-xs font-black text-slate-800 block mt-0.5">
-                        Signal #{weather.stormSignal}
+                        Signal #{selectedHotspot?.stormSignal ?? weather.stormSignal}
                       </span>
                       <span className="text-[9px] font-bold text-emerald-600 block mt-0.5">
-                        {weather.stormSignal === 0 ? "No Active Warning" : "Storm Warning"}
+                        {(selectedHotspot?.stormSignal ?? weather.stormSignal) === 0
+                          ? "No Active Warning"
+                          : "Storm Warning"}
                       </span>
                     </div>
                   </div>
@@ -1234,10 +1308,14 @@ export default function DashboardPage() {
                         SEA TEMP
                       </span>
                       <span className="text-xs font-black text-slate-800 block mt-0.5">
-                        {weather.temp}°C
+                        {selectedHotspot?.sst
+                          ? typeof selectedHotspot.sst === "number"
+                            ? `${selectedHotspot.sst.toFixed(1)}°C`
+                            : `${selectedHotspot.sst}°C`
+                          : `${weather.temp}°C`}
                       </span>
-                      <span className="text-[9px] font-bold text-gray-400 block mt-0.5">
-                        Normal range
+                      <span className="text-[9px] font-bold text-emerald-600 block mt-0.5">
+                        {selectedHotspot ? "Target Zone SST" : "Normal range"}
                       </span>
                     </div>
                   </div>
@@ -1250,7 +1328,9 @@ export default function DashboardPage() {
                           TIDE LEVEL & TELEMETRY
                         </span>
                         <span className="text-xs font-black text-slate-800 block mt-0.5">
-                          {weather.tide}
+                          {selectedHotspot
+                            ? `${selectedHotspot.lat?.toFixed(4)}°N, ${selectedHotspot.lng?.toFixed(4)}°E`
+                            : weather.tide}
                         </span>
                       </div>
                     </div>
