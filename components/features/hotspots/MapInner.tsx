@@ -395,32 +395,49 @@ export default function MapInner({
           if (!markerIcon) return null;
 
           return (
-            <Marker
-              key={`${spot.id}-${speciesColor}-${isSelected ? "sel" : "nor"}`}
-              position={[lat, lng]}
-              icon={markerIcon}
-              eventHandlers={{
-                click: () => {
-                  onSelectHotspot(spot);
-                  setCustomWaypoint(null); // Clear custom waypoint to prioritize active hotspot
-                },
-              }}
-            >
-              <Popup>
-                <div className="font-sans text-brand-black p-1 space-y-1.5 max-w-[200px]">
-                  <div className="flex items-center gap-1.5 font-black text-sm">
-                    <span className="text-base">{(spot as any).icon || "🐟"}</span>
-                    <span>{name}</span>
-                  </div>
-                  <div className={`text-[9px] uppercase font-black tracking-widest px-2 py-0.5 rounded-full border inline-block ${
-                    isUnsafe 
-                      ? "bg-rose-50 text-rose-600 border-rose-100"
-                      : type === "pelagic"
-                        ? "bg-brand-green/10 text-brand-green border-brand-green/20"
-                        : "bg-blue-50 text-blue-600 border-blue-100"
-                  }`}>
-                    {isUnsafe ? "UNSAFE BEACON" : type}
-                  </div>
+            <React.Fragment key={`${spot.id}-${speciesColor}-${isSelected ? "sel" : "nor"}`}>
+              {/* 9 km (9000m) Prediction Area Radius Circle */}
+              <Circle
+                center={[lat, lng]}
+                radius={9000}
+                pathOptions={{
+                  color: speciesColor,
+                  fillColor: speciesColor,
+                  fillOpacity: isSelected ? 0.22 : 0.07,
+                  weight: isSelected ? 2 : 1,
+                  dashArray: isSelected ? "4, 4" : "2, 4",
+                }}
+              />
+              <Marker
+                position={[lat, lng]}
+                icon={markerIcon}
+                eventHandlers={{
+                  click: () => {
+                    onSelectHotspot(spot);
+                    setCustomWaypoint(null); // Clear custom waypoint to prioritize active hotspot
+                  },
+                }}
+              >
+                <Popup>
+                  <div className="font-sans text-brand-black p-1 space-y-1.5 max-w-[210px]">
+                    <div className="flex items-center gap-1.5 font-black text-sm">
+                      <span className="text-base">{(spot as any).icon || "🐟"}</span>
+                      <span>{name}</span>
+                    </div>
+                    <div className="flex items-center gap-1 flex-wrap">
+                      <div className={`text-[9px] uppercase font-black tracking-widest px-2 py-0.5 rounded-full border inline-block ${
+                        isUnsafe 
+                          ? "bg-rose-50 text-rose-600 border-rose-100"
+                          : type === "pelagic"
+                            ? "bg-brand-green/10 text-brand-green border-brand-green/20"
+                            : "bg-blue-50 text-blue-600 border-blue-100"
+                      }`}>
+                        {isUnsafe ? "UNSAFE BEACON" : type}
+                      </div>
+                      <span className="text-[9px] font-bold text-gray-500 bg-slate-100 px-2 py-0.5 rounded-full border border-slate-200">
+                        📍 9 km Prediction Radius
+                      </span>
+                    </div>
                   <div className="text-[10px] font-bold text-gray-500 space-y-1">
                     {spot.catchProbability !== undefined && (
                       <div 
@@ -452,6 +469,7 @@ export default function MapInner({
                 </div>
               </Popup>
             </Marker>
+          </React.Fragment>
           );
         })}
       </MapContainer>

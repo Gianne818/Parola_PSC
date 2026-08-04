@@ -178,16 +178,34 @@ export const DICTIONARY = {
     hil: "Direksyon"
   },
   sosButton: {
-    en: "Trigger Emergency SOS",
-    tl: "I-trigger ang SOS",
-    ceb: "I-trigger ang SOS",
-    hil: "I-trigger ang SOS"
+    en: "Dispatch Storm Safety Broadcast",
+    tl: "I-broadcast ang Babala sa Bagyo",
+    ceb: "I-broadcast ang Pahimangno sa Bagyo",
+    hil: "I-broadcast ang Paandam sa Bagyo"
   },
   voiceAssist: {
     en: "Voice Assist",
     tl: "Boses na Gabay",
     ceb: "Tingog nga Giya",
     hil: "Tingog nga Giya"
+  },
+  stormWarningTitle: {
+    en: "PAGASA Severe Weather & Storm Advisory",
+    tl: "PAGASA Babala sa Masamang Panahon at Bagyo",
+    ceb: "PAGASA Pahimangno sa Daotang Panahon ug Bagyo",
+    hil: "PAGASA Paandam sa Malain nga Panahon kag Bagyo"
+  },
+  stormWarningDesc: {
+    en: "Broadcast severe weather advisories, gale warnings, and rough sea alerts (>2.0m waves) to coastal fishing fleets.",
+    tl: "Mag-broadcast ng mga babala sa bagyo, gale warning, at malalaking alon (>2.0m) sa mga mangingisda.",
+    ceb: "Pag-broadcast og mga pahimangno sa bagyo, gale warning, ug dagkong alon (>2.0m) sa mga mananagat.",
+    hil: "Mag-broadcast sang paandam sa bagyo, gale warning, kag daku nga balod (>2.0m) sa mga mangingisda."
+  },
+  predictionRadius: {
+    en: "9 km Grid Prediction Area",
+    tl: "9 km Sona ng Prediksyon",
+    ceb: "9 km Sona sa Prediksyon",
+    hil: "9 km Sona sang Prediksyon"
   }
 };
 
