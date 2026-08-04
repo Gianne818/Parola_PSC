@@ -249,9 +249,8 @@ export default function LoginPage() {
         <div className="w-full md:w-1/2 p-8 md:p-12 lg:p-14 flex flex-col justify-center bg-white">
           <div className="w-full max-w-lg mx-auto">
 
-            <div className="mb-6 flex items-center gap-2 bg-gray-50 px-3.5 py-1.5 rounded-full border border-gray-150/45 w-max">
-              <ParolaLogo iconOnly className="w-6 h-6 shadow-sm hover:scale-105 transition-transform" />
-              <span className="text-xs font-black uppercase tracking-widest text-brand-black/50">MUNICIPAL PORT BASE</span>
+            <div className="mb-6">
+              <ParolaLogo className="w-8 h-8" />
             </div>
 
             <h2 className="text-3xl font-display font-extrabold text-brand-black uppercase tracking-tight mb-6">

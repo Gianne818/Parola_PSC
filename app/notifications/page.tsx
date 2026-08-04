@@ -17,7 +17,11 @@ import {
   ChevronRight,
   CloudRain,
   Fish,
-  Fuel
+  Fuel,
+  Sparkles,
+  ThumbsUp,
+  Meh,
+  ThumbsDown
 } from "lucide-react";
 
 export default function NotificationsPage() {
@@ -26,8 +30,11 @@ export default function NotificationsPage() {
     markNotificationRead,
     purgeNotifications,
     simulateNotification,
+    showToast,
     language
   } = useApp();
+
+  const [evaluatedAlerts, setEvaluatedAlerts] = useState<Record<string, string>>({});
 
   const { t } = useTranslation(language);
 
@@ -89,6 +96,12 @@ export default function NotificationsPage() {
         return (
           <div className="p-3.5 bg-sky-50 rounded-2xl shrink-0 text-sky-500">
             <Fish className="w-5 h-5" />
+          </div>
+        );
+      case "evaluation":
+        return (
+          <div className="p-3.5 bg-amber-50 rounded-2xl shrink-0 text-amber-600">
+            <Sparkles className="w-5 h-5" />
           </div>
         );
       case "fuel":
@@ -282,6 +295,58 @@ export default function NotificationsPage() {
                             {alert.location || "General Coastal Area"}
                           </span>
                         </div>
+
+                        {/* Interactive Evaluation Rating Widget for today's SMS advisory evaluation */}
+                        {alert.type === "evaluation" && (
+                          <div className="pt-3 border-t border-gray-100 mt-2 space-y-2" onClick={(e) => e.stopPropagation()}>
+                            <span className="text-[10px] font-black text-gray-400 uppercase tracking-widest block">
+                              EVALUATE ACCURACY FOR TODAY ({new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}):
+                            </span>
+                            <div className="flex items-center gap-2 flex-wrap">
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  setEvaluatedAlerts(prev => ({ ...prev, [alert.id]: "High" }));
+                                  markNotificationRead(alert.id);
+                                  showToast("Evaluation logged: High accuracy rating recorded!", "success");
+                                }}
+                                className="px-3 py-1.5 bg-emerald-50 hover:bg-emerald-100 border border-emerald-200 text-emerald-700 rounded-xl text-xs font-black uppercase flex items-center gap-1.5 transition cursor-pointer active:scale-95"
+                              >
+                                <ThumbsUp className="w-3.5 h-3.5" />
+                                <span>HIGH ACCURACY</span>
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  setEvaluatedAlerts(prev => ({ ...prev, [alert.id]: "Medium" }));
+                                  markNotificationRead(alert.id);
+                                  showToast("Evaluation logged: Medium accuracy rating recorded!", "success");
+                                }}
+                                className="px-3 py-1.5 bg-amber-50 hover:bg-amber-100 border border-amber-200 text-amber-700 rounded-xl text-xs font-black uppercase flex items-center gap-1.5 transition cursor-pointer active:scale-95"
+                              >
+                                <Meh className="w-3.5 h-3.5" />
+                                <span>MEDIUM</span>
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  setEvaluatedAlerts(prev => ({ ...prev, [alert.id]: "Low" }));
+                                  markNotificationRead(alert.id);
+                                  showToast("Evaluation logged: Low accuracy rating recorded!", "info");
+                                }}
+                                className="px-3 py-1.5 bg-rose-50 hover:bg-rose-100 border border-rose-200 text-rose-700 rounded-xl text-xs font-black uppercase flex items-center gap-1.5 transition cursor-pointer active:scale-95"
+                              >
+                                <ThumbsDown className="w-3.5 h-3.5" />
+                                <span>LOW</span>
+                              </button>
+                            </div>
+                            {evaluatedAlerts[alert.id] && (
+                              <div className="text-[10px] font-black text-[#00B074] uppercase pt-1">
+                                ✓ EVALUATION RECORDED: {evaluatedAlerts[alert.id].toUpperCase()} ACCURACY
+                              </div>
+                            )}
+                          </div>
+                        )}
                       </div>
                     </div>
 

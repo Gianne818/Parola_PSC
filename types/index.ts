@@ -32,7 +32,7 @@ export interface PriceTier {
 
 export interface AlertNotification {
   id: string;
-  type: 'weather' | 'fuel' | 'survey' | 'community';
+  type: 'weather' | 'fuel' | 'survey' | 'community' | 'evaluation';
   title: {
     en: string;
     tl: string;

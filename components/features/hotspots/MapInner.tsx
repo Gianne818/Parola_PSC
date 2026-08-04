@@ -8,9 +8,7 @@ import { Hotspot } from "../../../types";
 import { isWithinPhilippineGeofence } from "../../../utils/spatial";
 import { getSpeciesColor, getSpeciesConfig, getHotspotDisplayColor, GENERAL_PELAGIC_COLOR, GENERAL_DEMERSAL_COLOR } from "../../../utils/speciesColors";
 
-/** Prediction radius the ML model was trained on — 9 km */
-export const PREDICTION_RADIUS_KM = 9;
-export const PREDICTION_RADIUS_METERS = PREDICTION_RADIUS_KM * 1000;
+import { PREDICTION_RADIUS_KM, PREDICTION_RADIUS_METERS } from "./MapComponent";
 
 // Custom marker icon definitions
 const safeHotspotIcon = typeof window !== "undefined" ? L.divIcon({

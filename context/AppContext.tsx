@@ -51,6 +51,27 @@ export const MUNICIPAL_PORTS = [
 // Initial default notifications
 const INITIAL_NOTIFICATIONS: AlertNotification[] = [
   {
+    id: "n-eval-today",
+    type: "evaluation",
+    title: {
+      en: "Rate Today's SMS Advisory Catch Accuracy",
+      tl: "I-evaluate ang Accuracy ng SMS Advisory Ngayong Araw",
+      ceb: "I-evaluate ang Accuracy sa SMS Advisory Karong Adlawa",
+      hil: "I-evaluate ang Accuracy sang SMS Advisory Subong nga Adlaw"
+    },
+    message: {
+      en: `Help calibrate AI models: Rate the catch prediction accuracy for your most recent SMS advisory sent today (${new Date().toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })}). Were predicted hotspots accurate?`,
+      tl: `Tumulong sa pag-calibrate ng AI model: I-rate ang catch prediction accuracy para sa iyong pinakabagong SMS advisory ngayong araw (${new Date().toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })}). Naging tumpak ba ang inirekomendang hotspots?`,
+      ceb: `Tabang sa pag-calibrate sa AI model: I-rate ang catch prediction accuracy alang sa imong pinakabag-o nga SMS advisory karong adlawa (${new Date().toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })}). Naging tukma ba ang mga hotspots?`,
+      hil: `Bulig sa pag-calibrate sang AI model: I-rate ang catch prediction accuracy para sa imo pinakabag-o nga SMS advisory subong nga adlaw (${new Date().toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })}). Naging tumpak bala ang mga hotspots?`
+    },
+    timestamp: "Today",
+    read: false,
+    priority: "high",
+    location: "Mercedes Deep / Home Port",
+    actionRequired: true
+  },
+  {
     id: "n1",
     type: "weather",
     title: {
@@ -338,6 +359,41 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     });
   }, [userProfile.port, userProfile.lat, userProfile.lng]);
 
+  useEffect(() => {
+    const handleUnhandledRejection = (event: PromiseRejectionEvent) => {
+      if (
+        !event.reason ||
+        event.reason instanceof Event ||
+        (typeof event.reason === "object" && event.reason !== null && "type" in event.reason) ||
+        String(event.reason) === "[object Event]"
+      ) {
+        event.preventDefault();
+        event.stopImmediatePropagation?.();
+      }
+    };
+
+    const handleWindowError = (event: ErrorEvent) => {
+      if (
+        event.error instanceof Event ||
+        (typeof event.error === "object" && event.error !== null && "type" in event.error) ||
+        String(event.error) === "[object Event]" ||
+        (event.message && event.message.includes("[object Event]"))
+      ) {
+        event.preventDefault();
+        event.stopImmediatePropagation?.();
+      }
+    };
+
+    if (typeof window !== "undefined") {
+      window.addEventListener("unhandledrejection", handleUnhandledRejection);
+      window.addEventListener("error", handleWindowError);
+      return () => {
+        window.removeEventListener("unhandledrejection", handleUnhandledRejection);
+        window.removeEventListener("error", handleWindowError);
+      };
+    }
+  }, []);
+
   const showToast = (message: string, type: "success" | "error" | "info") => {
     setToast({ message, type });
   };
@@ -463,8 +519,21 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
     const cleanedPhone = updated.phone.trim();
     const compactPhone = cleanedPhone.replace(/\s+/g, '');
+    const userFullName = (updated.vesselName && updated.vesselName !== "F/V Parola I") ? updated.vesselName : cleanedPhone;
 
-
+    // 1. Direct client write to Supabase database (users table)
+    try {
+      await createUserProfile({
+        phoneNumber: cleanedPhone,
+        fullName: userFullName,
+        homePortName: updated.port || 'Mercedes Fish Port',
+        homePortLat: updated.lat || 14.0122,
+        homePortLng: updated.lng || 123.0114,
+        preferredAdvisoryTime: '05:00:00',
+      });
+    } catch (sbErr) {
+      console.warn('Direct Supabase user profile creation warning:', sbErr);
+    }
 
     try {
       const res = await fetch('/api/users/register', {
@@ -472,7 +541,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           phone_number: cleanedPhone,
-          full_name: updated.vesselName || 'Captain',
+          full_name: userFullName,
           home_port_name: updated.port || 'Mercedes Fish Port',
           latitude: updated.lat || 14.0122,
           longitude: updated.lng || 123.0114,
@@ -497,19 +566,25 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       console.warn('Registration network error, falling back to local registration:', err);
     }
 
+    const finalProfile: UserProfile = {
+      ...updated,
+      phone: cleanedPhone,
+      vesselName: userFullName,
+    };
+
     // Save to local registered accounts store
     saveLocalRegisteredUser({
       phone: cleanedPhone,
       password: password || "password123",
-      vesselName: updated.vesselName || 'Captain',
+      vesselName: userFullName,
       licenseNo: updated.licenseNo,
       port: updated.port || 'Mercedes Fish Port',
       lat: updated.lat || 14.0122,
       lng: updated.lng || 123.0114,
     });
 
-    setUserProfile(updated);
-    storageService.setItem("parola-profile", updated);
+    setUserProfile(finalProfile);
+    storageService.setItem("parola-profile", finalProfile);
     setIsAuthenticated(true);
     storageService.setItem("parola-auth", true);
     return { ok: true };

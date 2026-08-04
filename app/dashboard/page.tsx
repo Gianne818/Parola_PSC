@@ -176,9 +176,9 @@ export default function DashboardPage() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ recipient: userProfile.phone || '09171234567', message: msg, category: 'weather' })
       });
-      showToast(isDangerous ? "⚠️ Storm/Gale Warning broadcast dispatched to fleet!" : "Weather advisory sent to fleet!", isDangerous ? "error" : "success");
+      showToast(isDangerous ? `⚠️ Storm/Gale Warning SMS dispatched to ${userProfile.phone || 'your phone number'}!` : `Weather advisory SMS dispatched to ${userProfile.phone || 'your phone number'}!`, isDangerous ? "error" : "success");
     } catch {
-      showToast(isDangerous ? "Storm warning broadcast dispatched!" : "Weather advisory dispatched!", "info");
+      showToast(isDangerous ? "Storm warning SMS dispatched!" : "Weather advisory SMS dispatched!", "info");
     } finally {
       setIsWeatherBroadcasting(false);
     }
@@ -1350,17 +1350,22 @@ export default function DashboardPage() {
 
               {/* ================= SECTION 4: FEEDBACK & WEATHER BROADCAST ================= */}
               <div className="space-y-3 pt-3 border-t border-gray-100">
-                <span className="text-[9px] font-black text-gray-400 uppercase tracking-widest block">
-                  COOPERATIVE MODEL CALIBRATION
-                </span>
-                <p className="text-[11px] font-semibold text-gray-500">
-                  Help train AI catch accuracy: Were predicted species locations accurate for your trip?
+                <div className="flex items-center justify-between gap-2 flex-wrap">
+                  <span className="text-[9px] font-black text-gray-400 uppercase tracking-widest block">
+                    COOPERATIVE MODEL CALIBRATION
+                  </span>
+                  <span className="text-[8.5px] font-black uppercase px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800 border border-emerald-200">
+                    MOST RECENT SMS ({new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })})
+                  </span>
+                </div>
+                <p className="text-[11px] font-semibold text-gray-600 leading-relaxed">
+                  Rate the AI catch accuracy for your most recent SMS advisory sent on <span className="font-bold text-slate-800">{new Date().toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })}</span>: Were predicted species locations accurate for your trip?
                 </p>
 
                 <div className="grid grid-cols-3 gap-2">
                   <button
                     onClick={() => handleFeedback("1")}
-                    className="p-2.5 bg-white hover:bg-emerald-50 border border-gray-200 hover:border-[#00B074] rounded-xl flex flex-col items-center gap-1 transition cursor-pointer shadow-xs"
+                    className="p-2.5 bg-white hover:bg-emerald-50 border border-gray-200 hover:border-[#00B074] rounded-xl flex flex-col items-center gap-1 transition cursor-pointer shadow-xs active:scale-95"
                   >
                     <ThumbsUp className="w-4 h-4 text-[#00B074]" />
                     <span className="text-[9px] font-black uppercase text-slate-700">
@@ -1369,7 +1374,7 @@ export default function DashboardPage() {
                   </button>
                   <button
                     onClick={() => handleFeedback("2")}
-                    className="p-2.5 bg-white hover:bg-amber-50 border border-gray-200 hover:border-amber-400 rounded-xl flex flex-col items-center gap-1 transition cursor-pointer shadow-xs"
+                    className="p-2.5 bg-white hover:bg-amber-50 border border-gray-200 hover:border-amber-400 rounded-xl flex flex-col items-center gap-1 transition cursor-pointer shadow-xs active:scale-95"
                   >
                     <Meh className="w-4 h-4 text-amber-500" />
                     <span className="text-[9px] font-black uppercase text-slate-700">
@@ -1378,7 +1383,7 @@ export default function DashboardPage() {
                   </button>
                   <button
                     onClick={() => handleFeedback("3")}
-                    className="p-2.5 bg-white hover:bg-rose-50 border border-gray-200 hover:border-rose-400 rounded-xl flex flex-col items-center gap-1 transition cursor-pointer shadow-xs"
+                    className="p-2.5 bg-white hover:bg-rose-50 border border-gray-200 hover:border-rose-400 rounded-xl flex flex-col items-center gap-1 transition cursor-pointer shadow-xs active:scale-95"
                   >
                     <ThumbsDown className="w-4 h-4 text-rose-500" />
                     <span className="text-[9px] font-black uppercase text-slate-700">
@@ -1388,8 +1393,8 @@ export default function DashboardPage() {
                 </div>
 
                 {submittedFeedback && (
-                  <div className="p-2.5 bg-emerald-50 border border-emerald-200 rounded-xl text-center text-[10px] font-black text-[#00B074]">
-                    FEEDBACK LOGGED: {submittedFeedback.toUpperCase()} ACCURACY
+                  <div className="p-2.5 bg-emerald-50 border border-emerald-200 rounded-xl text-center text-[10px] font-black text-[#00B074] animate-in fade-in duration-150">
+                    FEEDBACK LOGGED FOR TODAY&apos;S SMS ADVISORY: {submittedFeedback.toUpperCase()} ACCURACY
                   </div>
                 )}
               </div>
@@ -1416,7 +1421,7 @@ export default function DashboardPage() {
                         PAGASA Weather Broadcast
                       </h4>
                       <span className="text-[10px] text-gray-500 font-bold block mt-0.5">
-                        Dispatch live weather advisory to your fleet via SMS
+                        Dispatch live weather advisory directly to your registered phone number via SMS
                       </span>
                     </div>
                   </div>
@@ -1453,8 +1458,8 @@ export default function DashboardPage() {
                   isSafetyHoldActive ? "text-rose-700" : "text-emerald-700"
                 }`}>
                   {isSafetyHoldActive
-                    ? `⚠️ Dangerous conditions detected. Wave height ${weather.waveHeight.toFixed(1)}m exceeds safe threshold. Advise all fleet vessels to hold sailing and return to port.`
-                    : `Sea conditions are within safe operating limits. Wave height ${weather.waveHeight.toFixed(1)}m, wind ${weather.windSpeed} km/h. Fleet may proceed with caution.`
+                    ? `⚠️ Dangerous conditions detected. Wave height ${weather.waveHeight.toFixed(1)}m exceeds safe threshold. Hold sailing and stay safe ashore.`
+                    : `Sea conditions are within safe operating limits. Wave height ${weather.waveHeight.toFixed(1)}m, wind ${weather.windSpeed} km/h. You may proceed with caution.`
                   }
                 </p>
 
@@ -1469,8 +1474,8 @@ export default function DashboardPage() {
                   }`}
                 >
                   {isWeatherBroadcasting
-                    ? <><RefreshCw className="w-4 h-4 animate-spin" /><span>Broadcasting...</span></>
-                    : <><Radio className="w-4 h-4 text-amber-300 animate-pulse" /><span>{isSafetyHoldActive ? "Broadcast Gale Warning to Fleet" : "Send Weather Update to Fleet"}</span></>
+                    ? <><RefreshCw className="w-4 h-4 animate-spin" /><span>Sending SMS...</span></>
+                    : <><Radio className="w-4 h-4 text-amber-300 animate-pulse" /><span>{isSafetyHoldActive ? "Send Gale Warning SMS to My Number" : "Send Weather Update SMS to My Number"}</span></>
                   }
                 </button>
               </div>

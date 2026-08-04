@@ -196,10 +196,10 @@ export const DICTIONARY = {
     hil: "PAGASA Paandam sa Malain nga Panahon kag Bagyo"
   },
   stormWarningDesc: {
-    en: "Broadcast severe weather advisories, gale warnings, and rough sea alerts (>2.0m waves) to coastal fishing fleets.",
-    tl: "Mag-broadcast ng mga babala sa bagyo, gale warning, at malalaking alon (>2.0m) sa mga mangingisda.",
-    ceb: "Pag-broadcast og mga pahimangno sa bagyo, gale warning, ug dagkong alon (>2.0m) sa mga mananagat.",
-    hil: "Mag-broadcast sang paandam sa bagyo, gale warning, kag daku nga balod (>2.0m) sa mga mangingisda."
+    en: "Send severe weather advisories, gale warnings, and rough sea alerts (>2.0m waves) directly to your registered phone number via SMS.",
+    tl: "Magpadala ng mga babala sa bagyo, gale warning, at malalaking alon (>2.0m) sa iyong nakarehistrong numero ng telepono gamit ang SMS.",
+    ceb: "Magpadala og mga pahimangno sa bagyo, gale warning, ug dagkong alon (>2.0m) sa imong nakarehistrong numero sa telepono pinaagi sa SMS.",
+    hil: "Magpadala sang paandam sa bagyo, gale warning, kag daku nga balod (>2.0m) sa imo nakarehistro nga numero sang telepono paagi sa SMS."
   },
   predictionRadius: {
     en: "9 km Grid Prediction Area",

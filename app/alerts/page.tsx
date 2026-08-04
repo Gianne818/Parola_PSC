@@ -459,7 +459,7 @@ export default function AlertsPage() {
                     PAGASA Weather Broadcast
                   </h3>
                   <p className="text-[11px] font-semibold text-gray-400 mt-0.5">
-                    Send a live weather advisory or gale warning to your registered fleet.
+                    Send a live weather advisory or gale warning directly to your registered phone number via SMS.
                   </p>
                 </div>
                 <span className={`shrink-0 text-[9px] font-black uppercase px-2.5 py-1 rounded-full border ${
@@ -497,8 +497,8 @@ export default function AlertsPage() {
                   : "text-emerald-700"
               }`}>
                 {weather.waveHeight >= 2.0 || weather.stormSignal > 0
-                  ? `⚠️ Dangerous sea conditions detected. Wave height ${weather.waveHeight.toFixed(1)}m with Storm Signal ${weather.stormSignal}. Small crafts and bancas are advised NOT to sail. Broadcast a gale warning to your entire fleet immediately.`
-                  : `Sea conditions are within safe operating limits for small crafts. Wave height ${weather.waveHeight.toFixed(1)}m and wind speed ${weather.windSpeed} km/h are below danger thresholds. You may send a routine weather update to your fleet.`
+                  ? `⚠️ Dangerous sea conditions detected. Wave height ${weather.waveHeight.toFixed(1)}m with Storm Signal ${weather.stormSignal}. Small crafts and bancas are advised NOT to sail. Send a gale warning SMS to your registered phone number immediately.`
+                  : `Sea conditions are within safe operating limits for small crafts. Wave height ${weather.waveHeight.toFixed(1)}m and wind speed ${weather.windSpeed} km/h are below danger thresholds. You may send a routine weather update SMS to your registered phone number.`
                 }
               </p>
 
@@ -516,9 +516,9 @@ export default function AlertsPage() {
                       headers: { 'Content-Type': 'application/json' },
                       body: JSON.stringify({ recipient: userProfile?.phone || '09171234567', message: msg, category: 'weather' })
                     });
-                    showToast(isDangerous ? "⚠️ Gale warning broadcast dispatched to fleet!" : "Weather update sent to fleet!", isDangerous ? "error" : "success");
+                    showToast(isDangerous ? `⚠️ Gale warning SMS dispatched to ${userProfile?.phone || 'your phone number'}!` : `Weather update SMS dispatched to ${userProfile?.phone || 'your phone number'}!`, isDangerous ? "error" : "success");
                   } catch {
-                    showToast(isDangerous ? "Gale warning broadcast dispatched!" : "Weather advisory dispatched!", "info");
+                    showToast(isDangerous ? "Gale warning SMS dispatched!" : "Weather advisory SMS dispatched!", "info");
                   }
                 }}
                 className={`w-full font-black text-xs uppercase tracking-wider h-12 rounded-2xl transition flex items-center justify-center gap-2 shadow-md active:scale-95 cursor-pointer ${
@@ -528,7 +528,7 @@ export default function AlertsPage() {
                 }`}
               >
                 <Radio className="w-4 h-4 text-amber-300 animate-pulse" />
-                <span>{weather.waveHeight >= 2.0 || weather.stormSignal > 0 ? "BROADCAST GALE WARNING TO FLEET" : "SEND WEATHER UPDATE TO FLEET"}</span>
+                <span>{weather.waveHeight >= 2.0 || weather.stormSignal > 0 ? "SEND GALE WARNING SMS TO MY NUMBER" : "SEND WEATHER UPDATE SMS TO MY NUMBER"}</span>
               </button>
             </div>
           </div>

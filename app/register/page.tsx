@@ -104,7 +104,9 @@ export default function RegisterPage() {
   }, [otpModalOpen, countdown]);
 
   const handleAuthSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
+    if (e && typeof e.preventDefault === 'function') {
+      e.preventDefault();
+    }
     setFormError('');
 
     const cleaned = phone.trim();
@@ -113,32 +115,27 @@ export default function RegisterPage() {
     if (!cleaned || digitsOnly.length < 10) {
       const msg = "Please enter a valid mobile phone number (e.g. +63 912 345 6789).";
       setFormError(msg);
-      showToast(msg, "error");
       return;
     }
 
     if (!password || password.length < 6) {
       const msg = "Password must be at least 6 characters long.";
       setFormError(msg);
-      showToast(msg, "error");
       return;
     }
 
     setIsChecking(true);
 
-
-
     // Check if phone number is already registered in backend database
     try {
-      const checkRes = await fetch(`/api/users/by-phone?phone_number=${encodeURIComponent(cleaned)}`);
+      const checkRes = await fetch(`/api/users/by-phone?phone_number=${encodeURIComponent(cleaned)}`).catch(() => null);
       setIsChecking(false);
 
-      if (checkRes.ok) {
-        const data = await checkRes.json().catch(() => ({}));
+      if (checkRes && checkRes.ok) {
+        const data = await checkRes.json().catch(() => null);
         if (data && (data.id || data.phone_number)) {
           const errorMsg = "An account with this phone number already exists. Please sign in instead.";
           setFormError(errorMsg);
-          showToast(errorMsg, "error");
           return;
         }
       }
@@ -178,8 +175,10 @@ export default function RegisterPage() {
     }
   };
 
-  const handleVerifyOtp = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const handleVerifyOtp = async (e?: React.SyntheticEvent) => {
+    if (e && typeof e.preventDefault === 'function') {
+      e.preventDefault();
+    }
     const enteredOtp = otpDigits.join('');
 
     if (enteredOtp.length < 6) {
@@ -192,20 +191,24 @@ export default function RegisterPage() {
       return;
     }
 
-    const result = await register({
-      phone: phone.trim(),
-      vesselName: `F/V Parola ${phone.trim().slice(-4)}`,
-      licenseNo: `FL-2026-${Math.floor(1000 + Math.random() * 9000)}`,
-    }, password);
+    try {
+      const result = await register({
+        phone: phone.trim(),
+        vesselName: phone.trim(),
+        licenseNo: `FL-2026-${Math.floor(1000 + Math.random() * 9000)}`,
+      }, password);
 
-    if (result.ok) {
-      if (typeof window !== "undefined") {
-        sessionStorage.setItem('just-registered', 'true');
+      if (result.ok) {
+        if (typeof window !== "undefined") {
+          sessionStorage.setItem('just-registered', 'true');
+        }
+        setOtpModalOpen(false);
+        router.push("/onboarding");
+      } else {
+        setOtpError(result.error || "Registration failed. Please try again.");
       }
-      setOtpModalOpen(false);
-      router.push("/onboarding");
-    } else {
-      setOtpError(result.error || "Registration failed. Please try again.");
+    } catch (err: any) {
+      setOtpError(err?.message || "Registration failed. Please try again.");
     }
   };
 
@@ -345,9 +348,8 @@ export default function RegisterPage() {
         <div className="w-full md:w-1/2 p-8 md:p-12 lg:p-14 flex flex-col justify-center bg-white">
           <div className="w-full max-w-lg mx-auto">
 
-            <div className="mb-6 flex items-center gap-2 bg-gray-50 px-3.5 py-1.5 rounded-full border border-gray-150/45 w-max">
-              <ParolaLogo iconOnly className="w-6 h-6 shadow-sm hover:scale-105 transition-transform" />
-              <span className="text-xs font-black uppercase tracking-widest text-brand-black/50">MUNICIPAL PORT BASE</span>
+            <div className="mb-6">
+              <ParolaLogo className="w-8 h-8" />
             </div>
 
             <h2 className="text-3xl font-display font-extrabold text-brand-black uppercase tracking-tight mb-6">
@@ -441,14 +443,6 @@ export default function RegisterPage() {
                   <ChevronDown className="w-5 h-5 absolute right-4 top-1/2 -translate-y-1/2 text-brand-black/35 pointer-events-none" />
                 </div>
               </div>
-              
-              {/* Inline Duplicate Error Alert */}
-              {formError && (
-                <div className="bg-red-50 border border-red-200 rounded-2xl p-4 flex items-center gap-3 text-red-600 animate-in fade-in duration-150 mt-4">
-                  <AlertTriangle className="w-5 h-5 shrink-0 stroke-[2.5]" />
-                  <p className="text-xs font-bold leading-tight">{formError}</p>
-                </div>
-              )}
 
               {/* CTA Primary */}
               <button
