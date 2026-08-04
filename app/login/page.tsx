@@ -84,18 +84,16 @@ export default function LoginPage() {
     }, 800);
   };
 
-  const handleAuthSubmit = (e: React.FormEvent) => {
+  const handleAuthSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!phone.trim() || !password) return;
     setLoading(true);
 
-    setTimeout(() => {
-      const ok = login(phone.trim(), password);
-      setLoading(false);
-      if (ok) {
-        router.push("/dashboard");
-      }
-    }, 1000);
+    const ok = await login(phone.trim(), password);
+    setLoading(false);
+    if (ok) {
+      router.push("/dashboard");
+    }
   };
 
   const activeLang = LANGUAGES.find(l => l.code === language) || LANGUAGES[0];

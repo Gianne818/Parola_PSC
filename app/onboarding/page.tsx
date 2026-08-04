@@ -12,11 +12,13 @@ import {
   Compass,
   Info,
   X,
+  RefreshCw,
   Map as MapIcon
 } from 'lucide-react';
 import { useApp } from '../../context/AppContext';
 import { MapComponent } from '../../components/features/hotspots/MapComponent';
 import { ParolaLogo } from '../../components/ui/ParolaLogo';
+import { reverseGeocode, searchLocations, GeocodingResult } from '../../services/geocodingService';
 
 const PORT_PRESETS = [
   { name: 'Mercedes Fish Port', lat: 14.0122, lng: 123.0114, province: 'Camarines Norte' },
@@ -88,11 +90,31 @@ function OnboardingContent() {
   // Search state
   const [searchQuery, setSearchQuery] = useState('');
   const [showRecommendations, setShowRecommendations] = useState(false);
+  const [dynamicSearchResults, setDynamicSearchResults] = useState<GeocodingResult[]>([]);
+  const [isGeocoding, setIsGeocoding] = useState(false);
 
   // Drawer and Geofence Warning states
   const [drawerOpen, setDrawerOpen] = useState(true);
   const [warningModalOpen, setWarningModalOpen] = useState(false);
   const [outOfBoundsCoords, setOutOfBoundsCoords] = useState<[number, number] | null>(null);
+
+  useEffect(() => {
+    let active = true;
+    if (!searchQuery || searchQuery.trim().length < 3) {
+      setDynamicSearchResults([]);
+      return;
+    }
+    const timer = setTimeout(async () => {
+      const results = await searchLocations(searchQuery);
+      if (active) {
+        setDynamicSearchResults(results);
+      }
+    }, 400);
+    return () => {
+      active = false;
+      clearTimeout(timer);
+    };
+  }, [searchQuery]);
 
   const findNearestPreset = (lat: number, lng: number) => {
     let nearest = PORT_PRESETS[0];
@@ -107,7 +129,7 @@ function OnboardingContent() {
     return { ...nearest, distance: minDistance };
   };
 
-  const handleMapClick = (lat: number, lng: number) => {
+  const handleMapClick = async (lat: number, lng: number) => {
     // Geofencing verification boundaries: 4.5° N to 21.5° N, 116.0° E to 127.0° E
     if (lat < 4.5 || lat > 21.5 || lng < 116.0 || lng > 127.0) {
       setOutOfBoundsCoords([lat, lng]);
@@ -115,18 +137,23 @@ function OnboardingContent() {
       return;
     }
 
-    const nearest = findNearestPreset(lat, lng);
     setCoordinates([lat, lng]);
+    setIsGeocoding(true);
+    setPort("Locating real address...");
 
-    let portName = "";
-    if (nearest.distance < 15) {
-      portName = nearest.name;
+    const realAddress = await reverseGeocode(lat, lng);
+    setIsGeocoding(false);
+
+    if (realAddress) {
+      setPort(realAddress);
+      setSearchQuery(realAddress);
     } else {
-      portName = `Coastal Spot near ${nearest.name} (${nearest.province})`;
+      const nearest = findNearestPreset(lat, lng);
+      const portName = nearest.distance < 15 ? nearest.name : `Coastal Spot near ${nearest.name} (${nearest.province})`;
+      setPort(portName);
+      setSearchQuery(portName);
     }
 
-    setPort(portName);
-    setSearchQuery(portName);
     setShowRecommendations(false);
     setDrawerOpen(true);
   };
@@ -298,41 +325,68 @@ function OnboardingContent() {
           </div>
 
           {showRecommendations && (
-            <div className="border border-gray-100 p-2 rounded-2xl bg-white space-y-1 max-h-52 overflow-y-auto pr-1">
+            <div className="border border-gray-100 p-2 rounded-2xl bg-white space-y-1 max-h-52 overflow-y-auto pr-1 shadow-xl">
               <span className="text-[9px] font-black text-brand-black/45 uppercase tracking-widest block px-2 py-1">
-                {searchQuery ? 'Matching Locations' : 'Recommended Ports'}
+                {searchQuery ? 'Matching Real Locations & Ports' : 'Recommended Ports'}
               </span>
+
+              {/* Dynamic OSM Search Results */}
+              {dynamicSearchResults.map((res) => (
+                <button
+                  key={`${res.lat}-${res.lng}`}
+                  onClick={() => {
+                    setCoordinates([res.lat, res.lng]);
+                    setPort(res.name);
+                    setSearchQuery(res.name);
+                    setShowRecommendations(false);
+                    setDrawerOpen(true);
+                  }}
+                  className="w-full px-3 py-2.5 text-left rounded-xl text-xs font-bold transition-all flex items-center justify-between hover:bg-brand-green/5 text-brand-black cursor-pointer border-b border-gray-50 last:border-none"
+                >
+                  <div className="flex items-center gap-2 truncate">
+                    <MapPin className="w-3.5 h-3.5 shrink-0 text-brand-green" />
+                    <span className="truncate">{res.name}</span>
+                  </div>
+                  {res.province && (
+                    <span className="text-[9px] text-brand-black/35 font-extrabold uppercase shrink-0 bg-gray-100 px-1.5 py-0.5 rounded ml-2">
+                      {res.province}
+                    </span>
+                  )}
+                </button>
+              ))}
+
+              {/* Preset Matching Ports */}
               {PORT_PRESETS.filter(p => {
                 if (!searchQuery) return true;
                 const q = searchQuery.toLowerCase();
                 return p.name.toLowerCase().includes(q) || p.province.toLowerCase().includes(q);
-              }).length === 0 ? (
+              }).map((preset) => (
+                <button
+                  key={preset.name}
+                  onClick={() => handlePresetSelect(preset)}
+                  className={`w-full px-3 py-2.5 text-left rounded-xl text-xs font-bold transition-all flex items-center justify-between hover:bg-gray-50 cursor-pointer ${port === preset.name
+                      ? 'bg-brand-green/10 text-brand-green border-l-4 border-brand-green pl-2'
+                      : 'text-brand-black/80'
+                    }`}
+                >
+                  <div className="flex items-center gap-2 truncate">
+                    <Anchor className={`w-3.5 h-3.5 shrink-0 ${port === preset.name ? 'text-brand-green' : 'text-brand-black/40'}`} />
+                    <span className="truncate">{preset.name}</span>
+                  </div>
+                  <span className="text-[9px] text-brand-black/35 font-extrabold uppercase shrink-0 bg-gray-100 px-1.5 py-0.5 rounded">
+                    {preset.province}
+                  </span>
+                </button>
+              ))}
+
+              {dynamicSearchResults.length === 0 && PORT_PRESETS.filter(p => {
+                if (!searchQuery) return true;
+                const q = searchQuery.toLowerCase();
+                return p.name.toLowerCase().includes(q) || p.province.toLowerCase().includes(q);
+              }).length === 0 && (
                 <div className="px-3 py-4 text-center text-xs text-brand-black/45 font-semibold">
-                  No matching ports found. Type a custom name or tap the map!
+                  No matching locations found. Tap anywhere on the map!
                 </div>
-              ) : (
-                PORT_PRESETS.filter(p => {
-                  if (!searchQuery) return true;
-                  const q = searchQuery.toLowerCase();
-                  return p.name.toLowerCase().includes(q) || p.province.toLowerCase().includes(q);
-                }).map((preset) => (
-                  <button
-                    key={preset.name}
-                    onClick={() => handlePresetSelect(preset)}
-                    className={`w-full px-3 py-2.5 text-left rounded-xl text-xs font-bold transition-all flex items-center justify-between hover:bg-gray-50 cursor-pointer ${port === preset.name
-                        ? 'bg-brand-green/10 text-brand-green border-l-4 border-brand-green pl-2'
-                        : 'text-brand-black/80'
-                      }`}
-                  >
-                    <div className="flex items-center gap-2 truncate">
-                      <Anchor className={`w-3.5 h-3.5 shrink-0 ${port === preset.name ? 'text-brand-green' : 'text-brand-black/40'}`} />
-                      <span className="truncate">{preset.name}</span>
-                    </div>
-                    <span className="text-[9px] text-brand-black/35 font-extrabold uppercase shrink-0 bg-gray-100 px-1.5 py-0.5 rounded">
-                      {preset.province}
-                    </span>
-                  </button>
-                ))
               )}
             </div>
           )}
@@ -350,8 +404,15 @@ function OnboardingContent() {
               <span className="text-[9px] font-black text-brand-green uppercase tracking-widest block">
                 Selected Reference Anchor
               </span>
-              <h2 className="text-base md:text-lg font-display font-black text-brand-black uppercase leading-tight mt-0.5">
-                {port}
+              <h2 className="text-base md:text-lg font-display font-black text-brand-black uppercase leading-tight mt-0.5 flex items-center gap-2">
+                {isGeocoding ? (
+                  <span className="flex items-center gap-2 text-brand-green animate-pulse">
+                    <RefreshCw className="w-4 h-4 animate-spin" />
+                    Locating real address...
+                  </span>
+                ) : (
+                  port
+                )}
               </h2>
               <p className="text-xs text-brand-black/50 font-bold tracking-wide mt-0.5">
                 Latitude {(coordinates?.[0] ?? 14.0122).toFixed(4)}° N, Longitude {(coordinates?.[1] ?? 123.0114).toFixed(4)}° E

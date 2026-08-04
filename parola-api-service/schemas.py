@@ -1,5 +1,5 @@
 import uuid
-from datetime import date
+from datetime import date, time
 from typing import List, Optional
 from pydantic import BaseModel, Field
 
@@ -43,3 +43,47 @@ class CreateFeedbackRequest(BaseModel):
     advisory_id: Optional[uuid.UUID] = None
     feedback_value: int = Field(..., ge=1, le=3, description="1: High, 2: Medium, 3: Low")
     raw_sms_body: Optional[str] = None
+
+
+class UserCreate(BaseModel):
+    phone_number: str = Field(..., example="09171234567")
+    full_name: str = Field(..., example="Juan Dela Cruz")
+    home_port_name: Optional[str] = Field("Brgy Pasil, Cebu", example="Brgy Pasil, Cebu")
+    latitude: float = Field(..., ge=-90, le=90, example=10.2929)
+    longitude: float = Field(..., ge=-180, le=180, example=123.8961)
+    preferred_advisory_time: Optional[time] = Field(default="05:00:00")
+    coop_id: Optional[uuid.UUID] = None
+    password: Optional[str] = Field(None, example="secret123")
+
+
+class UserLogin(BaseModel):
+    phone_number: str = Field(..., example="09171234567")
+    password: str = Field(..., example="secret123")
+
+
+class UserResponse(BaseModel):
+    id: uuid.UUID
+    phone_number: str
+    full_name: Optional[str]
+    home_port_name: Optional[str]
+    latitude: float
+    longitude: float
+    is_active: bool
+
+    class Config:
+        from_attributes = True
+
+
+class DailyGridPredictionItem(BaseModel):
+    prediction_date: date
+    model_type: Optional[str] = "pelagic"
+    lat: float
+    lon: float
+    catch_probability: float
+    dbscan_cluster_id: Optional[int] = -1
+    sst: Optional[float] = None
+    chl_a: Optional[float] = None
+
+
+class BatchPredictionIngestRequest(BaseModel):
+    predictions: List[DailyGridPredictionItem]

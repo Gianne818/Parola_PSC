@@ -31,6 +31,7 @@ class User(Base):
     home_port_geom = Column(Geometry("POINT", srid=4326, spatial_index=True), nullable=False)
     preferred_advisory_time = Column(Time, nullable=False)
     coop_id = Column(UUID(as_uuid=True), nullable=True)
+    password_hash = Column(Text, nullable=True)
     is_active = Column(Boolean, default=True)
 
 class DailyAdvisory(Base):

@@ -1,7 +1,12 @@
 import uuid
+import hashlib
+import secrets
 from datetime import date as date_type, datetime
 from typing import Optional
-from fastapi import FastAPI, Depends, HTTPException, Query, status
+from fastapi import FastAPI, Depends, HTTPException, Query, status, Request
+from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import JSONResponse
+from sqlalchemy.exc import OperationalError
 from sqlalchemy.orm import Session
 from sqlalchemy import text
 from database import get_db
@@ -13,6 +18,46 @@ app = FastAPI(
     description="Backend REST API for Parola localized fishing advisories & PostGIS spatial queries.",
     version="2.0.0"
 )
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
+def hash_password(password: str) -> str:
+    salt = secrets.token_hex(16)
+    key = hashlib.pbkdf2_hmac('sha256', password.encode('utf-8'), salt.encode('utf-8'), 100000)
+    return f"{salt}${key.hex()}"
+
+def verify_password(password: str, stored_hash: str) -> bool:
+    if not stored_hash or "$" not in stored_hash:
+        return False
+    salt, key_hex = stored_hash.split("$", 1)
+    new_key = hashlib.pbkdf2_hmac('sha256', password.encode('utf-8'), salt.encode('utf-8'), 100000)
+    return secrets.compare_digest(new_key.hex(), key_hex)
+
+@app.on_event("startup")
+def startup_db_migration():
+    try:
+        db = next(get_db())
+        db.execute(text("ALTER TABLE public.users ADD COLUMN IF NOT EXISTS password_hash TEXT;"))
+        db.commit()
+    except Exception as e:
+        print(f"Startup migration notice: {e}")
+
+@app.exception_handler(OperationalError)
+def db_operational_error_handler(request: Request, exc: OperationalError):
+    return JSONResponse(
+        status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+        content={
+            "error": "Database connection failed",
+            "detail": "Please update 'DATABASE_URL' in parola-api-service/.env with your actual Supabase PostgreSQL password.",
+            "hint": "Replace '[YOUR-PASSWORD]' in parola-api-service/.env with your database password."
+        }
+    )
 
 @app.get("/api/health", tags=["System"])
 def health_check():
@@ -161,3 +206,161 @@ def submit_feedback(payload: schemas.CreateFeedbackRequest, db: Session = Depend
     db.commit()
     db.refresh(feedback)
     return {"status": "success", "feedback_id": str(feedback.id)}
+
+
+@app.post("/api/users", response_model=schemas.UserResponse, status_code=status.HTTP_201_CREATED, tags=["Users"])
+def register_user(payload: schemas.UserCreate, db: Session = Depends(get_db)):
+    cleaned_phone = payload.phone_number.strip()
+    existing = db.query(models.User).filter(models.User.phone_number == cleaned_phone).first()
+
+    if existing:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail="An account with this phone number already exists. Please sign in instead."
+        )
+
+    point_wkt = f"SRID=4326;POINT({payload.longitude} {payload.latitude})"
+    pwd_hash = hash_password(payload.password) if payload.password else None
+
+    new_user = models.User(
+        phone_number=cleaned_phone,
+        full_name=payload.full_name,
+        home_port_name=payload.home_port_name,
+        home_port_geom=point_wkt,
+        preferred_advisory_time=payload.preferred_advisory_time or "05:00:00",
+        password_hash=pwd_hash
+    )
+    db.add(new_user)
+    db.commit()
+    db.refresh(new_user)
+
+    coords = db.execute(
+        text("SELECT ST_Y(home_port_geom) as lat, ST_X(home_port_geom) as lon FROM public.users WHERE id = :uid"),
+        {"uid": str(new_user.id)}
+    ).fetchone()
+
+    return schemas.UserResponse(
+        id=new_user.id,
+        phone_number=new_user.phone_number,
+        full_name=new_user.full_name,
+        home_port_name=new_user.home_port_name,
+        latitude=coords.lat if coords else 0.0,
+        longitude=coords.lon if coords else 0.0,
+        is_active=new_user.is_active
+    )
+
+
+@app.put("/api/users/profile", response_model=schemas.UserResponse, tags=["Users"])
+def update_user_profile(payload: schemas.UserCreate, db: Session = Depends(get_db)):
+    cleaned_phone = payload.phone_number.strip()
+    existing = db.query(models.User).filter(models.User.phone_number == cleaned_phone).first()
+
+    if not existing:
+        raise HTTPException(status_code=404, detail="User profile not found.")
+
+    point_wkt = f"SRID=4326;POINT({payload.longitude} {payload.latitude})"
+    existing.full_name = payload.full_name
+    existing.home_port_name = payload.home_port_name
+    existing.home_port_geom = point_wkt
+    if payload.preferred_advisory_time:
+        existing.preferred_advisory_time = payload.preferred_advisory_time
+    if payload.password:
+        existing.password_hash = hash_password(payload.password)
+
+    db.commit()
+    db.refresh(existing)
+
+    coords = db.execute(
+        text("SELECT ST_Y(home_port_geom) as lat, ST_X(home_port_geom) as lon FROM public.users WHERE id = :uid"),
+        {"uid": str(existing.id)}
+    ).fetchone()
+
+    return schemas.UserResponse(
+        id=existing.id,
+        phone_number=existing.phone_number,
+        full_name=existing.full_name,
+        home_port_name=existing.home_port_name,
+        latitude=coords.lat if coords else 0.0,
+        longitude=coords.lon if coords else 0.0,
+        is_active=existing.is_active
+    )
+
+
+@app.post("/api/users/login", response_model=schemas.UserResponse, tags=["Users"])
+def login_user(payload: schemas.UserLogin, db: Session = Depends(get_db)):
+    cleaned_phone = payload.phone_number.strip()
+    user_obj = db.query(models.User).filter(models.User.phone_number == cleaned_phone).first()
+
+    if not user_obj:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Account not found for this phone number. Please register first."
+        )
+
+    if not user_obj.password_hash or not verify_password(payload.password, user_obj.password_hash):
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Incorrect password. Please try again."
+        )
+
+    coords = db.execute(
+        text("SELECT ST_Y(home_port_geom) as lat, ST_X(home_port_geom) as lon FROM public.users WHERE id = :uid"),
+        {"uid": str(user_obj.id)}
+    ).fetchone()
+
+    return schemas.UserResponse(
+        id=user_obj.id,
+        phone_number=user_obj.phone_number,
+        full_name=user_obj.full_name,
+        home_port_name=user_obj.home_port_name,
+        latitude=coords.lat if coords else 0.0,
+        longitude=coords.lon if coords else 0.0,
+        is_active=user_obj.is_active
+    )
+
+
+@app.get("/api/users/by-phone", response_model=schemas.UserResponse, tags=["Users"])
+def get_user_by_phone(phone_number: str = Query(...), db: Session = Depends(get_db)):
+    cleaned_phone = phone_number.strip()
+    user_obj = db.query(models.User).filter(models.User.phone_number == cleaned_phone).first()
+    if not user_obj:
+        raise HTTPException(status_code=404, detail="User not found with this phone number.")
+
+    coords = db.execute(
+        text("SELECT ST_Y(home_port_geom) as lat, ST_X(home_port_geom) as lon FROM public.users WHERE id = :uid"),
+        {"uid": str(user_obj.id)}
+    ).fetchone()
+
+    return schemas.UserResponse(
+        id=user_obj.id,
+        phone_number=user_obj.phone_number,
+        full_name=user_obj.full_name,
+        home_port_name=user_obj.home_port_name,
+        latitude=coords.lat if coords else 0.0,
+        longitude=coords.lon if coords else 0.0,
+        is_active=user_obj.is_active
+    )
+
+
+@app.post("/api/predictions/ingest", status_code=status.HTTP_201_CREATED, tags=["Advisories"])
+def ingest_daily_predictions(payload: schemas.BatchPredictionIngestRequest, db: Session = Depends(get_db)):
+    inserted_count = 0
+    for item in payload.predictions:
+        centroid_wkt = f"SRID=4326;POINT({item.lon} {item.lat})"
+        d = 0.005
+        poly_wkt = f"SRID=4326;POLYGON(({item.lon - d} {item.lat - d}, {item.lon + d} {item.lat - d}, {item.lon + d} {item.lat + d}, {item.lon - d} {item.lat + d}, {item.lon - d} {item.lat - d}))"
+
+        pred = models.DailyGridPrediction(
+            prediction_date=item.prediction_date,
+            model_type=item.model_type,
+            grid_cell_geom=poly_wkt,
+            centroid_geom=centroid_wkt,
+            catch_probability=item.catch_probability,
+            dbscan_cluster_id=item.dbscan_cluster_id,
+            sst=item.sst,
+            chl_a=item.chl_a
+        )
+        db.add(pred)
+        inserted_count += 1
+    db.commit()
+    return {"status": "success", "inserted_records": inserted_count}

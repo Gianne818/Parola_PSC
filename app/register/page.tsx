@@ -17,7 +17,8 @@ import {
   ShieldCheck,
   X,
   RefreshCw,
-  UserPlus
+  UserPlus,
+  AlertTriangle
 } from "lucide-react";
 import { useApp } from "../../context/AppContext";
 import { ParolaLogo } from "../../components/ui/ParolaLogo";
@@ -37,11 +38,13 @@ const LANGUAGES = [
 
 export default function RegisterPage() {
   const router = useRouter();
-  const { isInitialized, isAuthenticated, language, changeLanguage, register } = useApp();
+  const { isInitialized, isAuthenticated, language, changeLanguage, register, showToast } = useApp();
 
   const [showPassword, setShowPassword] = useState(false);
   const [phone, setPhone] = useState('+63 ');
   const [password, setPassword] = useState('');
+  const [formError, setFormError] = useState('');
+  const [isChecking, setIsChecking] = useState(false);
 
   // Language Dropdown open state
   const [langDropdownOpen, setLangDropdownOpen] = useState(false);
@@ -96,12 +99,31 @@ export default function RegisterPage() {
     return () => clearInterval(interval);
   }, [otpModalOpen, countdown]);
 
-  const handleAuthSubmit = (e: React.FormEvent) => {
+  const handleAuthSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!phone.trim() || !password) return;
 
-    // Clean up phone spacing/formatting
-    localStorage.setItem('profile-phone', phone.trim());
+    setFormError('');
+    setIsChecking(true);
+    const cleaned = phone.trim();
+
+    // Check if phone number is already registered in backend database
+    try {
+      const checkRes = await fetch(`/api/users/by-phone?phone_number=${encodeURIComponent(cleaned)}`);
+      setIsChecking(false);
+
+      if (checkRes.ok) {
+        const errorMsg = "An account with this phone number already exists. Please sign in instead.";
+        setFormError(errorMsg);
+        showToast(errorMsg, "error");
+        return;
+      }
+    } catch (err) {
+      setIsChecking(false);
+      console.warn("User existence check warning:", err);
+    }
+
+    localStorage.setItem('profile-phone', cleaned);
 
     // For registration, open the Verification Modal
     setOtpDigits(Array(6).fill(''));
@@ -132,7 +154,7 @@ export default function RegisterPage() {
     }
   };
 
-  const handleVerifyOtp = (e: React.FormEvent) => {
+  const handleVerifyOtp = async (e: React.FormEvent) => {
     e.preventDefault();
     const enteredOtp = otpDigits.join('');
 
@@ -146,17 +168,21 @@ export default function RegisterPage() {
       return;
     }
 
-    // Success registration
-    if (typeof window !== "undefined") {
-      sessionStorage.setItem('just-registered', 'true');
-    }
-    register({
+    const ok = await register({
       phone: phone.trim(),
       vesselName: `F/V Parola ${phone.trim().slice(-4)}`,
       licenseNo: `FL-2026-${Math.floor(1000 + Math.random() * 9000)}`,
-    });
-    setOtpModalOpen(false);
-    router.push("/onboarding");
+    }, password);
+
+    if (ok) {
+      if (typeof window !== "undefined") {
+        sessionStorage.setItem('just-registered', 'true');
+      }
+      setOtpModalOpen(false);
+      router.push("/onboarding");
+    } else {
+      setOtpError("An account with this phone number already exists. Please sign in instead.");
+    }
   };
 
   const handleResendOtp = () => {
@@ -341,14 +367,32 @@ export default function RegisterPage() {
                   <ChevronDown className="w-5 h-5 absolute right-4 top-1/2 -translate-y-1/2 text-brand-black/35 pointer-events-none" />
                 </div>
               </div>
+              
+              {/* Inline Duplicate Error Alert */}
+              {formError && (
+                <div className="bg-red-50 border border-red-200 rounded-2xl p-4 flex items-center gap-3 text-red-600 animate-in fade-in duration-150 mt-4">
+                  <AlertTriangle className="w-5 h-5 shrink-0 stroke-[2.5]" />
+                  <p className="text-xs font-bold leading-tight">{formError}</p>
+                </div>
+              )}
 
               {/* CTA Primary */}
               <button
                 type="submit"
-                className="w-full bg-brand-green hover:bg-brand-green/90 text-white font-bold uppercase tracking-wider py-4 rounded-2xl transition-all duration-150 mt-6 shadow-md hover:shadow-lg active:scale-[0.97] cursor-pointer flex items-center justify-center gap-2 text-sm"
+                disabled={isChecking}
+                className="w-full bg-brand-green hover:bg-brand-green/90 text-white font-bold uppercase tracking-wider py-4 rounded-2xl transition-all duration-150 mt-6 shadow-md hover:shadow-lg active:scale-[0.97] cursor-pointer flex items-center justify-center gap-2 text-sm disabled:opacity-50"
               >
-                <UserPlus className="w-5 h-5" />
-                <span>Register & Verify</span>
+                {isChecking ? (
+                  <>
+                    <RefreshCw className="w-5 h-5 animate-spin" />
+                    <span>Verifying Phone...</span>
+                  </>
+                ) : (
+                  <>
+                    <UserPlus className="w-5 h-5" />
+                    <span>Register & Verify</span>
+                  </>
+                )}
               </button>
             </form>
 

@@ -145,8 +145,8 @@ interface AppContextType {
   toast: { message: string; type: "success" | "error" | "info" } | null;
   showToast: (message: string, type: "success" | "error" | "info") => void;
   hideToast: () => void;
-  login: (phone: string, pin: string) => boolean;
-  register: (profile: Partial<UserProfile>) => void;
+  login: (phone: string, pin: string) => Promise<boolean>;
+  register: (profile: Partial<UserProfile>, password?: string) => Promise<boolean>;
   logout: () => void;
   updateProfile: (profile: Partial<UserProfile>) => void;
   changeLanguage: (lang: 'en' | 'tl' | 'ceb' | 'hil') => void;
@@ -236,27 +236,104 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
   const hideToast = () => setToast(null);
 
-  const login = (phone: string, pin: string): boolean => {
-    // Standard simulation check
-    if (phone && pin) {
-      setIsAuthenticated(true);
-      storageService.setItem("parola-auth", true);
-      const profile = { ...userProfile, phone };
-      setUserProfile(profile);
-      storageService.setItem("parola-profile", profile);
-      showToast("Signed in successfully as Captain!", "success");
-      return true;
+  const login = async (phone: string, pin: string): Promise<boolean> => {
+    if (!phone || !pin) return false;
+    const cleanedPhone = phone.trim();
+
+    try {
+      const res = await fetch('/api/users/login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          phone_number: cleanedPhone,
+          password: pin,
+        }),
+      });
+
+      if (res.ok) {
+        const userData = await res.json();
+        const profile: UserProfile = {
+          ...userProfile,
+          phone: userData.phone_number,
+          vesselName: userData.full_name || userProfile.vesselName,
+          port: userData.home_port_name || userProfile.port,
+          lat: userData.latitude || userProfile.lat,
+          lng: userData.longitude || userProfile.lng,
+        };
+        setIsAuthenticated(true);
+        storageService.setItem("parola-auth", true);
+        setUserProfile(profile);
+        storageService.setItem("parola-profile", profile);
+        showToast(`Welcome back, ${profile.vesselName || 'Captain'}!`, "success");
+        return true;
+      } else {
+        const errData = await res.json().catch(() => ({}));
+        const errorMessage = errData.error || (res.status === 401 ? "Incorrect password. Please try again." : "Account not found. Please register first.");
+        showToast(errorMessage, "error");
+        return false;
+      }
+    } catch (err) {
+      showToast("Could not reach authentication server. Please check connection.", "error");
+      return false;
     }
-    return false;
   };
 
-  const register = (profile: Partial<UserProfile>) => {
+  const updateUserWithBackend = async (prof: UserProfile) => {
+    try {
+      if (!prof.phone) return;
+      await fetch('/api/users/profile', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          phone_number: prof.phone,
+          full_name: prof.vesselName || 'Captain',
+          home_port_name: prof.port || 'Mercedes Fish Port',
+          latitude: prof.lat || 14.0122,
+          longitude: prof.lng || 123.0114,
+          preferred_advisory_time: '05:00:00',
+        }),
+      });
+    } catch (err) {
+      console.warn('Profile update sync deferred:', err);
+    }
+  };
+
+  const register = async (profile: Partial<UserProfile>, password?: string): Promise<boolean> => {
     const updated = { ...DEFAULT_PROFILE, ...profile };
+
+    try {
+      if (updated.phone) {
+        const res = await fetch('/api/users/register', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            phone_number: updated.phone,
+            full_name: updated.vesselName || 'Captain',
+            home_port_name: updated.port || 'Mercedes Fish Port',
+            latitude: updated.lat || 14.0122,
+            longitude: updated.lng || 123.0114,
+            preferred_advisory_time: '05:00:00',
+            password: password || undefined,
+          }),
+        });
+
+        if (!res.ok) {
+          const errData = await res.json().catch(() => ({}));
+          const errMsg = errData.error || "An account with this phone number already exists. Please sign in instead.";
+          showToast(errMsg, "error");
+          return false;
+        }
+      }
+    } catch (err) {
+      console.warn('Registration network error:', err);
+    }
+
     setUserProfile(updated);
     setIsAuthenticated(true);
     storageService.setItem("parola-auth", true);
     storageService.setItem("parola-profile", updated);
     showToast("Registration completed!", "success");
+    return true;
   };
 
   const logout = () => {
@@ -270,6 +347,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     setUserProfile(updated);
     storageService.setItem("parola-profile", updated);
     showToast("Vessel profile updated.", "success");
+    updateUserWithBackend(updated);
   };
 
   const changeLanguage = (lang: 'en' | 'tl' | 'ceb' | 'hil') => {
