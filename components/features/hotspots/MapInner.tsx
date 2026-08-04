@@ -222,7 +222,10 @@ export default function MapInner({
           const sConf = getSpeciesConfig(s);
           if (selConf && sConf && selConf.family === sConf.family) return true;
           if (selConf && (s.toLowerCase().includes(selConf.family.toLowerCase()) || selConf.family.toLowerCase().includes(s.toLowerCase()))) return true;
-          return s.toLowerCase().includes(sel.toLowerCase()) || sel.toLowerCase().includes(s.toLowerCase());
+          if (s.toLowerCase().includes(sel.toLowerCase()) || sel.toLowerCase().includes(s.toLowerCase())) return true;
+          const selTokens = sel.toLowerCase().split(/[\s\/()]+/);
+          const spotText = s.toLowerCase();
+          return selTokens.some(token => token.length > 2 && spotText.includes(token));
         });
       });
       if (!matchesSpecies) return false;
