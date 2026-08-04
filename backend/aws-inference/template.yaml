@@ -3,7 +3,7 @@ Transform: AWS::Serverless-2016-10-31
 Description: >
   parola-inference-pipeline
   
-  SAM Template for the Parola Project Pelagic Model daily inference pipeline.
+  SAM Template for the Parola Project Pelagic Model daily inference pipeline with StarISDAWorkflow cloud features.
 
 Resources:
   ParolaInferenceFunction:
@@ -11,12 +11,20 @@ Resources:
     Properties:
       PackageType: Image
       Architectures:
-        - arm64
+        - x86_64
       MemorySize: 3008
       Timeout: 900
       Environment:
         Variables:
           MODEL_BUCKET_NAME: !Ref ParolaDataBucket
+          COPERNICUS_USERNAME: "sstu"
+          COPERNICUS_PASSWORD: "StarISDA!234"
+          DATABASE_URL: "postgresql://postgres.aafqdvhfycqbsvmvaxmz:StarISDA!23@aws-1-ap-southeast-2.pooler.supabase.com:6543/postgres?pgbouncer=true"
+          OPEN_METEO_MARINE_API_URL: "https://marine-api.open-meteo.com/v1/marine"
+          OPEN_METEO_FORECAST_API_URL: "https://api.open-meteo.com/v1/forecast"
+          PAGASA_BULLETIN_API_URL: "https://pagasa.chlod.net/api/v1/bulletin/list"
+          SAFETY_WIND_THRESHOLD_KNOTS: "20.0"
+          SAFETY_WAVE_THRESHOLD_METERS: "3.0"
       Policies:
         - S3ReadPolicy:
             BucketName: !Ref ParolaDataBucket
@@ -28,7 +36,7 @@ Resources:
           Properties:
             Schedule: 'cron(0 3 * * ? *)'
             Name: ParolaDailyInferenceSchedule
-            Description: Trigger the model inference every morning at 3:00 AM UTC
+            Description: Trigger the model inference & weather workflow every morning at 3:00 AM UTC
     Metadata:
       Dockerfile: Dockerfile
       DockerContext: .

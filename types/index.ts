@@ -1,4 +1,5 @@
 export interface UserProfile {
+  id?: string;
   vesselName: string;
   licenseNo: string;
   phone: string;
@@ -61,10 +62,11 @@ export interface Hotspot {
   depth: number; // meters
   lastUpdated: string;
   catchProbability?: number;
-  distanceKm?: number;
-  compassBearing?: string;
   sst?: number;
   chlA?: number;
+  distanceKm?: number;
+  bearingDegrees?: number;
+  compassBearing?: string;
 }
 
 export interface WeatherTelemetry {
@@ -75,3 +77,5 @@ export interface WeatherTelemetry {
   tide: 'High' | 'Medium' | 'Low';
   stormSignal: number;
 }
+
+export type Language = 'en' | 'tl' | 'ceb' | 'hil';

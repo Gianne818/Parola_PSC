@@ -4,6 +4,10 @@ import React, { createContext, useContext, useState, useEffect } from "react";
 import { UserProfile, AlertNotification, WeatherTelemetry, Hotspot, FuelPool } from "../types";
 import { storageService } from "../services/storageService";
 import { fetchLiveWeather } from "../services/weatherService";
+import { fetchHotspots } from "../services/supabaseHotspotService";
+import { fetchWeatherSafetyOverrides, fetchSupabaseWeatherData } from "../services/supabaseWeatherService";
+import { fetchUserProfile, createUserProfile, updateUserProfile } from "../services/profileService";
+import { supabase } from "../lib/supabase";
 
 // Default pre-configured Philippine hotspots
 export const DEFAULT_HOTSPOTS: Hotspot[] = [
@@ -148,7 +152,7 @@ interface AppContextType {
   login: (phone: string, pin: string) => Promise<boolean>;
   register: (profile: Partial<UserProfile>, password?: string) => Promise<boolean>;
   logout: () => void;
-  updateProfile: (profile: Partial<UserProfile>) => void;
+  updateProfile: (profile: Partial<UserProfile>) => void | Promise<void>;
   changeLanguage: (lang: 'en' | 'tl' | 'ceb' | 'hil') => void;
   changeFontScale: (scale: number) => void;
   toggleTheme: () => void;
@@ -257,13 +261,63 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     }
   }, []);
 
-  // Handle weather loading and update whenever active profile port changes
+  // Load weather, overrides and hotspots whenever user coordinates change
   useEffect(() => {
-    const loadWeather = async () => {
+    const loadTelemetryAndHotspots = async () => {
+      if (!userProfile.lat || !userProfile.lng) return;
+
+      // 1. Fetch live weather from Open-Meteo
       const live = await fetchLiveWeather(userProfile.lat, userProfile.lng);
+
+      try {
+        // 2. Fetch latest weather data from Supabase
+        const sbWeather = await fetchSupabaseWeatherData(userProfile.lat, userProfile.lng);
+        if (sbWeather) {
+          live.temp = sbWeather.temperature ?? live.temp;
+          live.windSpeed = sbWeather.wind_speed ?? live.windSpeed;
+          live.waveHeight = sbWeather.wave_height ?? live.waveHeight;
+          live.stormSignal = sbWeather.storm_signal ?? live.stormSignal;
+        }
+      } catch (e) {
+        console.warn("Could not load Supabase weather telemetry:", e);
+      }
+
       setWeather(live);
+
+      try {
+        // 3. Fetch safety overrides from Supabase
+        const overrides = await fetchWeatherSafetyOverrides();
+        const hasActiveOverride = overrides.some(o => o.isActive);
+        if (hasActiveOverride) {
+          setManualOverrideHold(true);
+          const activeOverride = overrides.find(o => o.isActive);
+          if (activeOverride) {
+            showToast(`⚠️ Safety Override: ${activeOverride.reason}`, "error");
+          }
+        }
+      } catch (e) {
+        console.warn("Could not load weather safety overrides:", e);
+      }
+
+      try {
+        // 4. Fetch hotspots from Supabase/API
+        const sbHotspots = await fetchHotspots(userProfile.lat, userProfile.lng);
+        if (sbHotspots && sbHotspots.length > 0) {
+          const mapped = sbHotspots.map(h => ({
+            ...h,
+            type: (h.type === 'pelagic' || h.type === 'demersal' || h.type === 'both') ? h.type : 'both'
+          })) as Hotspot[];
+          setHotspots(mapped);
+        } else {
+          setHotspots(DEFAULT_HOTSPOTS);
+        }
+      } catch (e) {
+        console.warn("Could not load fishing hotspots:", e);
+        setHotspots(DEFAULT_HOTSPOTS);
+      }
     };
-    loadWeather();
+
+    loadTelemetryAndHotspots();
   }, [userProfile.port, userProfile.lat, userProfile.lng]);
 
   const showToast = (message: string, type: "success" | "error" | "info") => {
@@ -365,9 +419,9 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     }
 
     setUserProfile(updated);
+    storageService.setItem("parola-profile", updated);
     setIsAuthenticated(true);
     storageService.setItem("parola-auth", true);
-    storageService.setItem("parola-profile", updated);
     showToast("Registration completed!", "success");
     return true;
   };
@@ -375,10 +429,10 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const logout = () => {
     setIsAuthenticated(false);
     storageService.setItem("parola-auth", false);
-    showToast("Logged out from vessel profile.", "info");
+    showToast("Logged out.", "info");
   };
 
-  const updateProfile = (profile: Partial<UserProfile>) => {
+  const updateProfile = async (profile: Partial<UserProfile>) => {
     const updated = { ...userProfile, ...profile };
     setUserProfile(updated);
     storageService.setItem("parola-profile", updated);

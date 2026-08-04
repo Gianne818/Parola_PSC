@@ -6,3 +6,6 @@ copernicusmarine==1.1.0
 xarray==2024.1.1
 netCDF4==1.6.5
 scipy==1.13.1
+requests==2.31.0
+urllib3==2.2.1
+psycopg2-binary==2.9.9
