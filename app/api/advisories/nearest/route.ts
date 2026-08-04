@@ -25,7 +25,7 @@ export async function GET(request: Request) {
     const { searchParams } = new URL(request.url);
     const lat = parseFloat(searchParams.get('lat') || '14.0122');
     const lon = parseFloat(searchParams.get('lon') || '123.0114');
-    const limit = parseInt(searchParams.get('limit') || '50');
+    const limit = parseInt(searchParams.get('limit') || '1000');
 
     const db = getPool();
     if (!db) {
@@ -48,7 +48,7 @@ export async function GET(request: Request) {
         ST_AsText(centroid_geom) as centroid_wkt
       FROM public.daily_grid_predictions
       WHERE prediction_date = CURRENT_DATE
-        AND catch_probability >= 0.5
+        AND catch_probability >= 0.60
       ORDER BY catch_probability DESC
       LIMIT $1`,
       [limit]
