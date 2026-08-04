@@ -8,6 +8,7 @@ import { MapComponent } from "../../components/features/hotspots/MapComponent";
 import { Modal } from "../../components/ui/Modal";
 import { TierProgressBar } from "../../components/ui/TierProgressBar";
 import { calculateDistance, calculateBearing } from "../../utils/spatial";
+import { fetchHotspots } from "../../services/supabaseHotspotService";
 import { CATEGORIZED_SPECIES, getSpeciesConfig, getSpeciesColor, GENERAL_PELAGIC_COLOR, GENERAL_DEMERSAL_COLOR } from "../../utils/speciesColors";
 import {
   AlertTriangle,
@@ -211,6 +212,28 @@ export default function DashboardPage() {
 
   const allSpeciesList = Array.from(new Set(hotspots.flatMap((h) => h.species)));
 
+  const [speciesHotspots, setSpeciesHotspots] = useState<any[] | null>(null);
+
+  useEffect(() => {
+    let isMounted = true;
+    async function loadSpeciesData() {
+      if (selectedSpecies.length > 0) {
+        try {
+          const res = await fetchHotspots(userProfile.lat, userProfile.lng, selectedSpecies);
+          if (isMounted && res && res.length > 0) {
+            setSpeciesHotspots(res);
+            return;
+          }
+        } catch (err) {
+          console.warn("Error loading species hotspots:", err);
+        }
+      }
+      if (isMounted) setSpeciesHotspots(null);
+    }
+    loadSpeciesData();
+    return () => { isMounted = false; };
+  }, [selectedSpecies, userProfile.lat, userProfile.lng]);
+
   const handleSpeciesToggle = (species: string) => {
     if (selectedSpecies.includes(species)) {
       setSelectedSpecies(selectedSpecies.filter((s) => s !== species));
@@ -220,7 +243,8 @@ export default function DashboardPage() {
   };
 
   // Process and sort hotspot distance data
-  const processedHotspots = hotspots.map((spot) => {
+  const rawHotspotData = speciesHotspots || hotspots;
+  const processedHotspots = rawHotspotData.map((spot) => {
     const lat = spot.lat ?? (spot as any).position?.[0] ?? 0;
     const lng = spot.lng ?? (spot as any).position?.[1] ?? 0;
     const dist = calculateDistance(userProfile.lat, userProfile.lng, lat, lng);
@@ -241,7 +265,7 @@ export default function DashboardPage() {
     if (searchQuery) {
       const term = searchQuery.toLowerCase();
       const nameMatch = spot.name.toLowerCase().includes(term);
-      const speciesMatch = spot.species.some((s) => s.toLowerCase().includes(term));
+      const speciesMatch = (spot.species || []).some((s: string) => s.toLowerCase().includes(term));
       if (!nameMatch && !speciesMatch) return false;
     }
 
@@ -260,10 +284,23 @@ export default function DashboardPage() {
     );
 
     if (selectedCategorySpecies.length > 0) {
-      // Species Habitat Database is a separate prediction pipeline from General EOG Satellite Boat Detection.
-      // General EOG vessel spots MUST NOT be reused for species habitat predictions.
-      // Since backend species prediction data is not yet loaded, return false (0 spots for species filter).
-      return false;
+      const matchesSpecies = (spot.species || []).some((s: string) =>
+        selectedCategorySpecies.some((sel) => {
+          const config = getSpeciesConfig(sel);
+          const selLower = sel.toLowerCase();
+          const sLower = s.toLowerCase();
+          if (config) {
+            return (
+              sLower.includes(config.name.toLowerCase()) ||
+              sLower.includes(config.family.toLowerCase()) ||
+              config.name.toLowerCase().includes(sLower) ||
+              config.family.toLowerCase().includes(sLower)
+            );
+          }
+          return sLower.includes(selLower) || selLower.includes(sLower);
+        })
+      );
+      if (!matchesSpecies) return false;
     } else {
       // No species selected for this category -> Display General EOG Satellite Boat Detection predictions ONLY if General Model Run is ON
       if (spotType === "pelagic" && !showGeneralPelagic) return false;

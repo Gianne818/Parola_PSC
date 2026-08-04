@@ -87,3 +87,41 @@ class DailyGridPredictionItem(BaseModel):
 
 class BatchPredictionIngestRequest(BaseModel):
     predictions: List[DailyGridPredictionItem]
+
+
+class SpeciesProfileResponse(BaseModel):
+    id: int
+    species_name: str
+    family: Optional[str] = None
+    local_name: Optional[str] = None
+    category: str = Field(..., description="Species category: 'pelagic' or 'demersal'")
+    temp_min: Optional[float] = None
+    temp_opt_low: Optional[float] = None
+    temp_opt_high: Optional[float] = None
+    temp_max: Optional[float] = None
+    depth_min: Optional[float] = None
+    depth_max: Optional[float] = None
+
+    class Config:
+        from_attributes = True
+
+
+class SpeciesGridPredictionItem(BaseModel):
+    grid_id: int
+    prediction_date: date
+    model_type: Optional[str] = "pelagic"
+    lat: float
+    lon: float
+    target_lat: float
+    target_lon: float
+    base_catch_probability: float
+    species_suitability: float
+    species_catch_probability: float
+    species_name: Optional[str] = None
+    sst: Optional[float] = None
+    chl_a: Optional[float] = None
+    dbscan_cluster_id: Optional[int] = -1
+
+    class Config:
+        from_attributes = True
+

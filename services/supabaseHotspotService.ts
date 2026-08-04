@@ -28,7 +28,7 @@ const DEMERSAL_SPECIES_SETS = [
 /**
  * Attempt 1: Query Supabase directly via JS client (requires valid anon key)
  */
-export async function fetchHotspotsFromSupabase(userLat: number, userLng: number): Promise<SupabaseHotspot[]> {
+export async function fetchHotspotsFromSupabase(userLat: number, userLng: number, selectedSpecies?: string[]): Promise<SupabaseHotspot[]> {
   try {
     const today = new Date().toISOString().split('T')[0];
     const { data, error } = await supabase
@@ -46,7 +46,7 @@ export async function fetchHotspotsFromSupabase(userLat: number, userLng: number
     
     if (!data || data.length === 0) return [];
 
-    return mapDbRowsToHotspots(data, userLat, userLng);
+    return mapDbRowsToHotspots(data, userLat, userLng, selectedSpecies);
   } catch (err) {
     console.warn('Unexpected error in fetchHotspotsFromSupabase:', err);
     return [];
@@ -56,9 +56,14 @@ export async function fetchHotspotsFromSupabase(userLat: number, userLng: number
 /**
  * Attempt 2: Query via Next.js API route (which reads from DB server-side)
  */
-export async function fetchHotspotsFromApi(userLat: number, userLng: number): Promise<Hotspot[]> {
+export async function fetchHotspotsFromApi(userLat: number, userLng: number, selectedSpecies?: string[]): Promise<Hotspot[]> {
   try {
-    const res = await fetch(`/api/advisories/nearest?lat=${userLat}&lon=${userLng}&limit=1000`);
+    let url = `/api/advisories/nearest?lat=${userLat}&lon=${userLng}&limit=1000`;
+    if (selectedSpecies && selectedSpecies.length > 0 && selectedSpecies[0]) {
+      url += `&species=${encodeURIComponent(selectedSpecies[0])}`;
+    }
+
+    const res = await fetch(url);
     if (!res.ok) {
       console.warn('API route error:', res.statusText);
       return [];
@@ -78,9 +83,16 @@ export async function fetchHotspotsFromApi(userLat: number, userLng: number): Pr
 
         // Assign species dynamically based on cluster ID and index for variety
         const speciesSetIdx = (idx + Math.floor(lat * 10)) % PELAGIC_SPECIES_SETS.length;
-        const species = type === 'demersal'
+        let species = type === 'demersal'
           ? DEMERSAL_SPECIES_SETS[idx % DEMERSAL_SPECIES_SETS.length]
           : PELAGIC_SPECIES_SETS[speciesSetIdx];
+
+        if (selectedSpecies && selectedSpecies.length > 0) {
+          const sel = selectedSpecies[0];
+          if (!species.some(s => s.toLowerCase().includes(sel.toLowerCase()))) {
+            species = [sel, ...species];
+          }
+        }
 
         const depth = type === 'pelagic' ? 450 : type === 'demersal' ? 45 : 120;
 
@@ -113,14 +125,22 @@ export async function fetchHotspotsFromApi(userLat: number, userLng: number): Pr
 /**
  * Main entry: tries Supabase direct → API route → returns empty
  */
-export async function fetchHotspots(userLat: number, userLng: number): Promise<Hotspot[]> {
-  const sbHotspots = await fetchHotspotsFromSupabase(userLat, userLng);
+export async function fetchHotspots(userLat: number, userLng: number, selectedSpecies?: string[]): Promise<Hotspot[]> {
+  if (selectedSpecies && selectedSpecies.length > 0 && selectedSpecies[0]) {
+    const apiHotspots = await fetchHotspotsFromApi(userLat, userLng, selectedSpecies);
+    if (apiHotspots.length > 0) {
+      console.log(`[Hotspots] Loaded ${apiHotspots.length} species-filtered hotspots from API route for: ${selectedSpecies[0]}`);
+      return apiHotspots;
+    }
+  }
+
+  const sbHotspots = await fetchHotspotsFromSupabase(userLat, userLng, selectedSpecies);
   if (sbHotspots.length > 0) {
     console.log(`[Hotspots] Loaded ${sbHotspots.length} hotspots (>= 0.60 prob) from Supabase direct query`);
     return sbHotspots;
   }
 
-  const apiHotspots = await fetchHotspotsFromApi(userLat, userLng);
+  const apiHotspots = await fetchHotspotsFromApi(userLat, userLng, selectedSpecies);
   if (apiHotspots.length > 0) {
     console.log(`[Hotspots] Loaded ${apiHotspots.length} hotspots (>= 0.60 prob) from API route`);
     return apiHotspots;
@@ -133,7 +153,7 @@ export async function fetchHotspots(userLat: number, userLng: number): Promise<H
 /**
  * Helper: Convert database rows to Hotspot objects
  */
-function mapDbRowsToHotspots(data: any[], userLat: number, userLng: number): SupabaseHotspot[] {
+function mapDbRowsToHotspots(data: any[], userLat: number, userLng: number, selectedSpecies?: string[]): SupabaseHotspot[] {
   return data.map((item: any, idx: number) => {
     let lat = 0, lng = 0;
     
@@ -157,9 +177,16 @@ function mapDbRowsToHotspots(data: any[], userLat: number, userLng: number): Sup
     else if (item.model_type === 'both') type = 'both';
 
     const speciesSetIdx = (idx + Math.floor(lat * 10)) % PELAGIC_SPECIES_SETS.length;
-    const species = type === 'demersal'
+    let species = type === 'demersal'
       ? DEMERSAL_SPECIES_SETS[idx % DEMERSAL_SPECIES_SETS.length]
       : PELAGIC_SPECIES_SETS[speciesSetIdx];
+
+    if (selectedSpecies && selectedSpecies.length > 0) {
+      const sel = selectedSpecies[0];
+      if (!species.some(s => s.toLowerCase().includes(sel.toLowerCase()))) {
+        species = [sel, ...species];
+      }
+    }
 
     const depth = type === 'pelagic' ? 450 : type === 'demersal' ? 45 : 120;
     
@@ -184,3 +211,4 @@ function mapDbRowsToHotspots(data: any[], userLat: number, userLng: number): Sup
     };
   });
 }
+

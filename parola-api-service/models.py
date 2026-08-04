@@ -64,3 +64,34 @@ class CatchFeedback(Base):
     raw_sms_body = Column(String(50))
     received_at = Column(DateTime, default=datetime.utcnow)
     integrated_in_retraining = Column(Boolean, default=False)
+
+class PelagicSpecies(Base):
+    __tablename__ = "pelagic_species"
+    __table_args__ = {"schema": "public"}
+
+    id = Column(BigInteger, primary_key=True, index=True)
+    species_name = Column(String(100), nullable=False)
+    family = Column(String(100))
+    local_name = Column(String(100))
+    temp_min = Column(Float)
+    temp_opt_low = Column(Float)
+    temp_opt_high = Column(Float)
+    temp_max = Column(Float)
+    depth_min = Column(Float)
+    depth_max = Column(Float)
+
+class DemersalSpecies(Base):
+    __tablename__ = "demersal_species"
+    __table_args__ = {"schema": "public"}
+
+    id = Column(BigInteger, primary_key=True, index=True)
+    species_name = Column(String(100), nullable=False)
+    family = Column(String(100))
+    local_name = Column(String(100))
+    temp_min = Column(Float)
+    temp_opt_low = Column(Float)
+    temp_opt_high = Column(Float)
+    temp_max = Column(Float)
+    depth_min = Column(Float)
+    depth_max = Column(Float)
+
