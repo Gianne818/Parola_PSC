@@ -18,7 +18,7 @@ Resources:
         AuthType: NONE
       Environment:
         Variables:
-          MODEL_BUCKET_NAME: !Ref ParolaDataBucket
+          MODEL_BUCKET_NAME: "parola-data-bucket-715991411553-ap-southeast-1"
           COPERNICUS_USERNAME: "sstu"
           COPERNICUS_PASSWORD: "StarISDA!234"
           DATABASE_URL: "postgresql://postgres.aafqdvhfycqbsvmvaxmz:StarISDA!23@aws-1-ap-southeast-2.pooler.supabase.com:6543/postgres?pgbouncer=true"
@@ -52,7 +52,7 @@ Resources:
   ParolaDataBucket:
     Type: AWS::S3::Bucket
     Properties:
-      BucketName: !Sub "parola-data-bucket-${AWS::AccountId}-${AWS::Region}"
+      BucketName: "parola-data-bucket-715991411553-ap-southeast-1"
       PublicAccessBlockConfiguration:
         BlockPublicAcls: true
         BlockPublicPolicy: true
