@@ -97,13 +97,7 @@ export class IProgSmsService {
 
     // MOCK DRY-RUN GUARD (Preserves 5 free credits)
     if (this.config.mockMode) {
-      console.log('----------------------------------------------------');
-      console.log('🛡️ [iPROG DRY-RUN MODE ACTIVE - Preserving Trial Quota]');
-      console.log(`📱 Recipient: ${formattedPhone} (Original: ${req.recipient})`);
-      console.log(`💬 Message (${req.message.length} chars): ${req.message}`);
-      console.log(`🏷️ Sender ID: ${this.config.senderName}`);
-      console.log(`📁 Category: ${req.category || 'general'}`);
-      console.log('----------------------------------------------------');
+
 
       return {
         success: true,

@@ -6,7 +6,7 @@ const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || '';
 // A dummy client that returns a chainable proxy to prevent errors but logs warnings
 const createDummyClient = () => {
   if (typeof window !== 'undefined') {
-    console.warn("Supabase credentials missing or invalid. Supabase operations will be skipped.");
+    // Supabase credentials missing or invalid.
   }
   const handler: ProxyHandler<any> = {
     get(target: any, prop: string): any {
