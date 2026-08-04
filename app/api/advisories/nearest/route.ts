@@ -21,27 +21,29 @@ function getPool(): Pool | null {
   return pool;
 }
 
-interface SpeciesTempBounds {
+interface SpeciesBounds {
   temp_min: number;
   temp_opt_low: number;
   temp_opt_high: number;
   temp_max: number;
+  depth_min?: number;
+  depth_max?: number;
 }
 
 /**
- * Query public.pelagic_species or public.demersal_species using PostgreSQL pool to get species temperature bounds
+ * Query public.pelagic_species or public.demersal_species using PostgreSQL pool to get species bounds
  */
-async function getSpeciesTemperatureBounds(db: Pool, speciesName: string): Promise<SpeciesTempBounds | null> {
+async function getSpeciesBounds(db: Pool, speciesName: string): Promise<SpeciesBounds | null> {
   if (!speciesName) return null;
 
   const cleanedName = speciesName.split(/[\/\(\),]/)[0].trim();
   const searchPattern = `%${cleanedName}%`;
 
-  const tables = ['public.pelagic_species', 'public.demersal_species'];
+  const tables = ['public.demersal_species', 'public.pelagic_species'];
   for (const table of tables) {
     try {
       const res = await db.query(
-        `SELECT temp_min, temp_opt_low, temp_opt_high, temp_max
+        `SELECT temp_min, temp_opt_low, temp_opt_high, temp_max, depth_min, depth_max
          FROM ${table}
          WHERE common_name ILIKE $1 
             OR species_name ILIKE $1 
@@ -52,9 +54,8 @@ async function getSpeciesTemperatureBounds(db: Pool, speciesName: string): Promi
          LIMIT 1`,
         [searchPattern, cleanedName]
       ).catch(async () => {
-        // Fallback if specific search column names do not exist
         return await db.query(
-          `SELECT temp_min, temp_opt_low, temp_opt_high, temp_max FROM ${table} LIMIT 1`
+          `SELECT temp_min, temp_opt_low, temp_opt_high, temp_max, depth_min, depth_max FROM ${table} LIMIT 1`
         ).catch(() => null);
       });
 
@@ -66,6 +67,8 @@ async function getSpeciesTemperatureBounds(db: Pool, speciesName: string): Promi
             temp_opt_low: parseFloat(r.temp_opt_low),
             temp_opt_high: parseFloat(r.temp_opt_high),
             temp_max: parseFloat(r.temp_max),
+            depth_min: r.depth_min !== null && r.depth_min !== undefined ? parseFloat(r.depth_min) : undefined,
+            depth_max: r.depth_max !== null && r.depth_max !== undefined ? parseFloat(r.depth_max) : undefined,
           };
         }
       }
@@ -80,7 +83,7 @@ async function getSpeciesTemperatureBounds(db: Pool, speciesName: string): Promi
 /**
  * Compute trapezoidal temperature suitability (S_temp) from sst and species temperature bounds
  */
-function calculateSTemp(sst: number, bounds: SpeciesTempBounds): number {
+function calculateSTemp(sst: number, bounds: SpeciesBounds): number {
   const { temp_min, temp_opt_low, temp_opt_high, temp_max } = bounds;
 
   if (sst < temp_min || sst > temp_max) {
@@ -102,6 +105,23 @@ function calculateSTemp(sst: number, bounds: SpeciesTempBounds): number {
   return 1.0;
 }
 
+/**
+ * Compute depth suitability (S_depth) based on bathymetry depth and species depth range
+ */
+function calculateSDepth(depth: number, depthMin?: number, depthMax?: number): number {
+  if (depthMin === undefined || depthMax === undefined || depthMin === null || depthMax === null) {
+    return 1.0;
+  }
+  if (depth >= depthMin && depth <= depthMax) {
+    return 1.0;
+  }
+  const margin = Math.max(10, (depthMax - depthMin) * 0.5);
+  if (depth >= Math.max(0, depthMin - margin) && depth <= depthMax + margin) {
+    return 0.5;
+  }
+  return 0.1;
+}
+
 export async function GET(request: Request) {
   try {
     const { searchParams } = new URL(request.url);
@@ -118,9 +138,9 @@ export async function GET(request: Request) {
       }, { status: 503 });
     }
 
-    let speciesBounds: SpeciesTempBounds | null = null;
+    let speciesBounds: SpeciesBounds | null = null;
     if (species) {
-      speciesBounds = await getSpeciesTemperatureBounds(db, species);
+      speciesBounds = await getSpeciesBounds(db, species);
     }
 
     const result = await db.query(
@@ -162,10 +182,18 @@ export async function GET(request: Request) {
 
       let catchProb = parseFloat(row.catch_probability);
       const sstVal = row.sst !== null && row.sst !== undefined ? parseFloat(row.sst) : null;
+      const spotType = row.model_type || 'pelagic';
+      const cellDepth = spotType === 'demersal' ? 45 : 250; // Estimated bathymetry depth
 
-      if (speciesBounds && sstVal !== null && !isNaN(sstVal)) {
-        const sTemp = calculateSTemp(sstVal, speciesBounds);
-        catchProb = catchProb * sTemp;
+      if (speciesBounds) {
+        if (sstVal !== null && !isNaN(sstVal)) {
+          const sTemp = calculateSTemp(sstVal, speciesBounds);
+          catchProb = catchProb * sTemp;
+        }
+        if (speciesBounds.depth_min !== undefined || speciesBounds.depth_max !== undefined) {
+          const sDepth = calculateSDepth(cellDepth, speciesBounds.depth_min, speciesBounds.depth_max);
+          catchProb = catchProb * sDepth;
+        }
       }
 
       return {
