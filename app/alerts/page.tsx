@@ -59,21 +59,41 @@ export default function AlertsPage() {
   // Compute Hotspot Metrics dynamically using Haversine & Catch Efficiency Ratio
   const currentLat = userProfile?.lat || 14.0122;
   const currentLng = userProfile?.lng || 123.0114;
-  const hotspotAnalysis = analyzeHotspots(currentLat, currentLng, hotspots, modelFilter);
 
-  const nearestSpot = hotspotAnalysis.nearestHotspot;
-  const topEfficiencySpot = hotspotAnalysis.highestEfficiencyHotspot;
+  // Always compute both pelagic & demersal independently
+  const pelagicAnalysis = analyzeHotspots(currentLat, currentLng, hotspots, 'pelagic');
+  const demersalAnalysis = analyzeHotspots(currentLat, currentLng, hotspots, 'demersal');
+  // For single-model views, use the selected filter
+  const singleAnalysis = analyzeHotspots(currentLat, currentLng, hotspots, modelFilter);
+
+  const nearestSpot = singleAnalysis.nearestHotspot;
+  const topEfficiencySpot = singleAnalysis.highestEfficiencyHotspot;
   const targetHotspot = nearestSpot || topEfficiencySpot;
 
-  // Generate concise SMS message
+  // Generate concise SMS message(s)
   const waveVal = weather?.waveHeight ?? 1.2;
   const windVal = weather?.windSpeed ?? 14.5;
   const vessel = userProfile?.vesselName || "Ka-Isda";
   const portName = userProfile?.port || "Brgy Pasil";
 
-  const generatedSmsText = targetHotspot
-    ? formatConciseSmsAdvisory(vessel, portName, targetHotspot, waveVal, windVal)
-    : `[PAROLA] ${vessel}: No active hotspots detected near ${portName}. Wave:${waveVal}m Wind:${windVal}kph. Ligtas na paglalayag!`;
+  const noHotspotFallback = `Parola Advisory:\nNo active hotspots detected.\nWaves: ${waveVal}m, Wind: ${windVal}kph`;
+
+  // When 'both', generate two separate SMS messages (pelagic + demersal)
+  const pelagicTarget = pelagicAnalysis.nearestHotspot || pelagicAnalysis.highestEfficiencyHotspot;
+  const demersalTarget = demersalAnalysis.nearestHotspot || demersalAnalysis.highestEfficiencyHotspot;
+
+  const pelagicSmsText = pelagicTarget
+    ? `[PELAGIC]\n` + formatConciseSmsAdvisory(vessel, portName, pelagicTarget, waveVal, windVal)
+    : `[PELAGIC]\n` + noHotspotFallback;
+  const demersalSmsText = demersalTarget
+    ? `[DEMERSAL]\n` + formatConciseSmsAdvisory(vessel, portName, demersalTarget, waveVal, windVal)
+    : `[DEMERSAL]\n` + noHotspotFallback;
+
+  const generatedSmsText = modelFilter === 'both'
+    ? pelagicSmsText  // primary preview; both are sent
+    : targetHotspot
+      ? formatConciseSmsAdvisory(vessel, portName, targetHotspot, waveVal, windVal)
+      : noHotspotFallback;
 
   const smsSegmentDetails = calculateSmsSegments(generatedSmsText);
 
@@ -100,6 +120,18 @@ export default function AlertsPage() {
     showToast("SOS Distress Signal Broadcasted to Coast Guard & Local Base!", "error");
   };
 
+  const sendSms = async (recipientPhone: string, message: string) => {
+    const response = await fetch("/api/sms/send", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ recipient: recipientPhone, message, category: "weather" })
+    });
+    let data: any;
+    try { data = await response.json(); } catch { throw new Error("API returned invalid JSON response."); }
+    if (!response.ok || data?.error) throw new Error(data?.error || "Failed to dispatch SMS");
+    return data;
+  };
+
   const handleSimulateSmsAdvisory = async () => {
     setSmsSending(true);
     setLastSmsResult(null);
@@ -107,34 +139,24 @@ export default function AlertsPage() {
     try {
       const recipientPhone = userProfile?.phone || "09171234567";
 
-      const response = await fetch("/api/sms/send", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          recipient: recipientPhone,
-          message: generatedSmsText,
-          category: "weather"
-        })
-      });
-
-      let data: any;
-      try {
-        data = await response.json();
-      } catch (jsonErr) {
-        throw new Error("API returned invalid JSON response.");
+      if (modelFilter === 'both') {
+        // Send pelagic SMS first, then demersal
+        const pelagicResult = await sendSms(recipientPhone, pelagicSmsText);
+        const demersalResult = await sendSms(recipientPhone, demersalSmsText);
+        // Store combined result for display
+        setLastSmsResult({ ...demersalResult, dualMode: true, pelagicResult });
+        const modeLabel = pelagicResult.mode === "MOCK_DRY_RUN" ? "[DRY-RUN] " : "";
+        showToast(`${modeLabel}2 SMS Advisories Dispatched (Pelagic + Demersal) to ${pelagicResult.recipientFormatted || recipientPhone}!`, "success");
+      } else {
+        const data = await sendSms(recipientPhone, generatedSmsText);
+        setLastSmsResult(data);
+        showToast(
+          data.mode === "MOCK_DRY_RUN"
+            ? `[DRY-RUN] SMS Advisory Simulated to ${data.recipientFormatted || recipientPhone}!`
+            : `SMS Advisory Dispatched to ${data.recipientFormatted || recipientPhone}!`,
+          "success"
+        );
       }
-
-      if (!response.ok || data?.error) {
-        throw new Error(data?.error || "Failed to dispatch simulated SMS");
-      }
-
-      setLastSmsResult(data);
-      showToast(
-        data.mode === "MOCK_DRY_RUN"
-          ? `[DRY-RUN] SMS Advisory Simulated to ${data.recipientFormatted || recipientPhone}!`
-          : `SMS Advisory Dispatched to ${data.recipientFormatted || recipientPhone}!`,
-        "success"
-      );
     } catch (err: any) {
       showToast(err?.message || "Failed to send SMS advisory", "error");
     } finally {
@@ -624,27 +646,62 @@ export default function AlertsPage() {
             ) : null}
 
             {/* Generated Concise SMS Payload Preview Box */}
-            <div className="bg-slate-100 border border-slate-300/80 rounded-2xl p-4 space-y-2">
+            <div className="bg-slate-100 border border-slate-300/80 rounded-2xl p-4 space-y-3">
               <div className="flex items-center justify-between text-xs font-bold text-slate-700">
                 <span className="flex items-center gap-1.5 uppercase font-black tracking-wider text-[11px] text-slate-900">
                   <Smartphone className="w-4 h-4 text-[#00B074]" />
-                  Cellular SMS Payload Preview
+                  {modelFilter === 'both' ? 'SMS Payload Preview (2 Messages)' : 'Cellular SMS Payload Preview'}
                 </span>
                 <div className="flex items-center gap-2">
-                  <span className={`px-2 py-0.5 rounded text-[10px] font-black ${
-                    smsSegmentDetails.segmentCount === 1 ? 'bg-emerald-100 text-emerald-800' : 'bg-amber-100 text-amber-800'
-                  }`}>
-                    {smsSegmentDetails.characterCount} Chars ({smsSegmentDetails.segmentCount} SMS Segment)
-                  </span>
+                  {modelFilter !== 'both' && (
+                    <span className={`px-2 py-0.5 rounded text-[10px] font-black ${
+                      smsSegmentDetails.segmentCount === 1 ? 'bg-emerald-100 text-emerald-800' : 'bg-amber-100 text-amber-800'
+                    }`}>
+                      {smsSegmentDetails.characterCount} Chars ({smsSegmentDetails.segmentCount} SMS Segment)
+                    </span>
+                  )}
                   <span className="px-2 py-0.5 rounded bg-slate-200 text-slate-800 text-[10px] font-bold">
                     GSM-7 Encoding
                   </span>
                 </div>
               </div>
 
-              <div className="p-3 bg-white border border-slate-200 rounded-xl font-mono text-xs text-slate-900 leading-relaxed shadow-inner">
-                {generatedSmsText}
-              </div>
+              {modelFilter === 'both' ? (
+                <div className="space-y-2">
+                  {/* SMS 1: Pelagic */}
+                  <div className="space-y-1">
+                    <div className="flex items-center gap-1.5">
+                      <span className="text-[10px] font-black uppercase tracking-wider text-[#00B074]">SMS 1 — Pelagic</span>
+                      <span className={`px-1.5 py-0.5 rounded text-[9px] font-black ${
+                        calculateSmsSegments(pelagicSmsText).segmentCount === 1 ? 'bg-emerald-100 text-emerald-800' : 'bg-amber-100 text-amber-800'
+                      }`}>
+                        {calculateSmsSegments(pelagicSmsText).characterCount} chars
+                      </span>
+                    </div>
+                    <div className="p-3 bg-white border border-emerald-200 rounded-xl font-mono text-xs text-slate-900 leading-relaxed shadow-inner whitespace-pre-line">
+                      {pelagicSmsText}
+                    </div>
+                  </div>
+                  {/* SMS 2: Demersal */}
+                  <div className="space-y-1">
+                    <div className="flex items-center gap-1.5">
+                      <span className="text-[10px] font-black uppercase tracking-wider text-blue-600">SMS 2 — Demersal</span>
+                      <span className={`px-1.5 py-0.5 rounded text-[9px] font-black ${
+                        calculateSmsSegments(demersalSmsText).segmentCount === 1 ? 'bg-emerald-100 text-emerald-800' : 'bg-amber-100 text-amber-800'
+                      }`}>
+                        {calculateSmsSegments(demersalSmsText).characterCount} chars
+                      </span>
+                    </div>
+                    <div className="p-3 bg-white border border-blue-200 rounded-xl font-mono text-xs text-slate-900 leading-relaxed shadow-inner whitespace-pre-line">
+                      {demersalSmsText}
+                    </div>
+                  </div>
+                </div>
+              ) : (
+                <div className="p-3 bg-white border border-slate-200 rounded-xl font-mono text-xs text-slate-900 leading-relaxed shadow-inner whitespace-pre-line">
+                  {generatedSmsText}
+                </div>
+              )}
             </div>
 
             {/* Send Test SMS Button */}
@@ -673,7 +730,9 @@ export default function AlertsPage() {
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-2 text-emerald-400 font-black">
                     <CheckCircle2 className="w-4.5 h-4.5" />
-                    <span className="uppercase tracking-wider text-xs">Test Advisory Dispatched</span>
+                    <span className="uppercase tracking-wider text-xs">
+                      {lastSmsResult.dualMode ? '2 Advisories Dispatched (Pelagic + Demersal)' : 'Test Advisory Dispatched'}
+                    </span>
                   </div>
                   <span className="text-[10px] font-bold px-2.5 py-0.5 rounded bg-slate-800 text-emerald-300">
                     {lastSmsResult.mode}
@@ -682,7 +741,14 @@ export default function AlertsPage() {
 
                 <div className="text-[11px] font-mono text-gray-300 space-y-1.5 pt-2 border-t border-slate-800">
                   <div><strong className="text-gray-400">Recipient Phone:</strong> {lastSmsResult.recipientFormatted}</div>
-                  <div><strong className="text-gray-400">Gateway Message ID:</strong> {lastSmsResult.messageId}</div>
+                  {lastSmsResult.dualMode ? (
+                    <>
+                      <div><strong className="text-gray-400">Pelagic Msg ID:</strong> {lastSmsResult.pelagicResult?.messageId}</div>
+                      <div><strong className="text-gray-400">Demersal Msg ID:</strong> {lastSmsResult.messageId}</div>
+                    </>
+                  ) : (
+                    <div><strong className="text-gray-400">Gateway Message ID:</strong> {lastSmsResult.messageId}</div>
+                  )}
                   <div><strong className="text-gray-400">Dispatch Status:</strong> <span className="text-emerald-400">QUEUED / DELIVERED</span></div>
                 </div>
               </div>

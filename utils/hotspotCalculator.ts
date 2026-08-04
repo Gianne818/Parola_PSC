@@ -164,13 +164,20 @@ export function formatConciseSmsAdvisory(
   waveHeightMeters: number,
   windSpeedKmh: number
 ): string {
-  const name = vesselName || 'Ka-Isda';
-  const spotName = target.hotspot.name || 'Hotspot Zone';
-  const dist = `${target.distanceKm}km`;
+  const lat = target.hotspot.lat;
+  const lng = target.hotspot.lng;
+  const latLabel = `${Math.abs(lat).toFixed(2)}\u00b0${lat >= 0 ? 'N' : 'S'}`;
+  const lngLabel = `${Math.abs(lng).toFixed(2)}\u00b0${lng >= 0 ? 'E' : 'W'}`;
+  const dist = target.distanceKm;
   const bearing = target.compassBearing;
-  const prob = `${target.catchProbability}%`;
-  const gps = `${target.hotspot.lat.toFixed(3)}N,${target.hotspot.lng.toFixed(3)}E`;
-  const maps = `maps.google.com/?q=${target.hotspot.lat.toFixed(3)},${target.hotspot.lng.toFixed(3)}`;
+  const prob = target.catchProbability;
+  const mapUrl = `maps.google.com/?q=${lat.toFixed(3)},${lng.toFixed(3)}`;
 
-  return `[PAROLA] ${name}: ${spotName} (${dist}, ${bearing}) Prob:${prob}. GPS:${gps} Map:${maps} Alon:${waveHeightMeters}m Hangin:${windSpeedKmh}kph. Ligtas na paglalayag!`;
+  return (
+    `Parola Advisory:\n` +
+    `Hotspot: ${latLabel}, ${lngLabel} (${dist}km ${bearing})\n` +
+    `Prob: ${prob}%\n` +
+    `Map: ${mapUrl}\n` +
+    `Waves: ${waveHeightMeters}m, Wind: ${windSpeedKmh}kph`
+  );
 }
