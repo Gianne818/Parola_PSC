@@ -1,34 +1,100 @@
 import { NextResponse } from 'next/server';
+import { Pool } from 'pg';
+
+// Server-side PostgreSQL pool for direct database queries
+// Uses DATABASE_URL from .env to connect to Supabase PostGIS
+let pool: Pool | null = null;
+
+function getPool(): Pool | null {
+  if (pool) return pool;
+  const dbUrl = process.env.DATABASE_URL;
+  if (!dbUrl) return null;
+
+  pool = new Pool({
+    connectionString: dbUrl.replace('?pgbouncer=true', ''),
+    max: 3,
+    idleTimeoutMillis: 30000,
+    connectionTimeoutMillis: 10000,
+    ssl: { rejectUnauthorized: false },
+  });
+  return pool;
+}
 
 export async function GET(request: Request) {
   try {
     const { searchParams } = new URL(request.url);
-    const lat = searchParams.get('lat');
-    const lon = searchParams.get('lon');
-    const min_probability = searchParams.get('min_probability') || '0.50';
-    const limit = searchParams.get('limit') || '5';
+    const lat = parseFloat(searchParams.get('lat') || '14.0122');
+    const lon = parseFloat(searchParams.get('lon') || '123.0114');
+    const limit = parseInt(searchParams.get('limit') || '50');
 
-    if (!lat || !lon) {
-      return NextResponse.json({ error: 'lat and lon parameters are required' }, { status: 400 });
+    const db = getPool();
+    if (!db) {
+      return NextResponse.json({
+        error: 'DATABASE_URL not configured',
+        hotspots: [],
+      }, { status: 503 });
     }
 
-    const apiUrl = process.env.PAROLA_API_URL || 'http://localhost:8000';
-    const response = await fetch(
-      `${apiUrl}/api/advisories/nearest?lat=${lat}&lon=${lon}&min_probability=${min_probability}&limit=${limit}`,
-      {
-        method: 'GET',
-        headers: { 'Content-Type': 'application/json' },
-      }
+    const result = await db.query(
+      `SELECT
+        id,
+        prediction_date,
+        model_type,
+        catch_probability,
+        dbscan_cluster_id,
+        sst,
+        chl_a,
+        created_at,
+        ST_AsText(centroid_geom) as centroid_wkt
+      FROM public.daily_grid_predictions
+      WHERE prediction_date = CURRENT_DATE
+        AND catch_probability >= 0.5
+      ORDER BY catch_probability DESC
+      LIMIT $1`,
+      [limit]
     );
 
-    if (!response.ok) {
-      const errorText = await response.text();
-      return NextResponse.json({ error: errorText }, { status: response.status });
+    if (!result.rows || result.rows.length === 0) {
+      return NextResponse.json({
+        hotspots: [],
+        source: 'postgres_direct',
+        message: 'No predictions found for today. Pipeline may not have run yet.',
+      });
     }
 
-    const data = await response.json();
-    return NextResponse.json(data);
+    const hotspots = result.rows.map((row: any) => {
+      let itemLat = 0, itemLng = 0;
+      if (row.centroid_wkt) {
+        const match = row.centroid_wkt.match(/POINT\(([-\d.]+)\s+([-\d.]+)\)/);
+        if (match) {
+          itemLng = parseFloat(match[1]);
+          itemLat = parseFloat(match[2]);
+        }
+      }
+
+      return {
+        grid_id: row.id,
+        target_lat: itemLat,
+        target_lon: itemLng,
+        catch_probability: parseFloat(row.catch_probability),
+        model_type: row.model_type || 'pelagic',
+        sst: row.sst ? parseFloat(row.sst) : null,
+        chl_a: row.chl_a ? parseFloat(row.chl_a) : null,
+        dbscan_cluster_id: row.dbscan_cluster_id,
+        created_at: row.created_at,
+      };
+    });
+
+    return NextResponse.json({
+      hotspots,
+      source: 'postgres_direct',
+      count: hotspots.length,
+    });
   } catch (err: any) {
-    return NextResponse.json({ error: err.message || 'Internal server error' }, { status: 500 });
+    console.error('Error in /api/advisories/nearest:', err);
+    return NextResponse.json({
+      error: err.message || 'Internal server error',
+      hotspots: [],
+    }, { status: 500 });
   }
 }
