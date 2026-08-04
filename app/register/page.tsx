@@ -113,10 +113,13 @@ export default function RegisterPage() {
       setIsChecking(false);
 
       if (checkRes.ok) {
-        const errorMsg = "An account with this phone number already exists. Please sign in instead.";
-        setFormError(errorMsg);
-        showToast(errorMsg, "error");
-        return;
+        const data = await checkRes.json().catch(() => ({}));
+        if (data && (data.id || data.phone_number)) {
+          const errorMsg = "An account with this phone number already exists. Please sign in instead.";
+          setFormError(errorMsg);
+          showToast(errorMsg, "error");
+          return;
+        }
       }
     } catch (err) {
       setIsChecking(false);
@@ -168,20 +171,20 @@ export default function RegisterPage() {
       return;
     }
 
-    const ok = await register({
+    const result = await register({
       phone: phone.trim(),
       vesselName: `F/V Parola ${phone.trim().slice(-4)}`,
       licenseNo: `FL-2026-${Math.floor(1000 + Math.random() * 9000)}`,
     }, password);
 
-    if (ok) {
+    if (result.ok) {
       if (typeof window !== "undefined") {
         sessionStorage.setItem('just-registered', 'true');
       }
       setOtpModalOpen(false);
       router.push("/onboarding");
     } else {
-      setOtpError("An account with this phone number already exists. Please sign in instead.");
+      setOtpError(result.error || "Registration failed. Please try again.");
     }
   };
 

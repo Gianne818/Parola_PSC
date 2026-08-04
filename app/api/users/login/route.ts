@@ -33,6 +33,9 @@ export async function POST(request: Request) {
 
     return NextResponse.json(data, { status: 200 });
   } catch (err: any) {
-    return NextResponse.json({ error: err.message || 'Internal server error' }, { status: 500 });
+    return NextResponse.json(
+      { error: 'Backend authentication server unavailable. Please try again or use local authentication.', offline: true, details: err.message },
+      { status: 503 }
+    );
   }
 }

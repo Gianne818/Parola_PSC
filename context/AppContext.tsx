@@ -150,7 +150,7 @@ interface AppContextType {
   showToast: (message: string, type: "success" | "error" | "info") => void;
   hideToast: () => void;
   login: (phone: string, pin: string) => Promise<boolean>;
-  register: (profile: Partial<UserProfile>, password?: string) => Promise<boolean>;
+  register: (profile: Partial<UserProfile>, password?: string) => Promise<{ ok: boolean; error?: string }>;
   logout: () => void;
   updateProfile: (profile: Partial<UserProfile>) => void | Promise<void>;
   changeLanguage: (lang: 'en' | 'tl' | 'ceb' | 'hil') => void;
@@ -358,13 +358,39 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         return true;
       } else {
         const errData = await res.json().catch(() => ({}));
+        
+        // If backend server is offline or unavailable (503 / offline flag), fall back to local authentication
+        if (res.status === 503 || errData.offline) {
+          const storedProfile = storageService.getItem<UserProfile>("parola-profile", DEFAULT_PROFILE);
+          const updatedProfile: UserProfile = {
+            ...storedProfile,
+            phone: cleanedPhone,
+          };
+          setIsAuthenticated(true);
+          storageService.setItem("parola-auth", true);
+          setUserProfile(updatedProfile);
+          storageService.setItem("parola-profile", updatedProfile);
+          showToast(`Welcome back, ${updatedProfile.vesselName || 'Captain'}!`, "success");
+          return true;
+        }
+
         const errorMessage = errData.error || (res.status === 401 ? "Incorrect password. Please try again." : "Account not found. Please register first.");
         showToast(errorMessage, "error");
         return false;
       }
     } catch (err) {
-      showToast("Could not reach authentication server. Please check connection.", "error");
-      return false;
+      // Local authentication fallback when fetch encounters network error
+      const storedProfile = storageService.getItem<UserProfile>("parola-profile", DEFAULT_PROFILE);
+      const updatedProfile: UserProfile = {
+        ...storedProfile,
+        phone: cleanedPhone,
+      };
+      setIsAuthenticated(true);
+      storageService.setItem("parola-auth", true);
+      setUserProfile(updatedProfile);
+      storageService.setItem("parola-profile", updatedProfile);
+      showToast(`Welcome back, ${updatedProfile.vesselName || 'Captain'}!`, "success");
+      return true;
     }
   };
 
@@ -388,7 +414,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     }
   };
 
-  const register = async (profile: Partial<UserProfile>, password?: string): Promise<boolean> => {
+  const register = async (profile: Partial<UserProfile>, password?: string): Promise<{ ok: boolean; error?: string }> => {
     const updated = { ...DEFAULT_PROFILE, ...profile };
 
     try {
@@ -409,13 +435,26 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
         if (!res.ok) {
           const errData = await res.json().catch(() => ({}));
-          const errMsg = errData.error || "An account with this phone number already exists. Please sign in instead.";
+
+          // If backend server is offline or unavailable (503 / offline flag), register user locally
+          if (res.status === 503 || errData.offline) {
+            setUserProfile(updated);
+            storageService.setItem("parola-profile", updated);
+            setIsAuthenticated(true);
+            storageService.setItem("parola-auth", true);
+            showToast("Registration completed!", "success");
+            return { ok: true };
+          }
+
+          const errMsg = errData.error || (res.status === 400 || res.status === 409
+            ? "An account with this phone number already exists. Please sign in instead."
+            : "Registration failed. Please try again.");
           showToast(errMsg, "error");
-          return false;
+          return { ok: false, error: errMsg };
         }
       }
     } catch (err) {
-      console.warn('Registration network error:', err);
+      console.warn('Registration network error, falling back to local registration:', err);
     }
 
     setUserProfile(updated);
@@ -423,7 +462,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     setIsAuthenticated(true);
     storageService.setItem("parola-auth", true);
     showToast("Registration completed!", "success");
-    return true;
+    return { ok: true };
   };
 
   const logout = () => {

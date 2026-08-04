@@ -30,8 +30,11 @@ export async function POST(request: Request) {
 
     if (!response.ok) {
       const errorData = await response.json().catch(() => ({}));
+      const fallbackMsg = response.status === 400 || response.status === 409
+        ? 'An account with this phone number already exists. Please sign in instead.'
+        : 'Registration failed on backend server.';
       return NextResponse.json(
-        { error: errorData.detail || 'An account with this phone number already exists. Please sign in instead.' },
+        { error: errorData.detail || fallbackMsg },
         { status: response.status }
       );
     }
@@ -39,6 +42,9 @@ export async function POST(request: Request) {
     const data = await response.json();
     return NextResponse.json(data, { status: 201 });
   } catch (err: any) {
-    return NextResponse.json({ error: err.message || 'Internal server error' }, { status: 500 });
+    return NextResponse.json(
+      { error: 'Backend registration server unavailable.', offline: true, details: err.message },
+      { status: 503 }
+    );
   }
 }

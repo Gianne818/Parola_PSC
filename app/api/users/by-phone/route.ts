@@ -23,6 +23,9 @@ export async function GET(request: Request) {
     const data = await response.json();
     return NextResponse.json(data);
   } catch (err: any) {
-    return NextResponse.json({ error: err.message || 'Internal server error' }, { status: 500 });
+    return NextResponse.json(
+      { error: 'Backend server unavailable', offline: true, details: err.message },
+      { status: 503 }
+    );
   }
 }
