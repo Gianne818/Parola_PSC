@@ -149,7 +149,7 @@ interface AppContextType {
   toast: { message: string; type: "success" | "error" | "info" } | null;
   showToast: (message: string, type: "success" | "error" | "info") => void;
   hideToast: () => void;
-  login: (phone: string, pin: string) => Promise<boolean>;
+  login: (phone: string, pin: string) => Promise<{ ok: boolean; error?: string }>;
   register: (profile: Partial<UserProfile>, password?: string) => Promise<{ ok: boolean; error?: string }>;
   logout: () => void;
   updateProfile: (profile: Partial<UserProfile>) => void | Promise<void>;
@@ -167,6 +167,46 @@ interface AppContextType {
 }
 
 const AppContext = createContext<AppContextType | undefined>(undefined);
+
+export interface RegisteredUserAccount {
+  phone: string;
+  password?: string;
+  vesselName: string;
+  licenseNo?: string;
+  port: string;
+  lat: number;
+  lng: number;
+}
+
+const DEFAULT_REGISTERED_USERS: RegisteredUserAccount[] = [
+  {
+    phone: "+63 912 345 6789",
+    password: "password123",
+    vesselName: "F/V Parola I",
+    licenseNo: "FL-2026-8893",
+    port: "Mercedes Fish Port",
+    lat: 14.0122,
+    lng: 123.0114
+  }
+];
+
+export const getLocalRegisteredUsers = (): RegisteredUserAccount[] => {
+  return storageService.getItem<RegisteredUserAccount[]>("parola-registered-users", DEFAULT_REGISTERED_USERS);
+};
+
+export const saveLocalRegisteredUser = (user: RegisteredUserAccount) => {
+  const users = getLocalRegisteredUsers();
+  const cleanTarget = user.phone.trim().replace(/\s+/g, '');
+  const existingIdx = users.findIndex(u => u.phone.trim().replace(/\s+/g, '') === cleanTarget);
+  let updatedUsers: RegisteredUserAccount[];
+  if (existingIdx >= 0) {
+    updatedUsers = [...users];
+    updatedUsers[existingIdx] = user;
+  } else {
+    updatedUsers = [user, ...users];
+  }
+  storageService.setItem("parola-registered-users", updatedUsers);
+};
 
 const DEFAULT_PROFILE: UserProfile = {
   vesselName: "F/V Parola I",
@@ -304,12 +344,21 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
   const hideToast = () => setToast(null);
 
-  const login = async (phone: string, pin: string): Promise<boolean> => {
-    if (!phone || !pin) return false;
+  const login = async (phone: string, pin: string): Promise<{ ok: boolean; error?: string }> => {
+    if (!phone || !pin) {
+      const error = "Please enter both phone number and password.";
+      showToast(error, "error");
+      return { ok: false, error };
+    }
+
     const cleanedPhone = phone.trim();
+    const compactPhone = cleanedPhone.replace(/\s+/g, '');
+
+    let res: Response | null = null;
+    let errData: any = {};
 
     try {
-      const res = await fetch('/api/users/login', {
+      res = await fetch('/api/users/login', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -333,43 +382,55 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         setUserProfile(profile);
         storageService.setItem("parola-profile", profile);
         showToast(`Welcome back, ${profile.vesselName || 'Captain'}!`, "success");
-        return true;
+        return { ok: true };
       } else {
-        const errData = await res.json().catch(() => ({}));
-        
-        // If backend server is offline or unavailable (503 / offline flag), fall back to local authentication
-        if (res.status === 503 || errData.offline) {
-          const storedProfile = storageService.getItem<UserProfile>("parola-profile", DEFAULT_PROFILE);
-          const updatedProfile: UserProfile = {
-            ...storedProfile,
-            phone: cleanedPhone,
-          };
-          setIsAuthenticated(true);
-          storageService.setItem("parola-auth", true);
-          setUserProfile(updatedProfile);
-          storageService.setItem("parola-profile", updatedProfile);
-          showToast(`Welcome back, ${updatedProfile.vesselName || 'Captain'}!`, "success");
-          return true;
-        }
-
-        const errorMessage = errData.error || (res.status === 401 ? "Incorrect password. Please try again." : "Account not found. Please register first.");
-        showToast(errorMessage, "error");
-        return false;
+        errData = await res.json().catch(() => ({}));
       }
     } catch (err) {
-      // Local authentication fallback when fetch encounters network error
-      const storedProfile = storageService.getItem<UserProfile>("parola-profile", DEFAULT_PROFILE);
-      const updatedProfile: UserProfile = {
-        ...storedProfile,
-        phone: cleanedPhone,
-      };
-      setIsAuthenticated(true);
-      storageService.setItem("parola-auth", true);
-      setUserProfile(updatedProfile);
-      storageService.setItem("parola-profile", updatedProfile);
-      showToast(`Welcome back, ${updatedProfile.vesselName || 'Captain'}!`, "success");
-      return true;
+      console.warn("Backend login fetch error:", err);
     }
+
+    // Explicit API response errors from running backend (e.g. 404 account not found or 401 wrong password)
+    if (res && res.status !== 503 && !errData.offline) {
+      const errorMessage = errData.error || (res.status === 401 ? "Incorrect password. Please try again." : "Account not found for this phone number. Please register first.");
+      showToast(errorMessage, "error");
+      return { ok: false, error: errorMessage };
+    }
+
+    // Backend is offline (503 / fetch error): perform local offline credential verification against registered accounts
+    const localUsers = getLocalRegisteredUsers();
+    const matchedUser = localUsers.find(
+      u => u.phone.trim().replace(/\s+/g, '') === compactPhone
+    );
+
+    if (!matchedUser) {
+      const errorMessage = "Account not found for this phone number. Please register first.";
+      showToast(errorMessage, "error");
+      return { ok: false, error: errorMessage };
+    }
+
+    if (matchedUser.password && matchedUser.password !== pin) {
+      const errorMessage = "Incorrect password. Please try again.";
+      showToast(errorMessage, "error");
+      return { ok: false, error: errorMessage };
+    }
+
+    // Local offline sign in success
+    const profile: UserProfile = {
+      ...userProfile,
+      phone: matchedUser.phone,
+      vesselName: matchedUser.vesselName,
+      licenseNo: matchedUser.licenseNo || userProfile.licenseNo,
+      port: matchedUser.port || userProfile.port,
+      lat: matchedUser.lat || userProfile.lat,
+      lng: matchedUser.lng || userProfile.lng,
+    };
+    setIsAuthenticated(true);
+    storageService.setItem("parola-auth", true);
+    setUserProfile(profile);
+    storageService.setItem("parola-profile", profile);
+    showToast(`Welcome back, ${profile.vesselName || 'Captain'}!`, "success");
+    return { ok: true };
   };
 
   const updateUserWithBackend = async (prof: UserProfile) => {
@@ -394,36 +455,46 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
   const register = async (profile: Partial<UserProfile>, password?: string): Promise<{ ok: boolean; error?: string }> => {
     const updated = { ...DEFAULT_PROFILE, ...profile };
+    if (!updated.phone) {
+      const errorMsg = "Phone number is required for registration.";
+      showToast(errorMsg, "error");
+      return { ok: false, error: errorMsg };
+    }
+
+    const cleanedPhone = updated.phone.trim();
+    const compactPhone = cleanedPhone.replace(/\s+/g, '');
+
+    // Check duplicate in local storage first
+    const localUsers = getLocalRegisteredUsers();
+    const existingLocal = localUsers.find(
+      u => u.phone.trim().replace(/\s+/g, '') === compactPhone
+    );
+    if (existingLocal) {
+      const errorMsg = "An account with this phone number already exists. Please sign in instead.";
+      showToast(errorMsg, "error");
+      return { ok: false, error: errorMsg };
+    }
 
     try {
-      if (updated.phone) {
-        const res = await fetch('/api/users/register', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            phone_number: updated.phone,
-            full_name: updated.vesselName || 'Captain',
-            home_port_name: updated.port || 'Mercedes Fish Port',
-            latitude: updated.lat || 14.0122,
-            longitude: updated.lng || 123.0114,
-            preferred_advisory_time: '05:00:00',
-            password: password || undefined,
-          }),
-        });
+      const res = await fetch('/api/users/register', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          phone_number: cleanedPhone,
+          full_name: updated.vesselName || 'Captain',
+          home_port_name: updated.port || 'Mercedes Fish Port',
+          latitude: updated.lat || 14.0122,
+          longitude: updated.lng || 123.0114,
+          preferred_advisory_time: '05:00:00',
+          password: password || undefined,
+        }),
+      });
 
-        if (!res.ok) {
-          const errData = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        const errData = await res.json().catch(() => ({}));
 
-          // If backend server is offline or unavailable (503 / offline flag), register user locally
-          if (res.status === 503 || errData.offline) {
-            setUserProfile(updated);
-            storageService.setItem("parola-profile", updated);
-            setIsAuthenticated(true);
-            storageService.setItem("parola-auth", true);
-            showToast("Registration completed!", "success");
-            return { ok: true };
-          }
-
+        // If backend returned error response (other than offline 503)
+        if (res.status !== 503 && !errData.offline) {
           const errMsg = errData.error || (res.status === 400 || res.status === 409
             ? "An account with this phone number already exists. Please sign in instead."
             : "Registration failed. Please try again.");
@@ -435,11 +506,21 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       console.warn('Registration network error, falling back to local registration:', err);
     }
 
+    // Save to local registered accounts store
+    saveLocalRegisteredUser({
+      phone: cleanedPhone,
+      password: password || "password123",
+      vesselName: updated.vesselName || 'Captain',
+      licenseNo: updated.licenseNo,
+      port: updated.port || 'Mercedes Fish Port',
+      lat: updated.lat || 14.0122,
+      lng: updated.lng || 123.0114,
+    });
+
     setUserProfile(updated);
     storageService.setItem("parola-profile", updated);
     setIsAuthenticated(true);
     storageService.setItem("parola-auth", true);
-    showToast("Registration completed!", "success");
     return { ok: true };
   };
 

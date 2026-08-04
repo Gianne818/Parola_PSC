@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server';
+import { calculateDistance } from '../../../../utils/spatial';
 // @ts-ignore
 import { Pool } from 'pg';
 
@@ -196,11 +197,17 @@ export async function GET(request: Request) {
         }
       }
 
+      const distKm = calculateDistance(lat, lon, itemLat, itemLng);
+      const catchProbPercent = catchProb <= 1.0 ? catchProb * 100 : catchProb;
+      const efficiencyRatio = distKm > 0 ? parseFloat((catchProbPercent / distKm).toFixed(2)) : catchProbPercent;
+
       return {
         grid_id: row.id,
         target_lat: itemLat,
         target_lon: itemLng,
         catch_probability: catchProb,
+        distance_km: distKm,
+        efficiency_ratio: efficiencyRatio,
         model_type: row.model_type || 'pelagic',
         sst: sstVal,
         chl_a: row.chl_a ? parseFloat(row.chl_a) : null,

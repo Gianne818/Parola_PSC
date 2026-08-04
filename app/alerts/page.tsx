@@ -4,6 +4,8 @@ import React, { useState } from "react";
 import { AuthLayout } from "../../components/layouts/AuthLayout";
 import { useApp } from "../../context/AppContext";
 import { useTranslation } from "../../hooks/use-translation";
+import { analyzeHotspots, formatConciseSmsAdvisory } from "../../utils/hotspotCalculator";
+import { calculateSmsSegments } from "../../services/iprogSmsService";
 import {
   Bell,
   Target,
@@ -15,7 +17,11 @@ import {
   RefreshCw,
   CheckCircle2,
   Sliders,
-  AlertTriangle
+  AlertTriangle,
+  Compass,
+  MapPin,
+  ExternalLink,
+  Zap
 } from "lucide-react";
 
 export default function AlertsPage() {
@@ -24,6 +30,7 @@ export default function AlertsPage() {
     updateProfile,
     language,
     weather,
+    hotspots,
     showToast
   } = useApp();
 
@@ -42,9 +49,33 @@ export default function AlertsPage() {
   const [windThreshold, setWindThreshold] = useState<number>(20);
   const [emergencyContact, setEmergencyContact] = useState("0917 111 2222");
 
+  // Model Filter State for Hotspot Calculator & SMS
+  const [modelFilter, setModelFilter] = useState<'pelagic' | 'demersal' | 'both'>('pelagic');
+
   // SMS Simulation State
   const [smsSending, setSmsSending] = useState(false);
   const [lastSmsResult, setLastSmsResult] = useState<any>(null);
+
+  // Compute Hotspot Metrics dynamically using Haversine & Catch Efficiency Ratio
+  const currentLat = userProfile?.lat || 14.0122;
+  const currentLng = userProfile?.lng || 123.0114;
+  const hotspotAnalysis = analyzeHotspots(currentLat, currentLng, hotspots, modelFilter);
+
+  const nearestSpot = hotspotAnalysis.nearestHotspot;
+  const topEfficiencySpot = hotspotAnalysis.highestEfficiencyHotspot;
+  const targetHotspot = nearestSpot || topEfficiencySpot;
+
+  // Generate concise SMS message
+  const waveVal = weather?.waveHeight ?? 1.2;
+  const windVal = weather?.windSpeed ?? 14.5;
+  const vessel = userProfile?.vesselName || "Ka-Isda";
+  const portName = userProfile?.port || "Brgy Pasil";
+
+  const generatedSmsText = targetHotspot
+    ? formatConciseSmsAdvisory(vessel, portName, targetHotspot, waveVal, windVal)
+    : `[PAROLA] ${vessel}: No active hotspots detected near ${portName}. Wave:${waveVal}m Wind:${windVal}kph. Ligtas na paglalayag!`;
+
+  const smsSegmentDetails = calculateSmsSegments(generatedSmsText);
 
   const handleApplyVariables = async () => {
     try {
@@ -75,20 +106,13 @@ export default function AlertsPage() {
 
     try {
       const recipientPhone = userProfile?.phone || "09171234567";
-      const waveVal = weather?.waveHeight ?? 1.2;
-      const windVal = weather?.windSpeed ?? 14.5;
-      const windDir = weather?.windDirection || "NE";
-      const vessel = userProfile?.vesselName || "Ka-Isda";
-      const portName = userProfile?.port || "Brgy Pasil";
-
-      const sampleMessage = `[PAROLA ADVISORY] Magandang araw ${vessel}! Inirekomendang isdaan para sa ${portName}: Hotspot #1 (8.4km, NNE). Alon: ${waveVal}m, Hangin: ${windVal}km/h (${windDir}). Ligtas na paglalayag!`;
 
       const response = await fetch("/api/sms/send", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           recipient: recipientPhone,
-          message: sampleMessage,
+          message: generatedSmsText,
           category: "weather"
         })
       });
@@ -414,7 +438,7 @@ export default function AlertsPage() {
           {/* ============================================================ */}
           {/* SECTION 4: SIMULATED SMS ADVISORY */}
           {/* ============================================================ */}
-          <div className="space-y-5">
+          <div className="space-y-6">
             <div className="flex items-center justify-between">
               <div className="flex items-start gap-3">
                 <div className="p-2 bg-emerald-50 rounded-xl text-[#00B074] mt-0.5">
@@ -422,10 +446,10 @@ export default function AlertsPage() {
                 </div>
                 <div>
                   <h2 className="font-display font-black text-sm uppercase tracking-wider text-slate-900">
-                    SIMULATED SMS ADVISORY (iPROG GATEWAY)
+                    SIMULATED SMS ADVISORY & HOTSPOT CALCULATOR (iPROG GATEWAY)
                   </h2>
                   <p className="text-xs font-semibold text-gray-400 mt-0.5">
-                    Test your cellular SMS connection by dispatching a sample weather & fishing advisory to your registered phone.
+                    Calculates nearest hotspot distance (via Haversine formula) & catch probability ratio for SMS cellular dispatch.
                   </p>
                 </div>
               </div>
@@ -435,29 +459,191 @@ export default function AlertsPage() {
               </span>
             </div>
 
-            {/* Target Registered Mobile Display Card */}
-            <div className="bg-slate-50 border border-gray-200/80 rounded-2xl p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-              <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-xl bg-emerald-100/70 text-[#00B074] flex items-center justify-center font-bold shrink-0">
-                  <Smartphone className="w-5 h-5" />
+            {/* Target Registered Mobile & Model Settings Switcher Card */}
+            <div className="bg-slate-50 border border-gray-200/80 rounded-2xl p-5 space-y-4">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-gray-200/60">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-xl bg-emerald-100/70 text-[#00B074] flex items-center justify-center font-bold shrink-0">
+                    <Smartphone className="w-5 h-5" />
+                  </div>
+                  <div>
+                    <span className="text-[10px] font-black text-gray-400 uppercase block tracking-wider">
+                      Target Mobile Number
+                    </span>
+                    <span className="text-sm font-black text-slate-900">
+                      {userProfile.phone || "0917 123 4567"}
+                    </span>
+                  </div>
                 </div>
-                <div>
+
+                <div className="text-left sm:text-right">
                   <span className="text-[10px] font-black text-gray-400 uppercase block tracking-wider">
-                    Registered Mobile Number
+                    Selected Location / Home Port Anchor
                   </span>
-                  <span className="text-sm font-black text-slate-900">
-                    {userProfile.phone || "0917 123 4567"}
+                  <span className="text-xs font-bold text-slate-800 flex items-center gap-1">
+                    <MapPin className="w-3.5 h-3.5 text-[#00B074]" />
+                    {userProfile.port || 'Mercedes Fish Port'} ({currentLat.toFixed(3)}°N, {currentLng.toFixed(3)}°E)
                   </span>
                 </div>
               </div>
 
-              <div className="text-left sm:text-right">
-                <span className="text-[10px] font-black text-gray-400 uppercase block tracking-wider">
-                  Home Port Anchor
+              {/* Model Filter Selector (Pelagic vs Demersal vs General) */}
+              <div className="space-y-2">
+                <label className="text-[10px] font-black uppercase tracking-wider text-gray-400 block">
+                  MODEL FILTER FOR NEAREST HOTSPOT CALCULATION
+                </label>
+                <div className="bg-white border border-gray-200 p-1.5 rounded-xl grid grid-cols-3 gap-1.5">
+                  <button
+                    type="button"
+                    onClick={() => setModelFilter('pelagic')}
+                    className={`py-2 px-3 rounded-lg text-xs font-black transition cursor-pointer ${
+                      modelFilter === 'pelagic'
+                        ? 'bg-emerald-50 text-[#00B074] border border-emerald-200 shadow-sm'
+                        : 'text-gray-500 hover:text-slate-800'
+                    }`}
+                  >
+                    PELAGIC MODEL
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setModelFilter('demersal')}
+                    className={`py-2 px-3 rounded-lg text-xs font-black transition cursor-pointer ${
+                      modelFilter === 'demersal'
+                        ? 'bg-blue-50 text-blue-600 border border-blue-200 shadow-sm'
+                        : 'text-gray-500 hover:text-slate-800'
+                    }`}
+                  >
+                    DEMERSAL MODEL
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setModelFilter('both')}
+                    className={`py-2 px-3 rounded-lg text-xs font-black transition cursor-pointer ${
+                      modelFilter === 'both'
+                        ? 'bg-slate-900 text-white shadow-sm'
+                        : 'text-gray-500 hover:text-slate-800'
+                    }`}
+                  >
+                    GENERAL (ALL)
+                  </button>
+                </div>
+              </div>
+            </div>
+
+            {/* Calculated Nearest Hotspot & Efficiency Metrics Breakdown Card */}
+            {targetHotspot ? (
+              <div className="bg-gradient-to-br from-emerald-950 via-slate-900 to-slate-950 text-white rounded-2xl p-5 space-y-4 shadow-md">
+                <div className="flex flex-wrap items-center justify-between gap-2 border-b border-emerald-800/40 pb-3">
+                  <div className="flex items-center gap-2">
+                    <Zap className="w-4 h-4 text-emerald-400" />
+                    <span className="font-display font-black text-xs uppercase tracking-wider text-emerald-400">
+                      CALCULATED NEAREST HOTSPOT METRICS
+                    </span>
+                  </div>
+                  <span className="px-2.5 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 text-[10px] font-black uppercase">
+                    Haversine Spatial Engine
+                  </span>
+                </div>
+
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 text-left">
+                  <div className="bg-slate-900/80 p-3 rounded-xl border border-slate-800">
+                    <span className="text-[9px] font-black text-gray-400 uppercase block tracking-wider">
+                      Haversine Distance
+                    </span>
+                    <span className="text-sm font-black text-emerald-400">
+                      {targetHotspot.distanceKm} km
+                    </span>
+                    <span className="text-[10px] font-bold text-gray-400 block mt-0.5">
+                      Vector: {targetHotspot.compassBearing}
+                    </span>
+                  </div>
+
+                  <div className="bg-slate-900/80 p-3 rounded-xl border border-slate-800">
+                    <span className="text-[9px] font-black text-gray-400 uppercase block tracking-wider">
+                      Catch Probability
+                    </span>
+                    <span className="text-sm font-black text-emerald-300">
+                      {targetHotspot.catchProbability}%
+                    </span>
+                    <span className="text-[10px] font-bold text-gray-400 block mt-0.5">
+                      LightGBM ML Confidence
+                    </span>
+                  </div>
+
+                  <div className="bg-slate-900/80 p-3 rounded-xl border border-slate-800">
+                    <span className="text-[9px] font-black text-gray-400 uppercase block tracking-wider">
+                      Efficiency Ratio
+                    </span>
+                    <span className="text-sm font-black text-yellow-400">
+                      {targetHotspot.efficiencyRatio} %/km
+                    </span>
+                    <span className="text-[10px] font-bold text-gray-400 block mt-0.5">
+                      Yield / Dist Index
+                    </span>
+                  </div>
+
+                  <div className="bg-slate-900/80 p-3 rounded-xl border border-slate-800">
+                    <span className="text-[9px] font-black text-gray-400 uppercase block tracking-wider">
+                      Hotspot Grid Name
+                    </span>
+                    <span className="text-xs font-extrabold text-white truncate block">
+                      {targetHotspot.hotspot.name}
+                    </span>
+                    <span className="text-[10px] font-bold text-emerald-400 block mt-0.5 capitalize">
+                      {targetHotspot.hotspot.type} Zone
+                    </span>
+                  </div>
+                </div>
+
+                {/* 4 SMS Direction Parameters Breakdown */}
+                <div className="pt-2 border-t border-slate-800 grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs font-mono">
+                  <div className="bg-slate-900 p-2.5 rounded-lg border border-slate-800 flex items-center justify-between">
+                    <span className="text-gray-400 font-sans text-[11px]">1. Haversine Distance & Bearing:</span>
+                    <span className="text-emerald-400 font-bold">{targetHotspot.distanceKm} km ({targetHotspot.compassBearing})</span>
+                  </div>
+
+                  <div className="bg-slate-900 p-2.5 rounded-lg border border-slate-800 flex items-center justify-between">
+                    <span className="text-gray-400 font-sans text-[11px]">2. Compass App GPS Coordinate:</span>
+                    <span className="text-emerald-300 font-bold">{targetHotspot.gpsCoordinatesFormatted}</span>
+                  </div>
+
+                  <div className="bg-slate-900 p-2.5 rounded-lg border border-slate-800 flex items-center justify-between sm:col-span-2">
+                    <span className="text-gray-400 font-sans text-[11px]">3. Smartphone Google Maps Link:</span>
+                    <a
+                      href={targetHotspot.googleMapsUrl}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-blue-400 font-bold hover:underline flex items-center gap-1 truncate max-w-[240px]"
+                    >
+                      {targetHotspot.googleMapsUrl.replace('https://', '')}
+                      <ExternalLink className="w-3 h-3 shrink-0" />
+                    </a>
+                  </div>
+                </div>
+              </div>
+            ) : null}
+
+            {/* Generated Concise SMS Payload Preview Box */}
+            <div className="bg-slate-100 border border-slate-300/80 rounded-2xl p-4 space-y-2">
+              <div className="flex items-center justify-between text-xs font-bold text-slate-700">
+                <span className="flex items-center gap-1.5 uppercase font-black tracking-wider text-[11px] text-slate-900">
+                  <Smartphone className="w-4 h-4 text-[#00B074]" />
+                  Cellular SMS Payload Preview
                 </span>
-                <span className="text-xs font-bold text-slate-700">
-                  {userProfile.port || 'Mercedes Fish Port'}
-                </span>
+                <div className="flex items-center gap-2">
+                  <span className={`px-2 py-0.5 rounded text-[10px] font-black ${
+                    smsSegmentDetails.segmentCount === 1 ? 'bg-emerald-100 text-emerald-800' : 'bg-amber-100 text-amber-800'
+                  }`}>
+                    {smsSegmentDetails.characterCount} Chars ({smsSegmentDetails.segmentCount} SMS Segment)
+                  </span>
+                  <span className="px-2 py-0.5 rounded bg-slate-200 text-slate-800 text-[10px] font-bold">
+                    GSM-7 Encoding
+                  </span>
+                </div>
+              </div>
+
+              <div className="p-3 bg-white border border-slate-200 rounded-xl font-mono text-xs text-slate-900 leading-relaxed shadow-inner">
+                {generatedSmsText}
               </div>
             </div>
 
@@ -476,7 +662,7 @@ export default function AlertsPage() {
               ) : (
                 <>
                   <Send className="w-4 h-4" />
-                  <span>DISPATCH TEST SMS ADVISORY</span>
+                  <span>DISPATCH CONCISE TEST SMS ADVISORY</span>
                 </>
               )}
             </button>

@@ -13,7 +13,8 @@ import {
   Check,
   ChevronDown,
   LogIn,
-  Globe
+  Globe,
+  AlertTriangle
 } from "lucide-react";
 import { useApp } from "../../context/AppContext";
 import { ParolaLogo } from "../../components/ui/ParolaLogo";
@@ -38,6 +39,7 @@ export default function LoginPage() {
   const [showPassword, setShowPassword] = useState(false);
   const [phone, setPhone] = useState('+63 ');
   const [password, setPassword] = useState('');
+  const [formError, setFormError] = useState('');
   const [loading, setLoading] = useState(false);
 
   // Language Dropdown open state & ref for click outside
@@ -86,13 +88,29 @@ export default function LoginPage() {
 
   const handleAuthSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!phone.trim() || !password) return;
-    setLoading(true);
+    setFormError('');
 
-    const ok = await login(phone.trim(), password);
+    const cleaned = phone.trim();
+    const digitsOnly = cleaned.replace(/\D/g, '');
+
+    if (!cleaned || digitsOnly.length < 10) {
+      setFormError('Please enter a valid mobile phone number (e.g. +63 912 345 6789).');
+      return;
+    }
+
+    if (!password) {
+      setFormError('Please enter your password.');
+      return;
+    }
+
+    setLoading(true);
+    const result = await login(cleaned, password);
     setLoading(false);
-    if (ok) {
+
+    if (result.ok) {
       router.push("/dashboard");
+    } else {
+      setFormError(result.error || "Sign in failed. Please check your credentials.");
     }
   };
 
@@ -198,6 +216,13 @@ export default function LoginPage() {
               Sign In
             </h2>
 
+            {formError && (
+              <div className="mb-5 p-4 rounded-2xl bg-red-50 border border-red-200 text-red-700 flex items-start gap-3 text-xs font-bold animate-in fade-in zoom-in-95">
+                <AlertTriangle className="w-5 h-5 text-red-500 shrink-0 mt-0.5" />
+                <span className="leading-relaxed">{formError}</span>
+              </div>
+            )}
+
             <form onSubmit={handleAuthSubmit} className="space-y-5">
 
               {/* Phone Input */}
@@ -217,6 +242,7 @@ export default function LoginPage() {
                         val = '+63 ' + val.replace(/^\+63\s*/, '');
                       }
                       setPhone(val);
+                      if (formError) setFormError('');
                     }}
                     className="w-full bg-gray-50 border border-gray-200 pl-14 pr-6 py-4 rounded-2xl text-base focus:outline-none focus:ring-2 focus:ring-brand-green focus:border-brand-green transition-all font-semibold"
                     required
@@ -235,7 +261,10 @@ export default function LoginPage() {
                     type={showPassword ? 'text' : 'password'}
                     placeholder="••••••••"
                     value={password}
-                    onChange={(e) => setPassword(e.target.value)}
+                    onChange={(e) => {
+                      setPassword(e.target.value);
+                      if (formError) setFormError('');
+                    }}
                     className="w-full bg-gray-50 border border-gray-200 pl-14 pr-14 py-4 rounded-2xl text-base focus:outline-none focus:ring-2 focus:ring-brand-green focus:border-brand-green transition-all font-semibold"
                     required
                   />

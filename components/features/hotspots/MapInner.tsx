@@ -424,11 +424,14 @@ export default function MapInner({
                   <div className="text-[10px] font-bold text-gray-500 space-y-0.5">
                     {spot.catchProbability !== undefined && (
                       <div className="text-emerald-700 font-extrabold text-xs bg-emerald-50 px-2 py-1 rounded-lg border border-emerald-200">
-                        ⚡ {(spot.catchProbability * 100).toFixed(0)}% AWS Catch Probability
+                        ⚡ {(spot.catchProbability <= 1 ? spot.catchProbability * 100 : spot.catchProbability).toFixed(0)}% LightGBM Catch Probability
                       </div>
                     )}
                     {spot.distanceKm !== undefined && (
-                      <div>Vector: <span className="text-brand-black font-extrabold">{spot.distanceKm.toFixed(1)} km ({spot.compassBearing})</span></div>
+                      <div>Haversine Distance: <span className="text-slate-900 font-extrabold">{spot.distanceKm.toFixed(1)} km ({spot.compassBearing})</span></div>
+                    )}
+                    {spot.distanceKm !== undefined && spot.catchProbability !== undefined && spot.distanceKm > 0 && (
+                      <div>Yield Efficiency Ratio: <span className="text-amber-700 font-extrabold">{((spot.catchProbability <= 1 ? spot.catchProbability * 100 : spot.catchProbability) / spot.distanceKm).toFixed(2)} %/km</span></div>
                     )}
                     {spot.sst !== undefined && (
                       <div>Sea Temp (SST): <span className="text-amber-600 font-extrabold">{spot.sst}°C</span></div>

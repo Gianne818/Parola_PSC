@@ -20,7 +20,7 @@ import {
   UserPlus,
   AlertTriangle
 } from "lucide-react";
-import { useApp } from "../../context/AppContext";
+import { useApp, getLocalRegisteredUsers } from "../../context/AppContext";
 import { ParolaLogo } from "../../components/ui/ParolaLogo";
 
 interface Ripple {
@@ -101,11 +101,40 @@ export default function RegisterPage() {
 
   const handleAuthSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!phone.trim() || !password) return;
-
     setFormError('');
-    setIsChecking(true);
+
     const cleaned = phone.trim();
+    const digitsOnly = cleaned.replace(/\D/g, '');
+
+    if (!cleaned || digitsOnly.length < 10) {
+      const msg = "Please enter a valid mobile phone number (e.g. +63 912 345 6789).";
+      setFormError(msg);
+      showToast(msg, "error");
+      return;
+    }
+
+    if (!password || password.length < 6) {
+      const msg = "Password must be at least 6 characters long.";
+      setFormError(msg);
+      showToast(msg, "error");
+      return;
+    }
+
+    setIsChecking(true);
+
+    // Check local registered accounts store for duplicate phone number
+    const compactPhone = cleaned.replace(/\s+/g, '');
+    const localUsers = getLocalRegisteredUsers();
+    const existingLocal = localUsers.find(
+      u => u.phone.trim().replace(/\s+/g, '') === compactPhone
+    );
+    if (existingLocal) {
+      setIsChecking(false);
+      const errorMsg = "An account with this phone number already exists. Please sign in instead.";
+      setFormError(errorMsg);
+      showToast(errorMsg, "error");
+      return;
+    }
 
     // Check if phone number is already registered in backend database
     try {
@@ -294,6 +323,13 @@ export default function RegisterPage() {
               Register Account
             </h2>
 
+            {formError && (
+              <div className="mb-5 p-4 rounded-2xl bg-red-50 border border-red-200 text-red-700 flex items-start gap-3 text-xs font-bold animate-in fade-in zoom-in-95">
+                <AlertTriangle className="w-5 h-5 text-red-500 shrink-0 mt-0.5" />
+                <span className="leading-relaxed">{formError}</span>
+              </div>
+            )}
+
             <form onSubmit={handleAuthSubmit} className="space-y-5">
 
               {/* Phone Input with prefilled country code */}
@@ -313,6 +349,7 @@ export default function RegisterPage() {
                         val = '+63 ' + val.replace(/^\+63\s*/, '');
                       }
                       setPhone(val);
+                      if (formError) setFormError('');
                     }}
                     className="w-full bg-gray-50 border border-gray-200 pl-14 pr-6 py-4 rounded-2xl text-base focus:outline-none focus:ring-2 focus:ring-brand-green focus:border-brand-green transition-all font-semibold"
                     required
@@ -329,9 +366,12 @@ export default function RegisterPage() {
                 <div className="relative">
                   <input
                     type={showPassword ? 'text' : 'password'}
-                    placeholder="••••••••"
+                    placeholder="•••••••• (min 6 chars)"
                     value={password}
-                    onChange={(e) => setPassword(e.target.value)}
+                    onChange={(e) => {
+                      setPassword(e.target.value);
+                      if (formError) setFormError('');
+                    }}
                     className="w-full bg-gray-50 border border-gray-200 pl-14 pr-14 py-4 rounded-2xl text-base focus:outline-none focus:ring-2 focus:ring-brand-green focus:border-brand-green transition-all font-semibold"
                     required
                   />
