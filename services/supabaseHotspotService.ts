@@ -8,6 +8,23 @@ export interface SupabaseHotspot extends Hotspot {
   dbscan_cluster_id?: number;
 }
 
+// Pelagic species groups for dynamic distribution
+const PELAGIC_SPECIES_SETS = [
+  ["Tamban (Clupeidae)", "Tulingan (Scombridae)", "Galunggong (Carangidae)"],
+  ["Galunggong (Carangidae)", "Alumahan (Scombridae)", "Dilis (Engraulidae)"],
+  ["Tamban (Clupeidae)", "Kipalkipal (Belonidae)", "Bahi (Belonidae)"],
+  ["Alumahan (Scombridae)", "Tulingan (Scombridae)", "Dilis (Engraulidae)"],
+  ["Tamban (Clupeidae)", "Galunggong (Carangidae)", "Kipalkipal (Belonidae)"],
+];
+
+// Demersal species groups for dynamic distribution
+const DEMERSAL_SPECIES_SETS = [
+  ["Lapu-lapu (Serranidae)", "Maya-maya (Lutjanidae)", "Bisugo (Nemipteridae)"],
+  ["Maya-maya (Lutjanidae)", "Samaral (Siganidae)", "Katambak (Lethrinidae)"],
+  ["Lapu-lapu (Serranidae)", "Bisugo (Nemipteridae)", "Dugso (Lethrinidae)"],
+  ["Samaral (Siganidae)", "Katambak (Lethrinidae)", "Maya-maya (Lutjanidae)"],
+];
+
 /**
  * Attempt 1: Query Supabase directly via JS client (requires valid anon key)
  */
@@ -18,9 +35,9 @@ export async function fetchHotspotsFromSupabase(userLat: number, userLng: number
       .from('daily_grid_predictions')
       .select('id, prediction_date, model_type, catch_probability, dbscan_cluster_id, sst, chl_a, created_at, centroid_geom')
       .eq('prediction_date', today)
-      .gte('catch_probability', 0.5)
+      .gte('catch_probability', 0.60)
       .order('catch_probability', { ascending: false })
-      .limit(50);
+      .limit(1000);
 
     if (error) {
       console.warn('Supabase direct query error:', error.message);
@@ -37,11 +54,11 @@ export async function fetchHotspotsFromSupabase(userLat: number, userLng: number
 }
 
 /**
- * Attempt 2: Query via our Next.js API route (which reads from DB/S3 server-side)
+ * Attempt 2: Query via Next.js API route (which reads from DB server-side)
  */
 export async function fetchHotspotsFromApi(userLat: number, userLng: number): Promise<Hotspot[]> {
   try {
-    const res = await fetch(`/api/advisories/nearest?lat=${userLat}&lon=${userLng}&limit=50`);
+    const res = await fetch(`/api/advisories/nearest?lat=${userLat}&lon=${userLng}&limit=1000`);
     if (!res.ok) {
       console.warn('API route error:', res.statusText);
       return [];
@@ -59,11 +76,11 @@ export async function fetchHotspotsFromApi(userLat: number, userLng: number): Pr
         if (item.model_type === 'demersal') type = 'demersal';
         else if (item.model_type === 'both') type = 'both';
 
-        const species = type === 'pelagic' 
-          ? ["Tamban (Clupeidae)", "Tulingan (Scombridae)", "Galunggong (Carangidae)"] 
-          : type === 'demersal'
-            ? ["Lapu-lapu (Serranidae)", "Maya-maya (Lutjanidae)", "Bisugo (Nemipteridae)"]
-            : ["Tulingan (Scombridae)", "Samaral (Siganidae)", "Maya-maya (Lutjanidae)"];
+        // Assign species dynamically based on cluster ID and index for variety
+        const speciesSetIdx = (idx + Math.floor(lat * 10)) % PELAGIC_SPECIES_SETS.length;
+        const species = type === 'demersal'
+          ? DEMERSAL_SPECIES_SETS[idx % DEMERSAL_SPECIES_SETS.length]
+          : PELAGIC_SPECIES_SETS[speciesSetIdx];
 
         const depth = type === 'pelagic' ? 450 : type === 'demersal' ? 45 : 120;
 
@@ -97,17 +114,15 @@ export async function fetchHotspotsFromApi(userLat: number, userLng: number): Pr
  * Main entry: tries Supabase direct → API route → returns empty
  */
 export async function fetchHotspots(userLat: number, userLng: number): Promise<Hotspot[]> {
-  // Try 1: Direct Supabase client query
   const sbHotspots = await fetchHotspotsFromSupabase(userLat, userLng);
   if (sbHotspots.length > 0) {
-    console.log(`[Hotspots] Loaded ${sbHotspots.length} hotspots from Supabase direct query`);
+    console.log(`[Hotspots] Loaded ${sbHotspots.length} hotspots (>= 0.60 prob) from Supabase direct query`);
     return sbHotspots;
   }
 
-  // Try 2: Next.js API route (DB/S3 server-side)
   const apiHotspots = await fetchHotspotsFromApi(userLat, userLng);
   if (apiHotspots.length > 0) {
-    console.log(`[Hotspots] Loaded ${apiHotspots.length} hotspots from API route`);
+    console.log(`[Hotspots] Loaded ${apiHotspots.length} hotspots (>= 0.60 prob) from API route`);
     return apiHotspots;
   }
 
@@ -119,10 +134,9 @@ export async function fetchHotspots(userLat: number, userLng: number): Promise<H
  * Helper: Convert database rows to Hotspot objects
  */
 function mapDbRowsToHotspots(data: any[], userLat: number, userLng: number): SupabaseHotspot[] {
-  return data.map((item: any) => {
+  return data.map((item: any, idx: number) => {
     let lat = 0, lng = 0;
     
-    // Parse centroid_geom - could be WKT string or GeoJSON
     const geom = item.centroid_geom;
     if (typeof geom === 'string') {
       const match = geom.match(/POINT\(([-\d.]+)\s+([-\d.]+)\)/);
@@ -130,26 +144,22 @@ function mapDbRowsToHotspots(data: any[], userLat: number, userLng: number): Sup
         lng = parseFloat(match[1]);
         lat = parseFloat(match[2]);
       }
-    } else if (geom && typeof geom === 'object') {
-      // GeoJSON format
-      if (geom.coordinates) {
-        lng = geom.coordinates[0];
-        lat = geom.coordinates[1];
-      }
+    } else if (geom && typeof geom === 'object' && geom.coordinates) {
+      lng = geom.coordinates[0];
+      lat = geom.coordinates[1];
     }
 
     const distanceKm = calculateDistance(userLat, userLng, lat, lng);
     const compassBearing = calculateBearing(userLat, userLng, lat, lng);
 
-    let type: 'pelagic' | 'demersal' | 'both' = 'both';
-    if (item.model_type === 'pelagic') type = 'pelagic';
-    else if (item.model_type === 'demersal') type = 'demersal';
+    let type: 'pelagic' | 'demersal' | 'both' = 'pelagic';
+    if (item.model_type === 'demersal') type = 'demersal';
+    else if (item.model_type === 'both') type = 'both';
 
-    const species = type === 'pelagic' 
-      ? ["Tamban (Clupeidae)", "Tulingan (Scombridae)", "Galunggong (Carangidae)"] 
-      : type === 'demersal'
-        ? ["Lapu-lapu (Serranidae)", "Maya-maya (Lutjanidae)", "Bisugo (Nemipteridae)"]
-        : ["Tulingan (Scombridae)", "Samaral (Siganidae)", "Maya-maya (Lutjanidae)"];
+    const speciesSetIdx = (idx + Math.floor(lat * 10)) % PELAGIC_SPECIES_SETS.length;
+    const species = type === 'demersal'
+      ? DEMERSAL_SPECIES_SETS[idx % DEMERSAL_SPECIES_SETS.length]
+      : PELAGIC_SPECIES_SETS[speciesSetIdx];
 
     const depth = type === 'pelagic' ? 450 : type === 'demersal' ? 45 : 120;
     

@@ -214,7 +214,14 @@ export default function MapInner({
     // Species Filter
     const species = spot.species || [(spot as any).family || ""];
     if (selectedSpecies && selectedSpecies.length > 0) {
-      const matchesSpecies = species.some((s: string) => selectedSpecies.includes(s));
+      const matchesSpecies = species.some((s: string) => {
+        return selectedSpecies.some((sel: string) => {
+          if (s === sel) return true;
+          const selTokens = sel.toLowerCase().split(/[\s\/()]+/);
+          const spotText = s.toLowerCase();
+          return selTokens.some(token => token.length > 2 && spotText.includes(token));
+        });
+      });
       if (!matchesSpecies) return false;
     }
 
