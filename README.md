@@ -209,12 +209,12 @@ NEXT_PUBLIC_API_BASE_URL="http://localhost:8000"
 ### 4. Machine Learning & Serverless Pipeline
 
 * **Model Exploration & Training Notebooks:**  
-  Located under the [`notebooks/`](file:///d:/Mikua%20code/parolahack/AIHackathon2026_StarISDA_Parola/notebooks) directory:
-  * [`copernicus.ipynb`](file:///d:/Mikua%20code/parolahack/AIHackathon2026_StarISDA_Parola/notebooks/copernicus.ipynb): Ingestion and subsetting of Copernicus ocean NetCDF grids.
-  * [`pelagic_model.ipynb`](file:///d:/Mikua%20code/parolahack/AIHackathon2026_StarISDA_Parola/notebooks/pelagic_model.ipynb): Feature engineering, LightGBM training, and evaluation.
+  Located under the [`notebooks/`](notebooks) directory:
+  * [`copernicus.ipynb`](notebooks/copernicus.ipynb): Ingestion and subsetting of Copernicus ocean NetCDF grids, physical and biological feature calculation, and compilation of the primary training dataset (`lightgbm_ready_dataset_v5.csv`).
+  * [`pelagic_model.ipynb`](notebooks/pelagic_model.ipynb): Pelagic fishing model pipeline featuring baseline LightGBM training, Optuna automated hyperparameter optimization, interaction feature engineering (`chl_sst_ratio`), biological validation against BFAR regional commercial catch volumes (`psa_regional_volume.csv`), DBSCAN spatial hotspot cross-validation, and real-time daily advisory generation for local municipal ports (`pasil_local_advisories.csv`).
 
 * **AWS Lambda Serverless Deployment:**  
-  Located under [`backend/aws-inference/`](file:///d:/Mikua%20code/parolahack/AIHackathon2026_StarISDA_Parola/backend/aws-inference):
+  Located under [`backend/aws-inference/`](backend/aws-inference):
   ```bash
   cd backend/aws-inference
   sam build
