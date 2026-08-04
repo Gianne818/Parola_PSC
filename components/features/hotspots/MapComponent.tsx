@@ -32,6 +32,7 @@ interface MapComponentProps {
   filterType: "pelagic" | "demersal" | "both";
   selectedSpecies: string[];
   hideSidebar?: boolean;
+  hideLegend?: boolean;
   
   // Custom Vite props compatibility
   center?: [number, number];
@@ -45,6 +46,7 @@ export const MapComponent: React.FC<MapComponentProps> = ({
   filterType,
   selectedSpecies,
   hideSidebar = false,
+  hideLegend = hideSidebar,
   center,
   onMapClick
 }) => {
@@ -75,7 +77,8 @@ export const MapComponent: React.FC<MapComponentProps> = ({
         />
 
         {/* Map Model & Species Prediction Color Legend Overlay */}
-        <div className="absolute top-4 right-4 bg-white/95 dark:bg-[#12211E]/95 backdrop-blur border border-slate-200 dark:border-teal-950 p-3 rounded-2xl shadow-md z-10 text-[10px] space-y-2 max-w-[240px]">
+        {!hideLegend && (
+          <div className="absolute top-4 right-4 bg-white/95 dark:bg-[#12211E]/95 backdrop-blur border border-slate-200 dark:border-teal-950 p-3 rounded-2xl shadow-md z-10 text-[10px] space-y-2 max-w-[240px]">
           <div className="flex items-center justify-between">
             <span className="font-black text-gray-400 uppercase tracking-widest block text-[9px]">
               Prediction Map Legend
@@ -181,6 +184,7 @@ export const MapComponent: React.FC<MapComponentProps> = ({
             )}
           </div>
         </div>
+        )}
 
         {/* Home anchorage status overlay */}
         {userProfile && (
