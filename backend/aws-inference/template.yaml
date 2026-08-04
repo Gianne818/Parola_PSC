@@ -18,7 +18,8 @@ Resources:
         AuthType: NONE
       Environment:
         Variables:
-          MODEL_BUCKET_NAME: "parola-data-bucket-715991411553-ap-southeast-1"
+          MODEL_BUCKET_NAME: "parola-data-bucket-715991411553-us-east-1"
+          MODEL_KEY: "models/parola_pelagic_model_v2.txt"
           COPERNICUS_USERNAME: "sstu"
           COPERNICUS_PASSWORD: "StarISDA!234"
           DATABASE_URL: "postgresql://postgres.aafqdvhfycqbsvmvaxmz:StarISDA!23@aws-1-ap-southeast-2.pooler.supabase.com:6543/postgres?pgbouncer=true"
@@ -29,9 +30,9 @@ Resources:
           SAFETY_WAVE_THRESHOLD_METERS: "3.0"
       Policies:
         - S3ReadPolicy:
-            BucketName: !Ref ParolaDataBucket
+            BucketName: "parola-data-bucket-715991411553-us-east-1"
         - S3WritePolicy:
-            BucketName: !Ref ParolaDataBucket
+            BucketName: "parola-data-bucket-715991411553-us-east-1"
       Events:
         SixHourInferenceSchedule:
           Type: Schedule
@@ -49,16 +50,6 @@ Resources:
       DockerContext: .
       DockerTag: latest
 
-  ParolaDataBucket:
-    Type: AWS::S3::Bucket
-    Properties:
-      BucketName: "parola-data-bucket-715991411553-ap-southeast-1"
-      PublicAccessBlockConfiguration:
-        BlockPublicAcls: true
-        BlockPublicPolicy: true
-        IgnorePublicAcls: true
-        RestrictPublicBuckets: true
-
 Outputs:
   ParolaInferenceFunctionArn:
     Description: "Parola Inference Lambda Function ARN"
@@ -68,4 +59,4 @@ Outputs:
     Value: !GetAtt ParolaInferenceFunctionUrl.FunctionUrl
   ParolaDataBucketName:
     Description: "S3 Bucket containing the model and output advisories"
-    Value: !Ref ParolaDataBucket
+    Value: "parola-data-bucket-715991411553-us-east-1"

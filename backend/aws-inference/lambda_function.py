@@ -34,7 +34,7 @@ except Exception:
     s3 = None
 
 # Environment Variables & Configurations
-BUCKET_NAME = os.environ.get('MODEL_BUCKET_NAME', 'parola-data-bucket')
+BUCKET_NAME = os.environ.get('MODEL_BUCKET_NAME', 'parola-data-bucket-715991411553-us-east-1')
 MODEL_KEY = os.environ.get('MODEL_KEY', 'models/parola_pelagic_model_v2.txt')
 MODEL_LOCAL_PATH = '/tmp/parola_pelagic_model_v2.txt'
 
