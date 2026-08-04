@@ -106,7 +106,7 @@ export const AuthLayout: React.FC<AuthLayoutProps> = ({ children, fluid = false 
         
         {/* Desktop Left Sidebar */}
         <aside
-          className={`hidden md:flex flex-col border-r border-gray-100 dark:border-teal-950 bg-white dark:bg-[#12211E] relative transition-all duration-300 z-35 ${
+          className={`hidden md:flex flex-col border-r border-gray-200 bg-white relative transition-all duration-300 z-35 ${
             isCollapsed ? "w-20" : "w-64"
           }`}
         >
@@ -120,7 +120,7 @@ export const AuthLayout: React.FC<AuthLayoutProps> = ({ children, fluid = false 
           </button>
 
           {/* Logo Brand Header */}
-          <div className={`p-6 border-b border-gray-100 dark:border-teal-950 flex items-center ${isCollapsed ? "justify-center" : "justify-start"}`}>
+          <div className={`p-6 border-b border-gray-100 flex items-center ${isCollapsed ? "justify-center" : "justify-start"}`}>
             <ParolaLogo className="w-8 h-8" iconOnly={isCollapsed} />
           </div>
 
@@ -137,8 +137,8 @@ export const AuthLayout: React.FC<AuthLayoutProps> = ({ children, fluid = false 
                   title={isCollapsed ? item.label : undefined}
                   className={`flex items-center gap-3.5 h-11 px-4 rounded-full font-bold text-sm transition-all select-none relative group ${
                     isActive
-                      ? "bg-[#E5F7F3] text-[#00B37E] dark:bg-[#00B37E]/20 dark:text-[#00B37E]"
-                      : "text-gray-600 hover:text-[#12211E] dark:text-gray-300 dark:hover:text-white hover:bg-gray-50 dark:hover:bg-teal-950/40"
+                      ? "bg-[#E5F7F3] text-[#00B37E]"
+                      : "text-gray-600 hover:text-[#12211E] hover:bg-gray-100/70"
                   }`}
                 >
                   <Icon className={`w-5 h-5 shrink-0 transition-transform ${isActive ? "scale-105" : ""}`} />
@@ -149,7 +149,7 @@ export const AuthLayout: React.FC<AuthLayoutProps> = ({ children, fluid = false 
 
                   {/* Red Badge Alert */}
                   {item.badge && unreadCount > 0 && (
-                    <span className={`absolute flex items-center justify-center bg-rose-600 text-white text-[9px] font-black rounded-full border border-white dark:border-[#12211E] ${
+                    <span className={`absolute flex items-center justify-center bg-rose-600 text-white text-[9px] font-black rounded-full border border-white ${
                       isCollapsed ? "top-2 right-2 w-4 h-4" : "right-10 px-1.5 h-4.5 min-w-4.5"
                     }`}>
                       {unreadCount}
@@ -161,7 +161,7 @@ export const AuthLayout: React.FC<AuthLayoutProps> = ({ children, fluid = false 
           </nav>
 
           {/* Bottom logout area */}
-          <div className="p-4 border-t border-gray-100 dark:border-teal-950">
+          <div className="p-4 border-t border-gray-100">
             <button
               onClick={logout}
               className={`w-full flex items-center gap-3.5 h-11 px-4 rounded-full font-bold text-sm transition select-none ${

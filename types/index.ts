@@ -20,6 +20,7 @@ export interface FuelPool {
   closingDate: string;
   discountPerLiter: number;
   commits: { [phone: string]: number }; // phone -> committed liters
+  createdByPhone?: string;
 }
 
 export interface PriceTier {

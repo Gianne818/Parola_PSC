@@ -123,3 +123,12 @@ input[type="range"]::-moz-range-thumb {
 input[type="range"]::-moz-range-thumb:hover {
   transform: scale(1.15);
 }
+
+/* Hide Next.js Dev Overlay Indicator & Logo */
+[data-nextjs-toast],
+[data-nextjs-dev-tools-button],
+nextjs-portal,
+#nextjs-dev-tools,
+button[aria-label*="Next.js"] {
+  display: none !important;
+}

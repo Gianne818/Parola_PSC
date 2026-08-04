@@ -47,10 +47,10 @@ export const MapComponent: React.FC<MapComponentProps> = ({
   const [customWaypoint, setCustomWaypoint] = useState<{ lat: number; lng: number } | null>(null);
 
   return (
-    <div className="relative w-full bg-blue-50/30 border border-slate-200 dark:border-teal-950 rounded-[2rem] overflow-hidden shadow-inner flex flex-col md:flex-row select-none">
+    <div className={`relative w-full h-full bg-blue-50/30 flex flex-col md:flex-row select-none ${hideSidebar ? 'border-none rounded-none' : 'border border-slate-200 dark:border-teal-950 rounded-[2rem] overflow-hidden shadow-inner'}`}>
       
       {/* ECDIS Nautical Chart Container */}
-      <div className="relative flex-1 bg-blue-50/50 min-h-[450px] md:min-h-[580px]">
+      <div className="relative flex-1 bg-blue-50/50 w-full h-full min-h-[450px]">
         <MapInner
           hotspots={hotspots}
           selectedHotspot={selectedHotspot}

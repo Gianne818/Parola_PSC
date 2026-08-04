@@ -5,7 +5,7 @@ import { AuthLayout } from "../../components/layouts/AuthLayout";
 import { useApp, MUNICIPAL_PORTS } from "../../context/AppContext";
 import { useTranslation } from "../../hooks/use-translation";
 import { Modal } from "../../components/ui/Modal";
-import { Fuel, MapPin, Users, Calendar, ChevronRight, Search, Plus } from "lucide-react";
+import { Fuel, MapPin, Users, Calendar, ChevronRight, Search, Plus, Trash2 } from "lucide-react";
 
 export default function FuelPage() {
   const {
@@ -13,6 +13,7 @@ export default function FuelPage() {
     fuelPools,
     addFuelCommit,
     createFuelPool,
+    deleteFuelPool,
     language,
     showToast,
   } = useApp();
@@ -39,6 +40,23 @@ export default function FuelPage() {
 
   const activePool = fuelPools.find((p) => p.id === selectedPoolId) || fuelPools[0];
 
+  const isPoolOwner = (pool: typeof fuelPools[0]) => {
+    if (!pool) return false;
+    if (pool.createdByPhone) {
+      if (pool.createdByPhone === userProfile?.phone) return true;
+      const p1 = pool.createdByPhone.replace(/\D/g, "");
+      const p2 = (userProfile?.phone || "").replace(/\D/g, "");
+      if (p1 && p2 && (p1.endsWith(p2.slice(-8)) || p2.endsWith(p1.slice(-8)))) {
+        return true;
+      }
+    }
+    // Fallback for initial default pool or items without phone
+    if (pool.id === "pool1" || pool.createdByPhone === "0912 345 6789") {
+      return true;
+    }
+    return false;
+  };
+
   const handleLaunchPoolSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!newPoolName) {
@@ -62,6 +80,10 @@ export default function FuelPage() {
 
   const handleCommitOrder = () => {
     if (!activePool) return;
+    if (activePool.currentVolume >= activePool.targetVolume) {
+      showToast("This fuel pool is already full! Target volume has been reached.", "error");
+      return;
+    }
     addFuelCommit(activePool.id, fuelCommitLiters);
     showToast("Successfully committed fuel volume!", "success");
   };
@@ -125,8 +147,8 @@ export default function FuelPage() {
             <button
               onClick={() => setActiveTab("pools")}
               className={`px-6 py-2.5 rounded-xl text-xs font-black uppercase transition cursor-pointer ${activeTab === "pools"
-                  ? "bg-[#10B981]/10 text-[#10B981] border border-[#10B981]/30"
-                  : "text-gray-400 hover:text-gray-700"
+                ? "bg-[#10B981]/10 text-[#10B981] border border-[#10B981]/30"
+                : "text-gray-400 hover:text-gray-700"
                 }`}
             >
               NEARBY FUEL POOLS
@@ -134,8 +156,8 @@ export default function FuelPage() {
             <button
               onClick={() => setActiveTab("tiers")}
               className={`px-6 py-2.5 rounded-xl text-xs font-black uppercase transition cursor-pointer ${activeTab === "tiers"
-                  ? "bg-[#10B981]/10 text-[#10B981] border border-[#10B981]/30"
-                  : "text-gray-400 hover:text-gray-700"
+                ? "bg-[#10B981]/10 text-[#10B981] border border-[#10B981]/30"
+                : "text-gray-400 hover:text-gray-700"
                 }`}
             >
               PRICE TIERS & QUOTATIONS
@@ -168,6 +190,7 @@ export default function FuelPage() {
                   .map((pool) => {
                     const isSelected = selectedPoolId === pool.id;
                     const personalCommit = pool.commits?.[userProfile.phone] || 0;
+                    const isOwner = isPoolOwner(pool);
                     const percentage = Math.min(
                       100,
                       Math.round((pool.currentVolume / pool.targetVolume) * 100)
@@ -178,19 +201,28 @@ export default function FuelPage() {
                         key={pool.id}
                         onClick={() => setSelectedPoolId(pool.id)}
                         className={`bg-white border-2 rounded-3xl p-5 transition cursor-pointer shadow-md relative ${isSelected
-                            ? "border-[#10B981] ring-1 ring-[#10B981]/50"
-                            : "border-gray-200 hover:border-gray-300"
+                          ? "border-[#10B981] ring-1 ring-[#10B981]/50"
+                          : "border-gray-200 hover:border-gray-300"
                           }`}
                       >
                         <div className="flex justify-between items-start mb-2">
                           <div>
-                            <div className="flex items-center gap-2">
+                            <div className="flex items-center gap-2 flex-wrap">
                               <h3 className="font-black text-slate-900 uppercase text-sm tracking-tight">
                                 {pool.name}
                               </h3>
-                              {personalCommit > 0 && (
+                              {pool.currentVolume >= pool.targetVolume ? (
+                                <span className="bg-amber-100 text-amber-800 text-[9px] font-black uppercase px-2 py-0.5 rounded-md border border-amber-300">
+                                  POOL FULL
+                                </span>
+                              ) : personalCommit > 0 && (
                                 <span className="bg-[#10B981]/10 text-[#10B981] text-[9px] font-black uppercase px-2 py-0.5 rounded-md border border-[#10B981]/20">
                                   JOINED
+                                </span>
+                              )}
+                              {isOwner && (
+                                <span className="bg-amber-50 text-amber-700 text-[9px] font-black uppercase px-2 py-0.5 rounded-md border border-amber-200">
+                                  YOUR POOL
                                 </span>
                               )}
                             </div>
@@ -204,7 +236,24 @@ export default function FuelPage() {
                             </div>
                           </div>
 
-                          <div className="flex items-center gap-4">
+                          <div className="flex items-center gap-3">
+                            {isOwner && (
+                              <button
+                                type="button"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  if (confirm(`Are you sure you want to delete "${pool.name}"?`)) {
+                                    deleteFuelPool(pool.id);
+                                  }
+                                }}
+                                className="px-3 py-1.5 rounded-xl bg-rose-50 hover:bg-rose-100 text-rose-600 border border-rose-200 transition cursor-pointer flex items-center gap-1.5 text-xs font-black uppercase shadow-2xs active:scale-95"
+                                title="Delete your pool"
+                              >
+                                <Trash2 className="w-4 h-4 stroke-[2.5]" />
+                                <span>Delete</span>
+                              </button>
+                            )}
+
                             <div className="text-right">
                               <span className="text-[10px] font-black text-gray-400 block uppercase">
                                 DISCOUNT
@@ -321,20 +370,23 @@ export default function FuelPage() {
                   </label>
                   <div className="grid grid-cols-3 gap-2">
                     <button
+                      disabled={activePool.currentVolume >= activePool.targetVolume}
                       onClick={() => setFuelCommitLiters(Math.max(50, fuelCommitLiters - 50))}
-                      className="bg-slate-100 hover:bg-slate-200 text-slate-900 font-black py-3 rounded-2xl text-xs transition cursor-pointer"
+                      className="bg-slate-100 hover:bg-slate-200 disabled:opacity-50 disabled:cursor-not-allowed text-slate-900 font-black py-3 rounded-2xl text-xs transition cursor-pointer"
                     >
                       -50L
                     </button>
                     <input
                       type="number"
+                      disabled={activePool.currentVolume >= activePool.targetVolume}
                       value={fuelCommitLiters}
                       onChange={(e) => setFuelCommitLiters(Number(e.target.value))}
-                      className="bg-slate-50 border border-gray-200 rounded-2xl text-center font-black text-sm text-slate-900 focus:outline-none focus:border-[#10B981]"
+                      className="bg-slate-50 border border-gray-200 disabled:opacity-50 disabled:cursor-not-allowed rounded-2xl text-center font-black text-sm text-slate-900 focus:outline-none focus:border-[#10B981]"
                     />
                     <button
+                      disabled={activePool.currentVolume >= activePool.targetVolume}
                       onClick={() => setFuelCommitLiters(fuelCommitLiters + 50)}
-                      className="bg-slate-100 hover:bg-slate-200 text-slate-900 font-black py-3 rounded-2xl text-xs transition cursor-pointer"
+                      className="bg-slate-100 hover:bg-slate-200 disabled:opacity-50 disabled:cursor-not-allowed text-slate-900 font-black py-3 rounded-2xl text-xs transition cursor-pointer"
                     >
                       +50L
                     </button>
@@ -359,12 +411,35 @@ export default function FuelPage() {
                   </div>
                 </div>
 
-                <button
-                  onClick={handleCommitOrder}
-                  className="w-full bg-[#10B981] hover:bg-[#059669] text-white font-black text-xs uppercase py-4 rounded-2xl transition shadow-sm active:scale-98 cursor-pointer"
-                >
-                  JOIN BULK ORDER POOL
-                </button>
+                <div className="space-y-3">
+                  <button
+                    onClick={handleCommitOrder}
+                    disabled={activePool.currentVolume >= activePool.targetVolume}
+                    className={`w-full font-black text-xs uppercase py-4 rounded-2xl transition shadow-sm ${
+                      activePool.currentVolume >= activePool.targetVolume
+                        ? "bg-gray-300 text-gray-500 cursor-not-allowed border border-gray-400/30"
+                        : "bg-[#10B981] hover:bg-[#059669] text-white active:scale-98 cursor-pointer"
+                    }`}
+                  >
+                    {activePool.currentVolume >= activePool.targetVolume
+                      ? "POOL IS FULL (TARGET REACHED)"
+                      : "JOIN BULK ORDER POOL"}
+                  </button>
+
+                  {isPoolOwner(activePool) && (
+                    <button
+                      onClick={() => {
+                        if (confirm(`Are you sure you want to delete "${activePool.name}"?`)) {
+                          deleteFuelPool(activePool.id);
+                        }
+                      }}
+                      className="w-full bg-rose-50 hover:bg-rose-100 text-rose-600 border border-rose-200 font-black text-xs uppercase py-3.5 rounded-2xl transition shadow-2xs cursor-pointer flex items-center justify-center gap-2"
+                    >
+                      <Trash2 className="w-4 h-4" />
+                      <span>DELETE THIS CO-OP POOL</span>
+                    </button>
+                  )}
+                </div>
               </div>
             )}
           </div>
@@ -521,9 +596,10 @@ export default function FuelPage() {
         title="Launch Co-op Fuel Pool"
         size="sm"
       >
-        <form onSubmit={handleLaunchPoolSubmit} className="space-y-4">
+        <form onSubmit={handleLaunchPoolSubmit} className="space-y-4 pt-1">
+          {/* Cooperative Pool Name */}
           <div className="space-y-1">
-            <label className="text-[10px] font-black uppercase tracking-wider text-gray-400 block">
+            <label className="text-[10px] font-black uppercase tracking-wider text-slate-700 block">
               Cooperative Pool Name
             </label>
             <input
@@ -532,13 +608,14 @@ export default function FuelPage() {
               placeholder="e.g. Mercedes Fishermen Pool C"
               value={newPoolName}
               onChange={(e) => setNewPoolName(e.target.value)}
-              className="w-full bg-slate-50 border border-slate-200 rounded-2xl h-11 px-4 text-xs font-semibold focus:outline-none focus:border-[#10B981]"
+              className="w-full bg-slate-50 border border-[#10B981] text-slate-900 placeholder:text-slate-400 rounded-2xl h-11 px-4 text-xs font-semibold focus:outline-none focus:ring-2 focus:ring-[#10B981]"
             />
           </div>
 
+          {/* Target Volume & Discount */}
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-1">
-              <label className="text-[10px] font-black uppercase tracking-wider text-gray-400 block">
+              <label className="text-[10px] font-black uppercase tracking-wider text-slate-700 block">
                 Target Volume (Liters)
               </label>
               <input
@@ -546,12 +623,12 @@ export default function FuelPage() {
                 required
                 value={newPoolTarget}
                 onChange={(e) => setNewPoolTarget(parseInt(e.target.value) || 4000)}
-                className="w-full bg-slate-50 border border-slate-200 rounded-2xl h-11 px-4 text-xs font-semibold focus:outline-none focus:border-[#10B981]"
+                className="w-full bg-slate-50 border border-[#10B981] text-slate-900 rounded-2xl h-11 px-4 text-xs font-semibold focus:outline-none focus:ring-2 focus:ring-[#10B981]"
               />
             </div>
 
             <div className="space-y-1">
-              <label className="text-[10px] font-black uppercase tracking-wider text-gray-400 block">
+              <label className="text-[10px] font-black uppercase tracking-wider text-slate-700 block">
                 Discount (₱/Liter)
               </label>
               <input
@@ -560,39 +637,41 @@ export default function FuelPage() {
                 required
                 value={newPoolDiscount}
                 onChange={(e) => setNewPoolDiscount(parseFloat(e.target.value) || 2.5)}
-                className="w-full bg-slate-50 border border-slate-200 rounded-2xl h-11 px-4 text-xs font-semibold focus:outline-none focus:border-[#10B981]"
+                className="w-full bg-slate-50 border border-[#10B981] text-slate-900 rounded-2xl h-11 px-4 text-xs font-semibold focus:outline-none focus:ring-2 focus:ring-[#10B981]"
               />
             </div>
           </div>
 
+          {/* Anchorage Port Base */}
           <div className="space-y-1">
-            <label className="text-[10px] font-black uppercase tracking-wider text-gray-400 block">
+            <label className="text-[10px] font-black uppercase tracking-wider text-slate-700 block">
               Anchorage Port Base
             </label>
             <select
               value={newPoolPort}
               onChange={(e) => setNewPoolPort(e.target.value)}
-              className="w-full bg-slate-50 border border-slate-200 rounded-2xl h-11 px-4 text-xs font-semibold focus:outline-none text-gray-800"
+              className="w-full bg-slate-50 border border-[#10B981] text-slate-900 rounded-2xl h-11 px-4 text-xs font-semibold focus:outline-none focus:ring-2 focus:ring-[#10B981]"
             >
               {MUNICIPAL_PORTS.map((port) => (
-                <option key={port.name} value={port.name}>
+                <option key={port.name} value={port.name} className="text-slate-900 bg-white">
                   {port.name}
                 </option>
               ))}
             </select>
           </div>
 
+          {/* Action Buttons */}
           <div className="pt-4 flex gap-3">
             <button
               type="button"
               onClick={() => setIsCreateOpen(false)}
-              className="flex-1 bg-gray-100 hover:bg-gray-200 text-gray-600 font-black text-xs uppercase tracking-widest py-3 rounded-2xl transition cursor-pointer"
+              className="flex-1 bg-gray-100 hover:bg-gray-200 text-gray-700 font-black text-xs uppercase tracking-widest py-3 rounded-2xl transition cursor-pointer"
             >
               Cancel
             </button>
             <button
               type="submit"
-              className="flex-1 bg-[#10B981] hover:bg-[#059669] text-white font-black text-xs uppercase tracking-widest py-3 rounded-2xl transition cursor-pointer"
+              className="flex-1 bg-[#10B981] hover:bg-[#059669] text-white font-black text-xs uppercase tracking-widest py-3 rounded-2xl transition cursor-pointer shadow-sm"
             >
               Create Pool
             </button>

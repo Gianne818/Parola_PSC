@@ -31,7 +31,8 @@ import {
   Siren,
   ThumbsUp,
   ThumbsDown,
-  Meh
+  Meh,
+  GripVertical
 } from "lucide-react";
 
 const SPECIES_FAMILIES = [
@@ -82,6 +83,64 @@ export default function DashboardPage() {
 
   // Voice Assist State
   const [isSpeaking, setIsSpeaking] = useState(false);
+
+  // Municipal Advisor Card Resizing State
+  const [advisorWidth, setAdvisorWidth] = useState<number>(440);
+  const [isResizing, setIsResizing] = useState<boolean>(false);
+  const minAdvisorWidth = 340;
+  const maxAdvisorWidth = 850;
+
+  const handleMouseDownResize = (e: React.MouseEvent) => {
+    e.preventDefault();
+    setIsResizing(true);
+
+    const startX = e.clientX;
+    const startWidth = advisorWidth;
+
+    const handleMouseMove = (moveEvent: MouseEvent) => {
+      const deltaX = startX - moveEvent.clientX;
+      const newWidth = Math.min(
+        maxAdvisorWidth,
+        Math.max(minAdvisorWidth, startWidth + deltaX)
+      );
+      setAdvisorWidth(newWidth);
+    };
+
+    const handleMouseUp = () => {
+      setIsResizing(false);
+      window.removeEventListener("mousemove", handleMouseMove);
+      window.removeEventListener("mouseup", handleMouseUp);
+    };
+
+    window.addEventListener("mousemove", handleMouseMove);
+    window.addEventListener("mouseup", handleMouseUp);
+  };
+
+  const handleTouchStartResize = (e: React.TouchEvent) => {
+    setIsResizing(true);
+    const startX = e.touches[0].clientX;
+    const startWidth = advisorWidth;
+
+    const handleTouchMove = (moveEvent: TouchEvent) => {
+      if (moveEvent.touches.length > 0) {
+        const deltaX = startX - moveEvent.touches[0].clientX;
+        const newWidth = Math.min(
+          maxAdvisorWidth,
+          Math.max(minAdvisorWidth, startWidth + deltaX)
+        );
+        setAdvisorWidth(newWidth);
+      }
+    };
+
+    const handleTouchEnd = () => {
+      setIsResizing(false);
+      window.removeEventListener("touchmove", handleTouchMove);
+      window.removeEventListener("touchend", handleTouchEnd);
+    };
+
+    window.addEventListener("touchmove", handleTouchMove);
+    window.addEventListener("touchend", handleTouchEnd);
+  };
 
   // Real-time calculated safety threshold
   const windKnots = weather.windSpeed / 1.852;
@@ -376,7 +435,31 @@ export default function DashboardPage() {
           </div>
 
           {/* ================= RIGHT COLUMN: MUNICIPAL ADVISOR PANEL ================= */}
-          <div className="w-full lg:w-[440px] shrink-0 bg-white border border-gray-200 rounded-3xl shadow-md p-5 sm:p-6 flex flex-col justify-between space-y-5 overflow-y-auto h-full">
+          <div
+            style={{ width: `${advisorWidth}px` }}
+            className={`w-full max-w-full lg:max-w-none shrink-0 bg-white border border-gray-200 rounded-3xl shadow-md p-5 sm:p-6 flex flex-col justify-between space-y-5 overflow-y-auto h-full relative transition-shadow ${
+              isResizing ? "shadow-2xl border-[#00B074]/60 ring-2 ring-[#00B074]/20 select-none" : ""
+            }`}
+          >
+            {/* Left Edge Drag Handle to Resize Card Width to the Left */}
+            <div
+              onMouseDown={handleMouseDownResize}
+              onTouchStart={handleTouchStartResize}
+              title="Click and drag left edge to expand Municipal Advisor to the left"
+              className="hidden lg:flex absolute left-0 top-0 bottom-0 w-4 -ml-2 cursor-col-resize z-50 items-center justify-center group select-none"
+            >
+              <div
+                className={`w-1.5 h-20 rounded-full transition-all flex flex-col items-center justify-center gap-1 ${
+                  isResizing
+                    ? "bg-[#00B074] scale-y-110 shadow-md"
+                    : "bg-gray-300 group-hover:bg-[#00B074] group-hover:scale-y-105"
+                }`}
+              >
+                <div className="w-0.5 h-0.5 rounded-full bg-white" />
+                <div className="w-0.5 h-0.5 rounded-full bg-white" />
+                <div className="w-0.5 h-0.5 rounded-full bg-white" />
+              </div>
+            </div>
 
             <div className="space-y-5">
               {/* Header */}
@@ -907,13 +990,22 @@ export default function DashboardPage() {
                 Close
               </button>
               <button
+                disabled={activePool.currentVolume >= activePool.targetVolume}
                 onClick={() => {
+                  if (activePool.currentVolume >= activePool.targetVolume) {
+                    showToast("This fuel pool is already full!", "error");
+                    return;
+                  }
                   addFuelCommit(activePool.id, fuelCommitLiters);
                   setSelectedPoolId(null);
                 }}
-                className="flex-1 bg-[#00B074] hover:bg-[#00B074]/90 text-white font-black text-xs uppercase tracking-widest py-3 rounded-2xl transition cursor-pointer"
+                className={`flex-1 font-black text-xs uppercase tracking-widest py-3 rounded-2xl transition ${
+                  activePool.currentVolume >= activePool.targetVolume
+                    ? "bg-gray-300 text-gray-500 cursor-not-allowed"
+                    : "bg-[#00B074] hover:bg-[#00B074]/90 text-white cursor-pointer"
+                }`}
               >
-                Confirm Order
+                {activePool.currentVolume >= activePool.targetVolume ? "Pool Full" : "Confirm Order"}
               </button>
             </div>
           </div>

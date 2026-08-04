@@ -101,7 +101,8 @@ const DEFAULT_POOLS: FuelPool[] = [
     participants: 12,
     closingDate: "2026-08-04",
     discountPerLiter: 2.50,
-    commits: { "0912 345 6789": 150 }
+    commits: { "0912 345 6789": 150 },
+    createdByPhone: "0912 345 6789"
   },
   {
     id: "pool2",
@@ -154,6 +155,7 @@ interface AppContextType {
   setManualOverrideHold: (hold: boolean) => void;
   addFuelCommit: (poolId: string, liters: number) => void;
   createFuelPool: (pool: Partial<FuelPool>) => void;
+  deleteFuelPool: (poolId: string) => void;
   simulateNotification: () => void;
   markNotificationRead: (id: string) => void;
   purgeNotifications: () => void;
@@ -287,12 +289,19 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   };
 
   const addFuelCommit = (poolId: string, liters: number) => {
+    const targetPool = fuelPools.find(p => p.id === poolId);
+    const phone = userProfile.phone || "0912 345 6789";
+    const oldCommit = targetPool?.commits?.[phone] || 0;
+    const commitDiff = liters - oldCommit;
+
+    if (targetPool && targetPool.currentVolume >= targetPool.targetVolume && commitDiff > 0) {
+      showToast("This fuel pool has reached its target volume and is already full.", "error");
+      return;
+    }
+
     const updated = fuelPools.map(pool => {
       if (pool.id === poolId) {
-        const phone = userProfile.phone || "0912 345 6789";
-        const oldCommit = pool.commits[phone] || 0;
         const newCommit = liters;
-        const commitDiff = newCommit - oldCommit;
         
         const newCommits = { ...pool.commits, [phone]: newCommit };
         const nextVolume = Math.min(pool.targetVolume, pool.currentVolume + commitDiff);
@@ -323,11 +332,19 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       closingDate: pool.closingDate || "2026-08-10",
       discountPerLiter: pool.discountPerLiter || 2.5,
       commits: pool.commits || {},
+      createdByPhone: userProfile.phone || "0912 345 6789",
     };
     const updated = [newPool, ...fuelPools];
     setFuelPools(updated);
     storageService.setItem("parola-fuelpools", updated);
     showToast("New cooperative pool launched!", "success");
+  };
+
+  const deleteFuelPool = (poolId: string) => {
+    const updated = fuelPools.filter(pool => pool.id !== poolId);
+    setFuelPools(updated);
+    storageService.setItem("parola-fuelpools", updated);
+    showToast("Cooperative fuel pool deleted.", "info");
   };
 
   const simulateNotification = () => {
@@ -449,6 +466,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         setManualOverrideHold,
         addFuelCommit,
         createFuelPool,
+        deleteFuelPool,
         simulateNotification,
         markNotificationRead,
         purgeNotifications,

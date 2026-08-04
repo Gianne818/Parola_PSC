@@ -58,6 +58,20 @@ const customWaypointIcon = typeof window !== "undefined" ? L.divIcon({
   iconAnchor: [14, 14],
 }) : null;
 
+const selectedLocationPinIcon = typeof window !== "undefined" ? L.divIcon({
+  className: "custom-selected-location-pin",
+  html: `
+    <div style="position: relative; display: flex; flex-direction: column; align-items: center; justify-content: center; width: 36px; height: 36px;">
+      <div class="animate-ping" style="position: absolute; width: 36px; height: 36px; border-radius: 50%; background-color: rgba(16, 185, 129, 0.4); pointer-events: none;"></div>
+      <div style="width: 32px; height: 32px; background-color: #10B981; border-radius: 50% 50% 50% 0; transform: rotate(-45deg); display: flex; items-center; justify-content: center; border: 3px solid white; box-shadow: 0 4px 10px rgba(0,0,0,0.35); z-index: 10;">
+        <div style="width: 10px; height: 10px; background-color: white; border-radius: 50%; margin: auto;"></div>
+      </div>
+    </div>
+  `,
+  iconSize: [36, 36],
+  iconAnchor: [18, 36],
+}) : null;
+
 interface MapInnerProps {
   hotspots: Hotspot[];
   selectedHotspot: Hotspot | null;
@@ -305,6 +319,22 @@ export default function MapInner({
               </div>
             </Popup>
           </Circle>
+        )}
+
+        {/* Active Selected Location Pin Marker */}
+        {selectedLocationPinIcon && center && isValidLatLng(center[0], center[1]) && (
+          <Marker position={[center[0], center[1]]} icon={selectedLocationPinIcon}>
+            <Popup>
+              <div className="font-sans text-brand-black p-1">
+                <div className="font-black text-xs uppercase tracking-wider text-[#10B981]">
+                  📍 Selected Location Point
+                </div>
+                <div className="text-[10px] text-gray-600 font-bold mt-1">
+                  {center[0].toFixed(4)}° N, {center[1].toFixed(4)}° E
+                </div>
+              </div>
+            </Popup>
+          </Marker>
         )}
 
         {/* Custom Clicked Waypoint Marker */}

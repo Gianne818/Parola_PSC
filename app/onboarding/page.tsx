@@ -7,7 +7,6 @@ import {
   Navigation,
   ArrowLeft,
   Check,
-  Volume2,
   AlertTriangle,
   Anchor,
   Compass,
@@ -201,15 +200,6 @@ function OnboardingContent() {
     }
   };
 
-  const playVoiceGuide = () => {
-    if (typeof window !== 'undefined' && 'speechSynthesis' in window) {
-      const text = "Please click on the coastal map to set your home port in the Philippines. We will monitor safety conditions at this location.";
-      const utterance = new SpeechSynthesisUtterance(text);
-      utterance.lang = 'en-US';
-      window.speechSynthesis.speak(utterance);
-    }
-  };
-
   if (!isInitialized || !isAuthenticated) return null;
 
   return (
@@ -242,15 +232,6 @@ function OnboardingContent() {
 
         <div className="flex items-center gap-2">
           <button
-            onClick={playVoiceGuide}
-            className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-white/10 hover:bg-white/20 transition-all text-[11px] font-bold text-white/90 cursor-pointer"
-            title="Read instructions out loud"
-          >
-            <Volume2 className="w-3.5 h-3.5 text-brand-green" />
-            <span className="hidden sm:inline">Voice Assist</span>
-          </button>
-
-          <button
             onClick={() => router.push('/login')}
             className="text-white/40 hover:text-white transition-colors p-1.5 hover:bg-white/5 rounded-full cursor-pointer"
           >
@@ -259,10 +240,10 @@ function OnboardingContent() {
         </div>
       </header>
 
-      {/* 2. FULLSCREEN LEAFLET MAP */}
-      <div className="w-full h-full pt-[68px] pb-[160px] relative z-0">
+      {/* 2. FULLSCREEN LEAFLET MAP (OCCUPIES 100% VERTICAL SCREEN SPACE) */}
+      <div className="absolute inset-0 z-0 w-full h-full pt-16">
         <MapComponent
-          hotspots={hotspots}
+          hotspots={[]}
           selectedHotspot={null}
           onSelectHotspot={() => { }}
           filterType="both"
@@ -360,7 +341,7 @@ function OnboardingContent() {
 
       {/* 4. BOTTOM CONFIRMATION DRAWER */}
       {drawerOpen && (
-        <div className="absolute bottom-0 left-0 right-0 z-10 bg-white shadow-xl border-t border-gray-200 px-6 py-5 md:px-12 flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+        <div className="absolute bottom-0 left-0 right-0 z-20 bg-white/95 backdrop-blur-md shadow-2xl border-t border-gray-200/80 px-6 py-5 md:px-12 flex flex-col md:flex-row md:items-center md:justify-between gap-4 animate-in slide-in-from-bottom duration-300">
           <div className="flex items-start gap-3.5">
             <div className="w-11 h-11 rounded-2xl bg-brand-green/10 flex items-center justify-center text-brand-green shrink-0">
               <Compass className="w-6 h-6 animate-spin-slow" />

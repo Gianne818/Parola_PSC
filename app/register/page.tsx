@@ -233,15 +233,15 @@ export default function RegisterPage() {
       </div>
 
       {/* Page Header (Above the Card) */}
-      <div className="flex flex-col items-center text-center max-w-xl w-full mb-6 relative z-10">
-        <div className="flex items-center gap-2 px-3 py-1 bg-brand-green/10 text-brand-green font-bold text-[10px] uppercase tracking-widest rounded-full mb-3 border border-brand-green/15">
-          <Anchor className="w-3.5 h-3.5" />
+      <div className="flex flex-col items-center text-center max-w-2xl w-full mb-6 relative z-10">
+        <div className="flex items-center gap-2 px-3.5 py-1.5 bg-brand-green/10 text-brand-green font-bold text-xs uppercase tracking-widest rounded-full mb-3 border border-brand-green/15">
+          <Anchor className="w-4 h-4" />
           <span>PAROLA SATELLITE SYSTEM</span>
         </div>
-        <h1 className="text-3xl md:text-4xl font-display font-black text-brand-black uppercase tracking-tight leading-none mb-2">
+        <h1 className="text-3xl md:text-5xl font-display font-black text-brand-black uppercase tracking-tight leading-none mb-2">
           Cooperative Registration
         </h1>
-        <p className="text-xs text-brand-black/50 font-bold max-w-sm">
+        <p className="text-sm text-brand-black/60 font-semibold max-w-md">
           Access high-yield fish hotspots and automated marine safety alerts.
         </p>
       </div>
@@ -249,27 +249,27 @@ export default function RegisterPage() {
       {/* Main split-card with soft drop shadow */}
       <div
         onClick={(e) => e.stopPropagation()}
-        className="w-full max-w-4xl bg-white border border-gray-100 rounded-3xl shadow-[0_20px_60px_-15px_rgba(0,0,0,0.08)] flex flex-col md:flex-row overflow-hidden relative z-10 transition-all duration-300"
+        className="w-full max-w-5xl bg-white border border-gray-100 rounded-3xl shadow-[0_20px_60px_-15px_rgba(0,0,0,0.08)] flex flex-col md:flex-row overflow-hidden relative z-10 transition-all duration-300"
       >
 
         {/* LEFT COMPONENT: The Interactive Register Form */}
-        <div className="w-full md:w-[55%] p-8 md:p-10 lg:p-12 flex flex-col justify-center bg-white">
-          <div className="w-full max-w-md mx-auto">
+        <div className="w-full md:w-1/2 p-8 md:p-12 lg:p-14 flex flex-col justify-center bg-white">
+          <div className="w-full max-w-lg mx-auto">
 
-            <div className="mb-6 flex items-center gap-2 bg-gray-50 px-3 py-1.5 rounded-full border border-gray-150/45 w-max">
+            <div className="mb-6 flex items-center gap-2 bg-gray-50 px-3.5 py-1.5 rounded-full border border-gray-150/45 w-max">
               <ParolaLogo iconOnly className="w-6 h-6 shadow-sm hover:scale-105 transition-transform" />
-              <span className="text-[10px] font-black uppercase tracking-widest text-brand-black/50">MUNICIPAL PORT BASE</span>
+              <span className="text-xs font-black uppercase tracking-widest text-brand-black/50">MUNICIPAL PORT BASE</span>
             </div>
 
-            <h2 className="text-2xl font-display font-extrabold text-brand-black uppercase tracking-tight mb-6">
+            <h2 className="text-3xl font-display font-extrabold text-brand-black uppercase tracking-tight mb-6">
               Register Account
             </h2>
 
-            <form onSubmit={handleAuthSubmit} className="space-y-4">
+            <form onSubmit={handleAuthSubmit} className="space-y-5">
 
               {/* Phone Input with prefilled country code */}
-              <div className="space-y-1.5">
-                <label className="block text-brand-black/50 font-black text-[10px] uppercase tracking-wider ml-1">
+              <div className="space-y-2">
+                <label className="block text-brand-black/60 font-extrabold text-xs uppercase tracking-wider ml-1">
                   Mobile Phone Number
                 </label>
                 <div className="relative">
@@ -285,16 +285,16 @@ export default function RegisterPage() {
                       }
                       setPhone(val);
                     }}
-                    className="w-full bg-gray-50 border border-gray-200 pl-14 pr-6 py-3.5 rounded-2xl text-base focus:outline-none focus:ring-2 focus:ring-brand-green focus:border-brand-green transition-all font-semibold"
+                    className="w-full bg-gray-50 border border-gray-200 pl-14 pr-6 py-4 rounded-2xl text-base focus:outline-none focus:ring-2 focus:ring-brand-green focus:border-brand-green transition-all font-semibold"
                     required
                   />
-                  <Smartphone className="w-5 h-5 absolute left-5 top-1/2 -translate-y-1/2 text-brand-black/30" />
+                  <Smartphone className="w-5.5 h-5.5 absolute left-5 top-1/2 -translate-y-1/2 text-brand-black/35" />
                 </div>
               </div>
 
               {/* Password Input */}
-              <div className="space-y-1.5">
-                <label className="block text-brand-black/50 font-black text-[10px] uppercase tracking-wider ml-1">
+              <div className="space-y-2">
+                <label className="block text-brand-black/60 font-extrabold text-xs uppercase tracking-wider ml-1">
                   Secure Password
                 </label>
                 <div className="relative">
@@ -303,10 +303,10 @@ export default function RegisterPage() {
                     placeholder="••••••••"
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
-                    className="w-full bg-gray-50 border border-gray-200 pl-14 pr-14 py-3.5 rounded-2xl text-base focus:outline-none focus:ring-2 focus:ring-brand-green focus:border-brand-green transition-all font-semibold"
+                    className="w-full bg-gray-50 border border-gray-200 pl-14 pr-14 py-4 rounded-2xl text-base focus:outline-none focus:ring-2 focus:ring-brand-green focus:border-brand-green transition-all font-semibold"
                     required
                   />
-                  <KeyRound className="w-5 h-5 absolute left-5 top-1/2 -translate-y-1/2 text-brand-black/30" />
+                  <KeyRound className="w-5.5 h-5.5 absolute left-5 top-1/2 -translate-y-1/2 text-brand-black/35" />
                   <button
                     type="button"
                     onClick={() => setShowPassword(!showPassword)}
@@ -318,8 +318,8 @@ export default function RegisterPage() {
               </div>
 
               {/* Language Selection Select Dropdown */}
-              <div className="space-y-1.5">
-                <label className="block text-brand-black/50 font-black text-[10px] uppercase tracking-wider ml-1">
+              <div className="space-y-2">
+                <label className="block text-brand-black/60 font-extrabold text-xs uppercase tracking-wider ml-1">
                   System Translation Profile
                 </label>
                 <div className="relative">
@@ -329,7 +329,7 @@ export default function RegisterPage() {
                       const code = e.target.value as typeof language;
                       changeLanguage(code);
                     }}
-                    className="w-full bg-gray-50 border border-gray-200 pl-14 pr-10 py-3.5 rounded-2xl text-sm focus:outline-none focus:ring-2 focus:ring-brand-green focus:border-brand-green transition-all font-bold appearance-none cursor-pointer text-brand-black"
+                    className="w-full bg-gray-50 border border-gray-200 pl-14 pr-10 py-4 rounded-2xl text-base focus:outline-none focus:ring-2 focus:ring-brand-green focus:border-brand-green transition-all font-bold appearance-none cursor-pointer text-brand-black"
                   >
                     {LANGUAGES.map(lang => (
                       <option key={lang.code} value={lang.code}>
@@ -337,23 +337,23 @@ export default function RegisterPage() {
                       </option>
                     ))}
                   </select>
-                  <Globe className="w-5 h-5 absolute left-5 top-1/2 -translate-y-1/2 text-brand-black/30 pointer-events-none" />
-                  <ChevronDown className="w-5 h-5 absolute right-4 top-1/2 -translate-y-1/2 text-brand-black/30 pointer-events-none" />
+                  <Globe className="w-5.5 h-5.5 absolute left-5 top-1/2 -translate-y-1/2 text-brand-black/35 pointer-events-none" />
+                  <ChevronDown className="w-5 h-5 absolute right-4 top-1/2 -translate-y-1/2 text-brand-black/35 pointer-events-none" />
                 </div>
               </div>
 
               {/* CTA Primary */}
               <button
                 type="submit"
-                className="w-full bg-brand-green hover:bg-brand-green/90 text-white font-bold uppercase tracking-wider py-4 rounded-2xl transition-all duration-150 mt-6 shadow-md hover:shadow-lg active:scale-[0.97] cursor-pointer flex items-center justify-center gap-2"
+                className="w-full bg-brand-green hover:bg-brand-green/90 text-white font-bold uppercase tracking-wider py-4 rounded-2xl transition-all duration-150 mt-6 shadow-md hover:shadow-lg active:scale-[0.97] cursor-pointer flex items-center justify-center gap-2 text-sm"
               >
-                <UserPlus className="w-4 h-4" />
+                <UserPlus className="w-5 h-5" />
                 <span>Register & Verify</span>
               </button>
             </form>
 
             {/* Switch Mode */}
-            <p className="mt-6 text-center text-brand-black/60 font-semibold text-xs">
+            <p className="mt-6 text-center text-brand-black/70 font-semibold text-sm">
               Already registered?{" "}
               <Link
                 href="/login"
@@ -367,7 +367,7 @@ export default function RegisterPage() {
         </div>
 
         {/* RIGHT COMPONENT: Styled Brand Side Panel */}
-        <div className="hidden md:flex md:w-[45%] bg-brand-black text-white p-8 lg:p-12 flex-col justify-between relative overflow-hidden self-stretch">
+        <div className="hidden md:flex md:w-1/2 bg-brand-black text-white p-8 lg:p-12 flex-col justify-between relative overflow-hidden self-stretch">
           {/* Emerald accent glows */}
           <div className="absolute -top-12 -right-12 w-64 h-64 bg-brand-green/20 rounded-full blur-[80px] pointer-events-none z-0"></div>
           <div className="absolute -bottom-16 -left-16 w-64 h-64 bg-brand-green/10 rounded-full blur-[80px] pointer-events-none z-0"></div>
@@ -380,16 +380,16 @@ export default function RegisterPage() {
               <Anchor className="w-10 h-10 text-brand-green relative z-10" />
             </div>
 
-            <div className="bg-brand-green/10 border border-brand-green/20 text-brand-green px-4 py-1.5 rounded-full text-[9px] font-black tracking-widest uppercase">
+            <div className="bg-brand-green/10 border border-brand-green/20 text-brand-green px-4 py-1.5 rounded-full text-xs font-black tracking-widest uppercase">
               Co-Op Active Member
             </div>
           </div>
 
           <div className="relative z-10 space-y-4">
-            <h3 className="text-2xl font-display font-black tracking-tight text-white uppercase leading-tight">
+            <h3 className="text-3xl font-display font-black tracking-tight text-white uppercase leading-tight">
               Harness the bulk power of the fleet
             </h3>
-            <p className="text-xs text-white/70 leading-relaxed font-medium">
+            <p className="text-sm text-white/80 leading-relaxed font-medium">
               Registering establishes your license profile within our co-op directories. Receive maximized volume discount rates and auto-broadcast emergency telemetry.
             </p>
           </div>
@@ -400,45 +400,45 @@ export default function RegisterPage() {
       {/* OTP VERIFICATION MODAL */}
       {otpModalOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-brand-black/65 backdrop-blur-sm">
-          <div className="bg-brand-black text-white rounded-[2rem] w-full max-w-md border border-white/10 shadow-2xl overflow-hidden animate-in fade-in duration-200">
+          <div className="bg-brand-black text-white rounded-[2rem] w-full max-w-lg border border-white/10 shadow-2xl overflow-hidden animate-in fade-in duration-200">
 
             {/* Modal Header */}
-            <div className="px-6 py-5 bg-white/5 border-b border-white/10 flex items-center justify-between">
-              <div className="flex items-center gap-3">
-                <div className="w-9 h-9 rounded-xl bg-brand-green/20 text-brand-green flex items-center justify-center border border-brand-green/30">
-                  <ShieldCheck className="w-5 h-5 stroke-[2.5]" />
+            <div className="px-7 py-5 bg-white/5 border-b border-white/10 flex items-center justify-between">
+              <div className="flex items-center gap-3.5">
+                <div className="w-10 h-10 rounded-xl bg-brand-green/20 text-brand-green flex items-center justify-center border border-brand-green/30">
+                  <ShieldCheck className="w-6 h-6 stroke-[2.5]" />
                 </div>
                 <div>
-                  <h3 className="font-display font-black uppercase tracking-tight text-sm">Security Pin Required</h3>
-                  <p className="text-[9px] font-bold text-white/40 uppercase tracking-widest mt-0.5">Dual-Factor Verification</p>
+                  <h3 className="font-display font-black uppercase tracking-tight text-base">Security Pin Required</h3>
+                  <p className="text-xs font-bold text-white/50 uppercase tracking-widest mt-0.5">Dual-Factor Verification</p>
                 </div>
               </div>
               <button
                 onClick={() => setOtpModalOpen(false)}
-                className="text-white/40 hover:text-white transition-colors p-1.5 hover:bg-white/5 rounded-full cursor-pointer"
+                className="text-white/50 hover:text-white transition-colors p-2 hover:bg-white/10 rounded-full cursor-pointer"
               >
                 <X className="w-5 h-5" />
               </button>
             </div>
 
             {/* Modal Body */}
-            <div className="p-6 space-y-6">
+            <div className="p-7 space-y-6">
 
               {/* SMS Broadcast Simulation Banner */}
               <div className="bg-brand-green/10 border border-brand-green/25 rounded-2xl p-4 flex flex-col items-center text-center">
-                <span className="text-[9px] font-black text-brand-green uppercase tracking-widest leading-none mb-1.5">SIMULATED SATELLITE BROADCAST</span>
-                <p className="text-sm font-black text-white tracking-wide">
-                  &ldquo;Your Parola verification code is <span className="text-brand-green font-display text-base tracking-widest underline decoration-2 decoration-brand-green/40">482910</span>&rdquo;
+                <span className="text-xs font-black text-brand-green uppercase tracking-widest leading-none mb-1.5">SIMULATED SATELLITE BROADCAST</span>
+                <p className="text-base font-black text-white tracking-wide">
+                  &ldquo;Your Parola verification code is <span className="text-brand-green font-display text-lg tracking-widest underline decoration-2 decoration-brand-green/40">482910</span>&rdquo;
                 </p>
               </div>
 
-              <div className="space-y-2">
-                <label className="block text-white/50 font-black text-[10px] uppercase tracking-widest text-center">
+              <div className="space-y-2.5">
+                <label className="block text-white/60 font-black text-xs uppercase tracking-widest text-center">
                   Monospace 6-Digit Code
                 </label>
 
                 {/* Monospace centered OTP inputs */}
-                <div className="grid grid-cols-6 gap-2 max-w-xs mx-auto">
+                <div className="grid grid-cols-6 gap-2.5 max-w-sm mx-auto">
                   {otpDigits.map((digit, idx) => (
                     <input
                       key={idx}
@@ -449,34 +449,34 @@ export default function RegisterPage() {
                       value={digit}
                       onChange={(e) => handleOtpChange(e.target.value, idx)}
                       onKeyDown={(e) => handleOtpKeyDown(e, idx)}
-                      className="w-full h-12 bg-white/5 border border-white/10 rounded-xl text-center text-lg font-black text-white focus:outline-none focus:ring-2 focus:ring-brand-green focus:border-transparent transition-all font-mono"
+                      className="w-full h-14 bg-white/5 border border-white/10 rounded-xl text-center text-xl font-black text-white focus:outline-none focus:ring-2 focus:ring-brand-green focus:border-transparent transition-all font-mono"
                       required
                     />
                   ))}
                 </div>
 
                 {otpError && (
-                  <p className="text-center text-[11px] font-bold text-brand-red mt-2">{otpError}</p>
+                  <p className="text-center text-xs font-bold text-brand-red mt-2">{otpError}</p>
                 )}
               </div>
 
               {/* Confirm Action */}
               <button
                 onClick={handleVerifyOtp}
-                className="w-full bg-brand-green text-white font-black text-xs uppercase tracking-widest py-3.5 rounded-xl hover:bg-brand-green/90 transition-all cursor-pointer text-center shadow-lg hover:shadow-xl"
+                className="w-full bg-brand-green text-white font-black text-sm uppercase tracking-widest py-4 rounded-xl hover:bg-brand-green/90 transition-all cursor-pointer text-center shadow-lg hover:shadow-xl"
               >
                 Confirm Verification Code
               </button>
 
               {/* Resend actions */}
-              <div className="flex justify-between items-center text-[10px] text-white/40 font-bold border-t border-white/5 pt-4">
+              <div className="flex justify-between items-center text-xs text-white/50 font-bold border-t border-white/10 pt-4">
                 <button
                   onClick={handleResendOtp}
                   disabled={countdown > 0}
                   className={`flex items-center gap-1.5 uppercase tracking-wider transition-colors ${countdown > 0 ? 'text-white/20 cursor-not-allowed' : 'text-brand-green hover:text-brand-green/90 cursor-pointer'
                     }`}
                 >
-                  <RefreshCw className="w-3.5 h-3.5" />
+                  <RefreshCw className="w-4 h-4" />
                   <span>Resend SMS Code</span>
                 </button>
                 <span>

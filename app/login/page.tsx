@@ -168,15 +168,15 @@ export default function LoginPage() {
       </div>
 
       {/* Page Header (Above Card) */}
-      <div className="flex flex-col items-center text-center max-w-xl w-full mb-6 relative z-10">
-        <div className="flex items-center gap-2 px-3 py-1 bg-brand-green/10 text-brand-green font-bold text-[10px] uppercase tracking-widest rounded-full mb-3 border border-brand-green/15">
-          <Anchor className="w-3.5 h-3.5 animate-pulse" />
+      <div className="flex flex-col items-center text-center max-w-2xl w-full mb-6 relative z-10">
+        <div className="flex items-center gap-2 px-3.5 py-1.5 bg-brand-green/10 text-brand-green font-bold text-xs uppercase tracking-widest rounded-full mb-3 border border-brand-green/15">
+          <Anchor className="w-4 h-4 animate-pulse" />
           <span>PAROLA SATELLITE SYSTEM</span>
         </div>
-        <h1 className="text-3xl md:text-4xl font-display font-black text-brand-black uppercase tracking-tight leading-none mb-2">
+        <h1 className="text-3xl md:text-5xl font-display font-black text-brand-black uppercase tracking-tight leading-none mb-2">
           Fisherman Portal
         </h1>
-        <p className="text-xs text-brand-black/50 font-bold max-w-sm">
+        <p className="text-sm text-brand-black/60 font-semibold max-w-md">
           Sailing coordinates, safety advisories, and shared diesel pools.
         </p>
       </div>
@@ -184,27 +184,27 @@ export default function LoginPage() {
       {/* Main Elevated White Card with Soft Drop Shadow */}
       <div
         onClick={(e) => e.stopPropagation()}
-        className="w-full max-w-4xl bg-white border border-gray-100 rounded-3xl shadow-[0_20px_60px_-15px_rgba(0,0,0,0.08)] flex flex-col md:flex-row overflow-hidden relative z-10 transition-all duration-300"
+        className="w-full max-w-5xl bg-white border border-gray-100 rounded-3xl shadow-[0_20px_60px_-15px_rgba(0,0,0,0.08)] flex flex-col md:flex-row overflow-hidden relative z-10 transition-all duration-300"
       >
 
         {/* LEFT PANEL: Interactive Form */}
-        <div className="w-full md:w-[55%] p-8 md:p-10 lg:p-12 flex flex-col justify-center bg-white">
-          <div className="w-full max-w-md mx-auto">
+        <div className="w-full md:w-1/2 p-8 md:p-12 lg:p-14 flex flex-col justify-center bg-white">
+          <div className="w-full max-w-lg mx-auto">
 
-            <div className="mb-6 flex items-center gap-2 bg-gray-50 px-3 py-1.5 rounded-full border border-gray-150/45 w-max">
+            <div className="mb-6 flex items-center gap-2 bg-gray-50 px-3.5 py-1.5 rounded-full border border-gray-150/45 w-max">
               <ParolaLogo iconOnly className="w-6 h-6 shadow-sm hover:scale-105 transition-transform" />
-              <span className="text-[10px] font-black uppercase tracking-widest text-brand-black/50">MUNICIPAL PORT BASE</span>
+              <span className="text-xs font-black uppercase tracking-widest text-brand-black/50">MUNICIPAL PORT BASE</span>
             </div>
 
-            <h2 className="text-2xl font-display font-extrabold text-brand-black uppercase tracking-tight mb-6">
+            <h2 className="text-3xl font-display font-extrabold text-brand-black uppercase tracking-tight mb-6">
               Sign In
             </h2>
 
-            <form onSubmit={handleAuthSubmit} className="space-y-4">
+            <form onSubmit={handleAuthSubmit} className="space-y-5">
 
               {/* Phone Input */}
-              <div className="space-y-1.5">
-                <label className="block text-brand-black/50 font-black text-[10px] uppercase tracking-wider ml-1">
+              <div className="space-y-2">
+                <label className="block text-brand-black/60 font-extrabold text-xs uppercase tracking-wider ml-1">
                   Mobile Phone Number
                 </label>
                 <div className="relative">
@@ -220,16 +220,16 @@ export default function LoginPage() {
                       }
                       setPhone(val);
                     }}
-                    className="w-full bg-gray-50 border border-gray-200 pl-14 pr-6 py-3.5 rounded-2xl text-base focus:outline-none focus:ring-2 focus:ring-brand-green focus:border-brand-green transition-all font-semibold"
+                    className="w-full bg-gray-50 border border-gray-200 pl-14 pr-6 py-4 rounded-2xl text-base focus:outline-none focus:ring-2 focus:ring-brand-green focus:border-brand-green transition-all font-semibold"
                     required
                   />
-                  <Smartphone className="w-5 h-5 absolute left-5 top-1/2 -translate-y-1/2 text-brand-black/30" />
+                  <Smartphone className="w-5.5 h-5.5 absolute left-5 top-1/2 -translate-y-1/2 text-brand-black/35" />
                 </div>
               </div>
 
               {/* Password Input */}
-              <div className="space-y-1.5">
-                <label className="block text-brand-black/50 font-black text-[10px] uppercase tracking-wider ml-1">
+              <div className="space-y-2">
+                <label className="block text-brand-black/60 font-extrabold text-xs uppercase tracking-wider ml-1">
                   Secure Password
                 </label>
                 <div className="relative">
@@ -238,10 +238,10 @@ export default function LoginPage() {
                     placeholder="••••••••"
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
-                    className="w-full bg-gray-50 border border-gray-200 pl-14 pr-14 py-3.5 rounded-2xl text-base focus:outline-none focus:ring-2 focus:ring-brand-green focus:border-brand-green transition-all font-semibold"
+                    className="w-full bg-gray-50 border border-gray-200 pl-14 pr-14 py-4 rounded-2xl text-base focus:outline-none focus:ring-2 focus:ring-brand-green focus:border-brand-green transition-all font-semibold"
                     required
                   />
-                  <KeyRound className="w-5 h-5 absolute left-5 top-1/2 -translate-y-1/2 text-brand-black/30" />
+                  <KeyRound className="w-5.5 h-5.5 absolute left-5 top-1/2 -translate-y-1/2 text-brand-black/35" />
                   <button
                     type="button"
                     onClick={() => setShowPassword(!showPassword)}
@@ -257,13 +257,13 @@ export default function LoginPage() {
               <button
                 type="submit"
                 disabled={loading}
-                className="w-full bg-brand-green hover:bg-brand-green/90 disabled:bg-gray-300 disabled:cursor-not-allowed text-white font-bold uppercase tracking-wider py-4 rounded-2xl transition-all duration-150 mt-6 shadow-md hover:shadow-lg active:scale-[0.97] cursor-pointer flex items-center justify-center gap-2"
+                className="w-full bg-brand-green hover:bg-brand-green/90 disabled:bg-gray-300 disabled:cursor-not-allowed text-white font-bold uppercase tracking-wider py-4 rounded-2xl transition-all duration-150 mt-6 shadow-md hover:shadow-lg active:scale-[0.97] cursor-pointer flex items-center justify-center gap-2 text-sm"
               >
                 {loading ? (
-                  <span className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                  <span className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
                 ) : (
                   <>
-                    <LogIn className="w-4 h-4" />
+                    <LogIn className="w-5 h-5" />
                     <span>Sign In</span>
                   </>
                 )}
@@ -271,7 +271,7 @@ export default function LoginPage() {
             </form>
 
             {/* Account Switch Prompt */}
-            <p className="mt-6 text-center text-brand-black/60 font-semibold text-xs">
+            <p className="mt-6 text-center text-brand-black/70 font-semibold text-sm">
               Don&apos;t have an account?{" "}
               <Link
                 href="/register"
@@ -285,7 +285,7 @@ export default function LoginPage() {
         </div>
 
         {/* RIGHT PANEL: Hero Illustration / Dark Brand Showcase */}
-        <div className="hidden md:flex md:w-[45%] bg-brand-black text-white p-8 lg:p-12 flex-col justify-between relative overflow-hidden self-stretch">
+        <div className="hidden md:flex md:w-1/2 bg-brand-black text-white p-8 lg:p-12 flex-col justify-between relative overflow-hidden self-stretch">
           {/* Ambient Glow Effects */}
           <div className="absolute -top-12 -right-12 w-64 h-64 bg-brand-green/20 rounded-full blur-[80px] pointer-events-none z-0" />
           <div className="absolute -bottom-16 -left-16 w-64 h-64 bg-brand-green/10 rounded-full blur-[80px] pointer-events-none z-0" />
@@ -297,16 +297,16 @@ export default function LoginPage() {
               <Globe className="w-10 h-10 text-brand-green relative z-10" />
             </div>
 
-            <div className="bg-brand-green/10 border border-brand-green/20 text-brand-green px-4 py-1.5 rounded-full text-[9px] font-black tracking-widest uppercase">
+            <div className="bg-brand-green/10 border border-brand-green/20 text-brand-green px-4 py-1.5 rounded-full text-xs font-black tracking-widest uppercase">
               Philippine Coastal Safety
             </div>
           </div>
 
           <div className="relative z-10 space-y-4">
-            <h3 className="text-2xl font-display font-black tracking-tight text-white uppercase leading-tight">
+            <h3 className="text-3xl font-display font-black tracking-tight text-white uppercase leading-tight">
               Guard the Horizon
             </h3>
-            <p className="text-xs text-white/70 leading-relaxed font-medium">
+            <p className="text-sm text-white/80 leading-relaxed font-medium">
               Join thousands of municipal fishermen receiving automated PAGASA satellite safety reports and joint fuel pricing.
             </p>
           </div>

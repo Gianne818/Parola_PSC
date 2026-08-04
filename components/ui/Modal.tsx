@@ -8,6 +8,7 @@ interface ModalProps {
   title: string;
   children: React.ReactNode;
   size?: "sm" | "md" | "lg" | "xl";
+  className?: string;
 }
 
 export const Modal: React.FC<ModalProps> = ({
@@ -15,7 +16,8 @@ export const Modal: React.FC<ModalProps> = ({
   onClose,
   title,
   children,
-  size = "md"
+  size = "md",
+  className = ""
 }) => {
   // Prevent body scroll when modal is open
   useEffect(() => {
@@ -46,7 +48,7 @@ export const Modal: React.FC<ModalProps> = ({
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
             onClick={onClose}
-            className="absolute inset-0 bg-[#12211E]/40 backdrop-blur-sm"
+            className="absolute inset-0 bg-slate-900/50 backdrop-blur-sm"
           />
 
           {/* Modal Container */}
@@ -55,16 +57,16 @@ export const Modal: React.FC<ModalProps> = ({
             animate={{ opacity: 1, scale: 1, y: 0 }}
             exit={{ opacity: 0, scale: 0.95, y: 15 }}
             transition={{ type: "spring", duration: 0.4, bounce: 0.2 }}
-            className={`relative w-full ${sizeClasses[size]} bg-white dark:bg-[#12211E] border border-gray-100 dark:border-teal-950 rounded-[2rem] shadow-2xl p-6 md:p-8 z-10 overflow-hidden text-gray-800 dark:text-gray-100`}
+            className={`relative w-full ${sizeClasses[size]} bg-white border border-gray-200 rounded-[2rem] shadow-2xl p-6 md:p-8 z-10 overflow-hidden text-slate-900 ${className}`}
           >
             {/* Header */}
-            <div className="flex items-center justify-between pb-4 border-b border-gray-100 dark:border-teal-950 mb-6">
-              <h3 className="font-display font-black text-xl tracking-tight text-[#12211E] dark:text-[#F7FAF9]">
+            <div className="flex items-center justify-between pb-4 border-b border-gray-100 mb-6">
+              <h3 className="font-display font-black text-xl tracking-tight text-slate-900">
                 {title}
               </h3>
               <button
                 onClick={onClose}
-                className="p-2 rounded-full hover:bg-gray-100 dark:hover:bg-teal-950/50 text-gray-400 hover:text-gray-600 transition"
+                className="p-2 rounded-full hover:bg-gray-100 text-gray-400 hover:text-gray-600 transition cursor-pointer"
                 aria-label="Close modal"
               >
                 <X className="w-5 h-5" />
