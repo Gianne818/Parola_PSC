@@ -64,6 +64,9 @@ export interface Hotspot {
   catchProbability?: number;
   sst?: number;
   chlA?: number;
+  waveHeight?: number; // meters
+  windSpeed?: number; // km/h
+  stormSignal?: number;
   distanceKm?: number;
   bearingDegrees?: number;
   compassBearing?: string;
