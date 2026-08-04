@@ -44,16 +44,18 @@ const SPECIES_FAMILIES = [
 
 const CATEGORIZED_SPECIES = {
   pelagic: [
-    { name: "Tamban", localName: "Sardines", desc: "Surface & Open Water" },
-    { name: "Tuna", localName: "Tulingan", desc: "Oceanic Pelagic" },
-    { name: "Galunggong", localName: "Round Scad", desc: "Upper Water Column" },
-    { name: "Talakitok", localName: "Trevally", desc: "Surface & Coastal" },
+    { name: "Tamban / Tunsoy", family: "Clupeidae", localName: "Family: Clupeidae (Sardines & Herrings)", desc: "Upper Ocean Pelagic" },
+    { name: "Galunggong / Talakitok", family: "Carangidae", localName: "Family: Carangidae (Jacks & Scads)", desc: "Upper & Coastal Water" },
+    { name: "Alumahan / Tulingan / Bariles", family: "Scombridae", localName: "Family: Scombridae (Mackerels & Tunas)", desc: "Oceanic Pelagic" },
+    { name: "Dilis", family: "Engraulidae", localName: "Family: Engraulidae (Anchovies)", desc: "Coastal Surface Water" },
+    { name: "Kipalkipal / Bahi", family: "Belonidae", localName: "Family: Belonidae (Needlefishes)", desc: "Surface Water Column" },
   ],
   demersal: [
-    { name: "Lapu-Lapu", localName: "Grouper", desc: "Coral Reef Bottom" },
-    { name: "Maya-Maya", localName: "Red Snapper", desc: "Deep Reef Seabed" },
-    { name: "Alimasag", localName: "Blue Crab", desc: "Seabed & Mud Floor" },
-    { name: "Sapsap", localName: "Ponyfish", desc: "Coastal Seabed" },
+    { name: "Lapu-lapu", family: "Serranidae", localName: "Family: Serranidae (Groupers)", desc: "Coral Reef & Rocky Seabed" },
+    { name: "Maya-maya", family: "Lutjanidae", localName: "Family: Lutjanidae (Snappers)", desc: "Deep Reef Floor" },
+    { name: "Bisugo", family: "Nemipteridae", localName: "Family: Nemipteridae (Threadfin Breams)", desc: "Mud & Sand Seabed" },
+    { name: "Samaral", family: "Siganidae", localName: "Family: Siganidae (Rabbitfishes)", desc: "Reef & Seagrass Beds" },
+    { name: "Katambak / Dugso", family: "Lethrinidae", localName: "Family: Lethrinidae (Emperors)", desc: "Deep Shelf Seabed" },
   ],
 };
 
@@ -297,7 +299,18 @@ export default function DashboardPage() {
     if (checkedFamilies.length > 0 && !checkedFamilies.includes(spotType)) return false;
 
     if (selectedSpecies.length > 0) {
-      const matchesSpecies = spot.species.some((s) => selectedSpecies.includes(s));
+      const matchesSpecies = spot.species.some((s) => {
+        return selectedSpecies.some((sel) => {
+          if (s === sel) return true;
+          const allItems = [...CATEGORIZED_SPECIES.pelagic, ...CATEGORIZED_SPECIES.demersal];
+          const matchedItem = allItems.find(item => item.name === sel || (item as any).family === sel);
+          if (!matchedItem) return s.toLowerCase().includes(sel.toLowerCase());
+          return s.toLowerCase().includes(matchedItem.name.toLowerCase()) ||
+            s.toLowerCase().includes((matchedItem as any).family.toLowerCase()) ||
+            matchedItem.name.toLowerCase().includes(s.toLowerCase()) ||
+            (matchedItem as any).family.toLowerCase().includes(s.toLowerCase());
+        });
+      });
       if (!matchesSpecies) return false;
     }
 
