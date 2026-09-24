@@ -8,7 +8,7 @@ import { useApp } from "../../../context/AppContext";
 import { Anchor, Compass, Info, Navigation, ShieldCheck } from "lucide-react";
 import { ALL_SPECIES_CONFIGS, GENERAL_PELAGIC_COLOR, GENERAL_DEMERSAL_COLOR, GENERAL_PELAGIC_SHADES, GENERAL_DEMERSAL_SHADES, getSpeciesConfig } from "../../../utils/speciesColors";
 
-/** Prediction radius the ML model was trained on — 9 km */
+/** Prediction radius the ML model was trained on: 9 km */
 export const PREDICTION_RADIUS_KM = 9;
 export const PREDICTION_RADIUS_METERS = PREDICTION_RADIUS_KM * 1000;
 
@@ -97,19 +97,19 @@ export const MapComponent: React.FC<MapComponentProps> = ({
                     <span className="truncate">General Pelagic Model</span>
                   </div>
                   <div className="grid grid-cols-4 gap-1 text-[7.5px] font-black text-center pt-0.5">
-                    <div className="flex flex-col items-center" title="60–69%">
+                    <div className="flex flex-col items-center" title="60-69%">
                       <span className="w-full h-1.5 rounded-xs mb-0.5 shadow-2xs" style={{ backgroundColor: GENERAL_PELAGIC_SHADES.light }} />
                       <span className="text-gray-400">60-69%</span>
                     </div>
-                    <div className="flex flex-col items-center" title="70–79%">
+                    <div className="flex flex-col items-center" title="70-79%">
                       <span className="w-full h-1.5 rounded-xs mb-0.5 shadow-2xs" style={{ backgroundColor: GENERAL_PELAGIC_SHADES.medium }} />
                       <span className="text-gray-400">70-79%</span>
                     </div>
-                    <div className="flex flex-col items-center" title="80–89%">
+                    <div className="flex flex-col items-center" title="80-89%">
                       <span className="w-full h-1.5 rounded-xs mb-0.5 shadow-2xs" style={{ backgroundColor: GENERAL_PELAGIC_SHADES.dark }} />
                       <span className="text-gray-400">80-89%</span>
                     </div>
-                    <div className="flex flex-col items-center" title="90–100%">
+                    <div className="flex flex-col items-center" title="90-100%">
                       <span className="w-full h-1.5 rounded-xs mb-0.5 shadow-2xs" style={{ backgroundColor: GENERAL_PELAGIC_SHADES.deepest }} />
                       <span className="text-gray-400">90-100%</span>
                     </div>
@@ -122,19 +122,19 @@ export const MapComponent: React.FC<MapComponentProps> = ({
                     <span className="truncate">General Demersal Model</span>
                   </div>
                   <div className="grid grid-cols-4 gap-1 text-[7.5px] font-black text-center pt-0.5">
-                    <div className="flex flex-col items-center" title="60–69%">
+                    <div className="flex flex-col items-center" title="60-69%">
                       <span className="w-full h-1.5 rounded-xs mb-0.5 shadow-2xs" style={{ backgroundColor: GENERAL_DEMERSAL_SHADES.light }} />
                       <span className="text-gray-400">60-69%</span>
                     </div>
-                    <div className="flex flex-col items-center" title="70–79%">
+                    <div className="flex flex-col items-center" title="70-79%">
                       <span className="w-full h-1.5 rounded-xs mb-0.5 shadow-2xs" style={{ backgroundColor: GENERAL_DEMERSAL_SHADES.medium }} />
                       <span className="text-gray-400">70-79%</span>
                     </div>
-                    <div className="flex flex-col items-center" title="80–89%">
+                    <div className="flex flex-col items-center" title="80-89%">
                       <span className="w-full h-1.5 rounded-xs mb-0.5 shadow-2xs" style={{ backgroundColor: GENERAL_DEMERSAL_SHADES.dark }} />
                       <span className="text-gray-400">80-89%</span>
                     </div>
-                    <div className="flex flex-col items-center" title="90–100%">
+                    <div className="flex flex-col items-center" title="90-100%">
                       <span className="w-full h-1.5 rounded-xs mb-0.5 shadow-2xs" style={{ backgroundColor: GENERAL_DEMERSAL_SHADES.deepest }} />
                       <span className="text-gray-400">90-100%</span>
                     </div>
@@ -160,19 +160,19 @@ export const MapComponent: React.FC<MapComponentProps> = ({
                       
                       {/* 4-tier probability gradient swatches */}
                       <div className="grid grid-cols-4 gap-1 text-[7.5px] font-black text-center pt-0.5">
-                        <div className="flex flex-col items-center" title="60–69% Catch Probability">
+                        <div className="flex flex-col items-center" title="60-69% Catch Probability">
                           <span className="w-full h-2 rounded-xs mb-0.5 shadow-2xs" style={{ backgroundColor: cfg.shades.light }} />
                           <span className="text-gray-400">60-69%</span>
                         </div>
-                        <div className="flex flex-col items-center" title="70–79% Catch Probability">
+                        <div className="flex flex-col items-center" title="70-79% Catch Probability">
                           <span className="w-full h-2 rounded-xs mb-0.5 shadow-2xs" style={{ backgroundColor: cfg.shades.medium }} />
                           <span className="text-gray-400">70-79%</span>
                         </div>
-                        <div className="flex flex-col items-center" title="80–89% Catch Probability">
+                        <div className="flex flex-col items-center" title="80-89% Catch Probability">
                           <span className="w-full h-2 rounded-xs mb-0.5 shadow-2xs" style={{ backgroundColor: cfg.shades.dark }} />
                           <span className="text-gray-400">80-89%</span>
                         </div>
-                        <div className="flex flex-col items-center" title="90–100% Catch Probability">
+                        <div className="flex flex-col items-center" title="90-100% Catch Probability">
                           <span className="w-full h-2 rounded-xs mb-0.5 shadow-2xs" style={{ backgroundColor: cfg.shades.deepest }} />
                           <span className="text-gray-400">90-100%</span>
                         </div>

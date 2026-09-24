@@ -5,7 +5,6 @@ import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import {
   LayoutDashboard,
-  Fuel,
   ShieldAlert,
   Bell,
   User,
@@ -14,7 +13,9 @@ import {
   ChevronLeft,
   ChevronRight,
   LogOut,
-  Sparkles
+  Sparkles,
+  BookOpen,
+  Ship
 } from "lucide-react";
 import { useApp } from "../../context/AppContext";
 import { useTranslation } from "../../hooks/use-translation";
@@ -70,7 +71,6 @@ export const AuthLayout: React.FC<AuthLayoutProps> = ({ children, fluid = false 
 
   const navItems = [
     { href: "/dashboard", icon: LayoutDashboard, label: t("dashboard") },
-    { href: "/fuel", icon: Fuel, label: t("fuel") },
     { href: "/alerts", icon: ShieldAlert, label: t("alerts") },
     { href: "/notifications", icon: Bell, label: t("notifications"), badge: true },
     { href: "/profile", icon: User, label: t("profile") },
@@ -160,6 +160,38 @@ export const AuthLayout: React.FC<AuthLayoutProps> = ({ children, fluid = false 
                 </Link>
               );
             })}
+
+            {/* System Resources & Information */}
+            <div className="pt-3 pb-1 border-t border-gray-100 my-2">
+              {!isCollapsed && (
+                <div className="px-4 text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-1">
+                  Resources
+                </div>
+              )}
+              {[
+                { href: "/guide", icon: BookOpen, label: "System Guide" },
+                { href: "/pricing", icon: Ship, label: "Tonnage Pricing" },
+                { href: "/about", icon: Sparkles, label: "About Parola" },
+              ].map((res) => {
+                const isActive = pathname === res.href;
+                const Icon = res.icon;
+                return (
+                  <Link
+                    key={res.href}
+                    href={res.href}
+                    title={isCollapsed ? res.label : undefined}
+                    className={`flex items-center gap-3.5 h-10 px-4 rounded-full font-bold text-xs transition-all select-none ${
+                      isActive
+                        ? "bg-[#E5F7F3] text-[#00B37E]"
+                        : "text-gray-500 hover:text-[#12211E] hover:bg-gray-100/70"
+                    }`}
+                  >
+                    <Icon className="w-4.5 h-4.5 shrink-0" />
+                    {!isCollapsed && <span className="truncate">{res.label}</span>}
+                  </Link>
+                );
+              })}
+            </div>
           </nav>
 
           {/* Bottom logout area */}

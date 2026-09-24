@@ -1,0 +1,673 @@
+"use client";
+
+import React, { useState, useEffect } from "react";
+import Link from "next/link";
+import {
+  CheckCircle2,
+  ArrowRight,
+  ArrowLeft,
+  Radio,
+  Fish,
+  Anchor,
+  ShieldAlert,
+  Ship,
+  Search,
+  MessageSquare,
+  Sparkles,
+  MapPin,
+  Check,
+  Smartphone,
+  ChevronRight,
+  ExternalLink
+} from "lucide-react";
+import { motion, AnimatePresence } from "motion/react";
+import { ParolaLogo } from "@/components/ui/ParolaLogo";
+
+interface StepGuide {
+  id: string;
+  stepNumber: number;
+  category: "Account & Onboarding" | "Vessel & Port" | "Advisories & At Sea";
+  title: string;
+  duration: string;
+  shortDesc: string;
+  actionUrl: string;
+  actionLabel: string;
+  instructions: string[];
+  operationalTip: string;
+}
+
+const STEPS: StepGuide[] = [
+  {
+    id: "create-account",
+    stepNumber: 1,
+    category: "Account & Onboarding",
+    title: "How to create your first account",
+    duration: "1 min",
+    shortDesc: "Set up your Parola mobile profile using your Philippine cellular number for 2G SMS connectivity.",
+    actionUrl: "/register",
+    actionLabel: "Open Registration",
+    instructions: [
+      "Navigate to the Register page on the web app or text JOIN to Parola's SMS gateway.",
+      "Enter your Philippine mobile number starting with +63 (Globe, Smart, or Dito).",
+      "Select your role as Municipal Fisher, Cooperative Leader, or Maritime Safety Officer.",
+      "Set your secure password or confirm via SMS verification passcode to initialize your account."
+    ],
+    operationalTip: "Basic keypad feature phones are 100% supported. You do not need smartphone data to activate your profile."
+  },
+  {
+    id: "complete-onboarding",
+    stepNumber: 2,
+    category: "Account & Onboarding",
+    title: "How to complete onboarding and register your vessel",
+    duration: "2 min",
+    shortDesc: "Record your boat classification, gross tonnage (GT), and fishing gear to calibrate marine advisories.",
+    actionUrl: "/onboarding",
+    actionLabel: "Start Onboarding",
+    instructions: [
+      "Access the onboarding flow immediately after account creation.",
+      "Enter your official vessel name (e.g., F/B Sto. Niño) and local MFVR registration number if issued by your LGU.",
+      "Select your hull type (motorized banca, wooden hull, or steel hull) and enter gross tonnage (GT).",
+      "Choose your primary gear (handline, gillnet, ring net, or longline) so hotspot telemetry matches your target fish species."
+    ],
+    operationalTip: "Small bancas under 3.0 GT qualify for municipal exemptions, while 3.1 to 20.0 GT vessels belong to the Small-Scale commercial tier."
+  },
+  {
+    id: "find-vessel",
+    stepNumber: 3,
+    category: "Vessel & Port",
+    title: "How to find your vessel on the fleet map",
+    duration: "1 min",
+    shortDesc: "Search and locate registered craft, active port anchors, and live telemetry on the Parola dashboard.",
+    actionUrl: "/dashboard",
+    actionLabel: "Open Fleet Map",
+    instructions: [
+      "Open your Parola Dashboard and navigate to the interactive Fleet Map section.",
+      "Use the search bar at the top to type your vessel name or registration code.",
+      "Click on your vessel pin to open the live telemetry card showing home port distance and current sea state.",
+      "Toggle between satellite SST layer and navigation map view to inspect surrounding conditions."
+    ],
+    operationalTip: "If your boat is offshore, your last reported GPS anchor coordinates sync automatically whenever an SMS advisory is triggered."
+  },
+  {
+    id: "register-home-port",
+    stepNumber: 4,
+    category: "Vessel & Port",
+    title: "How to register your home port",
+    duration: "2 min",
+    shortDesc: "Anchor your vessel to a designated coastal pier to receive localized harbor wave and weather forecasts.",
+    actionUrl: "/onboarding?from=profile",
+    actionLabel: "Manage Home Port",
+    instructions: [
+      "In the Onboarding map or Profile Settings, select the Home Port selector.",
+      "Choose from verified municipal landing centers (such as Mercedes Fish Port, Estancia, Navotas, or Batangas Pier).",
+      "Alternatively, tap directly on the map to set a custom GPS coordinate pin for remote barangay coves.",
+      "Confirm your primary emergency VHF radio channel (Channel 16 default) for port muster broadcasts."
+    ],
+    operationalTip: "Local harbor thresholds calibrate your automated departure holds. When local waves exceed 1.5m, your home port triggers a safety hold."
+  },
+  {
+    id: "read-sms-advisory",
+    stepNumber: 5,
+    category: "Advisories & At Sea",
+    title: "How to read an SMS advisory",
+    duration: "2 min",
+    shortDesc: "Decode daily 04:30 PHT marine weather dispatches and use two-way query commands at sea.",
+    actionUrl: "/alerts",
+    actionLabel: "View Advisory Syntax",
+    instructions: [
+      "Check your phone inbox every morning at 04:30 PHT for your automated pre-departure dispatch.",
+      "Identify the safety status: 'Safe to sail' means calm waters under 1.0m, while 'Advisory hold' warns of hazardous swells.",
+      "Read key telemetry values: significant wave height (e.g. 0.8m), wind speed (e.g. 9 kts), and active fishing zone.",
+      "Reply with 'ADVISORY' anytime while offshore to request an updated weather bulletin without internet data."
+    ],
+    operationalTip: "Query keywords include ADVISORY for sea conditions, HOTSPOT for coordinates, and STATUS for your active departure clearance."
+  },
+  {
+    id: "check-fish-probability",
+    stepNumber: 6,
+    category: "Advisories & At Sea",
+    title: "How to check fish probability and catch prediction",
+    duration: "2 min",
+    shortDesc: "Understand satellite sea surface temperature fronts and target species probability percentages.",
+    actionUrl: "/dashboard",
+    actionLabel: "View Catch Predictions",
+    instructions: [
+      "Access the Species Hotspot module on the Dashboard or review the zone field in your morning SMS bulletin.",
+      "Check the three monitored pelagic species: Tamban (Sardinella), Galunggong (Round scad), and Tuna (Skipjack/Yellowfin).",
+      "Look for probability scores above 70%, which indicate active thermal upwelling fronts and chlorophyll feeding zones.",
+      "Note the recommended navigation heading and distance offshore (e.g., Zone 3, 12km East-Northeast)."
+    ],
+    operationalTip: "Thermal boundary zones with 27.5°C to 28.5°C SST fronts concentrate schooling baitfish, reducing fuel scouting time by up to 35%."
+  },
+  {
+    id: "submit-catch-feedback",
+    stepNumber: 7,
+    category: "Advisories & At Sea",
+    title: "How to submit catch feedback",
+    duration: "1 min",
+    shortDesc: "Log your daily harvest via SMS or web to improve community prediction models while protecting secret spots.",
+    actionUrl: "/dashboard",
+    actionLabel: "Submit Harvest Log",
+    instructions: [
+      "Upon returning to port or mooring, open the Catch Feedback modal or compose a short SMS.",
+      "SMS syntax: Text 'CATCH [Weight in KG] [Species] [Zone or Coords]' (e.g., CATCH 180KG TAMBAN ZONE 3).",
+      "Optionally log fuel liters consumed or hours spent at sea to calculate trip efficiency.",
+      "Receive instant confirmation that your anonymized catch data has updated the municipal fisheries model."
+    ],
+    operationalTip: "Exact GPS marks are kept confidential and aggregated into 5-kilometer grid cells to prevent crowding secret family fishing grounds."
+  },
+  {
+    id: "respond-safety-hold",
+    stepNumber: 8,
+    category: "Advisories & At Sea",
+    title: "How to understand and respond to a safety hold alert",
+    duration: "2 min",
+    shortDesc: "Recognize automated departure holds when wave swells exceed 1.5 meters or PAGASA issues gale warnings.",
+    actionUrl: "/alerts",
+    actionLabel: "View Safety Protocols",
+    instructions: [
+      "If wave height exceeds 1.5m or PAGASA issues a Gale Warning, Parola dispatches an urgent SAFETY HOLD alert.",
+      "Your departure clearance is temporarily suspended to protect small motorized bancas from capsizing.",
+      "Confirm receipt by replying 'ACK' to the SMS notification or tapping Acknowledge on the Alerts screen.",
+      "Check the Coast Guard VHF Channel 16 muster status and wait for the official all-clear dispatch before untying lines."
+    ],
+    operationalTip: "Safety holds automatically lift once significant wave height drops back below 1.2m and PAGASA cancels coastal gale advisories."
+  }
+];
+
+export default function GuidePage() {
+  const [activeStepId, setActiveStepId] = useState<string>("create-account");
+  const [completedSteps, setCompletedSteps] = useState<string[]>([]);
+
+  useEffect(() => {
+    const saved = localStorage.getItem("parola_completed_guide_steps");
+    if (saved) {
+      try {
+        setCompletedSteps(JSON.parse(saved));
+      } catch (e) {
+        // ignore parse error
+      }
+    }
+  }, []);
+
+  const activeIndex = STEPS.findIndex((s) => s.id === activeStepId);
+  const currentStep = STEPS[activeIndex] || STEPS[0];
+
+  const toggleComplete = (id: string) => {
+    let updated: string[];
+    if (completedSteps.includes(id)) {
+      updated = completedSteps.filter((s) => s !== id);
+    } else {
+      updated = [...completedSteps, id];
+    }
+    setCompletedSteps(updated);
+    localStorage.setItem("parola_completed_guide_steps", JSON.stringify(updated));
+  };
+
+  const progressPercent = Math.round((completedSteps.length / STEPS.length) * 100);
+
+  const categories = [
+    { name: "Account & Onboarding", items: STEPS.filter((s) => s.category === "Account & Onboarding") },
+    { name: "Vessel & Port", items: STEPS.filter((s) => s.category === "Vessel & Port") },
+    { name: "Advisories & At Sea", items: STEPS.filter((s) => s.category === "Advisories & At Sea") }
+  ];
+
+  return (
+    <div className="min-h-screen bg-[#F2F6F4] text-[#12211E] font-sans antialiased overflow-x-hidden selection:bg-[#00B37E]/20 selection:text-[#12211E]">
+      {/* Background Atmosphere: Coastal Ambient Depth */}
+      <div className="absolute inset-0 pointer-events-none overflow-hidden -z-10 bg-[#F2F6F4]">
+        <div
+          className="absolute inset-0 opacity-[0.045]"
+          style={{
+            backgroundImage: "radial-gradient(#12211E 1px, transparent 1px)",
+            backgroundSize: "24px 24px"
+          }}
+        />
+        <div className="absolute top-0 right-1/4 w-[640px] h-[360px] bg-[#00B37E]/8 blur-[130px] rounded-full" />
+        <div className="absolute top-[30%] left-[-80px] w-[450px] h-[450px] bg-[#C57E2C]/5 blur-[120px] rounded-full" />
+      </div>
+
+      {/* Header Navigation (strictly <= 68px single line) */}
+      <header className="sticky top-0 w-full border-b border-[#DAE5E0] bg-[#F2F6F4]/90 backdrop-blur-md z-40">
+        <div className="flex items-center justify-between h-[68px] px-6 md:px-12 max-w-7xl mx-auto w-full">
+          <Link href="/" className="flex items-center gap-3 group">
+            <ParolaLogo iconOnly className="w-8 h-8 group-hover:scale-105 transition-transform" />
+            <span className="font-display text-xl font-black tracking-tight text-[#12211E] uppercase">
+              Parola
+            </span>
+          </Link>
+
+          <nav className="hidden md:flex items-center gap-8 text-xs font-bold uppercase tracking-wider text-[#12211E]/75">
+            <Link href="/#how-it-works" className="hover:text-[#00B37E] transition-colors">
+              Features
+            </Link>
+            <Link href="/guide" className="text-[#00B37E] font-black border-b-2 border-[#00B37E] pb-1">
+              System Guide
+            </Link>
+            <Link href="/pricing" className="hover:text-[#00B37E] transition-colors">
+              Pricing
+            </Link>
+            <Link href="/about" className="hover:text-[#00B37E] transition-colors">
+              About
+            </Link>
+          </nav>
+
+          <div className="flex items-center gap-4">
+            <Link
+              href="/login"
+              className="text-xs font-bold uppercase tracking-wider text-[#12211E]/75 hover:text-[#12211E] transition-colors"
+            >
+              Log In
+            </Link>
+            <Link
+              href="/register"
+              className="bg-[#00B37E] hover:bg-[#00B37E]/90 text-white px-5 py-2.5 rounded-full font-bold text-xs uppercase tracking-wider transition-all shadow-sm hover:shadow active:scale-[0.98]"
+            >
+              Register Vessel
+            </Link>
+          </div>
+        </div>
+      </header>
+
+      {/* MAIN CONTAINER */}
+      <main className="max-w-7xl mx-auto px-6 py-10 md:py-14 space-y-10">
+        {/* Page Hero Title & Subtext */}
+        <div className="max-w-3xl space-y-3">
+          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-[#C57E2C]/10 border border-[#C57E2C]/25 text-[#9A5B18] text-[11px] font-bold uppercase tracking-wider shadow-2xs">
+            <Sparkles className="w-3 h-3 text-[#C57E2C]" />
+            <span>Operational Walkthrough</span>
+          </div>
+          <h1 className="text-3xl sm:text-5xl font-display font-black tracking-tight text-[#12211E] leading-tight">
+            Learn Parola, one practical task at a time.
+          </h1>
+          <p className="text-sm sm:text-base text-[#12211E]/75 leading-relaxed font-normal">
+            Eight step-by-step guides that take you from registering your vessel to receiving SMS advisories, tracking fish hotspots, and responding to safety alerts. Go through them in order or jump to the one you need, and tick each off as you go.
+          </p>
+        </div>
+
+        {/* 2-Column Responsive Layout: Left Sidebar + Right Active Lesson */}
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
+          {/* LEFT SIDEBAR: Progress & Grouped Step List (Col-span 4) */}
+          <aside className="lg:col-span-4 space-y-6">
+            {/* Progress Card (Elevated white card with border) */}
+            <div className="bg-white border border-[#DAE5E0] rounded-2xl p-5 shadow-[0_2px_12px_rgba(18,33,30,0.04)] space-y-3">
+              <div className="flex items-center justify-between text-xs font-bold">
+                <span className="text-[#12211E]">Your progress</span>
+                <span className="text-[#00B37E] font-display font-black text-sm">
+                  {completedSteps.length} of {STEPS.length}
+                </span>
+              </div>
+              <div className="w-full bg-[#F2F6F4] border border-[#DAE5E0] h-2.5 rounded-full overflow-hidden">
+                <div
+                  className="bg-[#00B37E] h-full transition-all duration-300 rounded-full"
+                  style={{ width: `${progressPercent}%` }}
+                />
+              </div>
+              <div className="text-[11px] text-[#12211E]/60 font-medium">
+                {progressPercent === 100
+                  ? "All steps completed! You are ready for coastal operations."
+                  : `${STEPS.length - completedSteps.length} practical lessons remaining.`}
+              </div>
+            </div>
+
+            {/* Category Groups */}
+            <div className="space-y-6">
+              {categories.map((cat, cIdx) => {
+                const catCompleted = cat.items.filter((item) => completedSteps.includes(item.id)).length;
+
+                return (
+                  <div key={cIdx} className="space-y-2">
+                    <div className="flex items-center justify-between px-2 text-[11px] font-bold text-[#12211E]/55 uppercase tracking-wider">
+                      <span>{cat.name}</span>
+                      <span>
+                        {catCompleted}/{cat.items.length}
+                      </span>
+                    </div>
+
+                    <div className="space-y-1.5">
+                      {cat.items.map((step) => {
+                        const isActive = step.id === activeStepId;
+                        const isDone = completedSteps.includes(step.id);
+
+                        return (
+                          <button
+                            key={step.id}
+                            onClick={() => setActiveStepId(step.id)}
+                            className={`w-full text-left p-3.5 rounded-xl transition-all flex items-center justify-between gap-3 text-xs cursor-pointer border ${
+                              isActive
+                                ? "bg-[#00B37E]/10 border-[#00B37E]/40 text-[#12211E] shadow-sm font-bold"
+                                : "bg-white hover:bg-[#EAF1ED] border-[#DAE5E0] text-[#12211E]/75 font-medium shadow-2xs"
+                            }`}
+                          >
+                            <div className="flex items-center gap-3 min-w-0">
+                              <div
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  toggleComplete(step.id);
+                                }}
+                                className={`w-5 h-5 rounded-full flex items-center justify-center shrink-0 transition-colors border ${
+                                  isDone
+                                    ? "bg-[#00B37E] border-[#00B37E] text-white"
+                                    : "border-gray-300 bg-[#F2F6F4] text-gray-500 hover:border-[#00B37E]"
+                                }`}
+                                title={isDone ? "Completed (tap to uncheck)" : "Mark complete"}
+                              >
+                                {isDone ? (
+                                  <Check className="w-3 h-3 stroke-[3]" />
+                                ) : (
+                                  <span className="text-[10px] font-bold">{step.stepNumber}</span>
+                                )}
+                              </div>
+                              <span className={`truncate ${isDone && !isActive ? "text-[#12211E]/50 line-through" : ""}`}>
+                                {step.title}
+                              </span>
+                            </div>
+                            <span className="text-[10px] text-[#12211E]/55 shrink-0 font-mono">
+                              {step.duration}
+                            </span>
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </aside>
+
+          {/* RIGHT PANE: Active Lesson Interactive Card (Elevated white card) */}
+          <section className="lg:col-span-8 bg-white border border-[#DAE5E0] rounded-3xl p-6 md:p-10 shadow-[0_4px_24px_rgba(18,33,30,0.06)] space-y-8">
+            {/* Lesson Eyebrow & Headline */}
+            <div className="space-y-3">
+              <div className="flex items-center justify-between">
+                <span className="text-[11px] font-bold text-[#9A5B18] uppercase tracking-wider bg-[#C57E2C]/10 px-3 py-1 rounded-full border border-[#C57E2C]/20">
+                  {currentStep.category} · Step {currentStep.stepNumber} of {STEPS.length}
+                </span>
+                <span className="text-xs text-[#12211E]/55 font-mono">
+                  Est. {currentStep.duration}
+                </span>
+              </div>
+              <h2 className="text-2xl sm:text-3xl font-display font-black text-[#12211E] tracking-tight">
+                {currentStep.title}
+              </h2>
+              <p className="text-sm text-[#12211E]/75 leading-relaxed">
+                {currentStep.shortDesc}
+              </p>
+            </div>
+
+            {/* Interactive Preview Container (Simulated UI specific to step) */}
+            <div className="bg-[#F2F6F4] border border-[#DAE5E0] rounded-2xl p-5 md:p-6 space-y-4">
+              <div className="flex items-center justify-between text-xs pb-3 border-b border-[#DAE5E0]">
+                <div className="flex items-center gap-2">
+                  <div className="w-2.5 h-2.5 rounded-full bg-[#00B37E]" />
+                  <span className="font-bold text-[#12211E] uppercase tracking-wide">
+                    Live Interface Simulation
+                  </span>
+                </div>
+                <span className="text-[11px] text-[#12211E]/60 font-mono">
+                  Step {currentStep.stepNumber} / 8
+                </span>
+              </div>
+
+              {/* Dynamic UI Demonstration per Step */}
+              {currentStep.id === "create-account" && (
+                <div className="space-y-3 bg-white p-4 rounded-xl border border-[#DAE5E0] shadow-2xs">
+                  <div className="text-xs font-bold text-[#12211E]">Mobile Account Setup</div>
+                  <div className="flex items-center gap-2 bg-[#F2F6F4] border border-[#DAE5E0] rounded-xl px-3 py-2 text-xs font-mono text-[#12211E]">
+                    <Smartphone className="w-4 h-4 text-[#00B37E]" />
+                    <span>+63 917 555 0192</span>
+                    <span className="ml-auto text-[10px] text-[#00B37E] font-bold bg-[#00B37E]/10 px-2 py-0.5 rounded-full">
+                      Verified
+                    </span>
+                  </div>
+                  <div className="grid grid-cols-2 gap-2 text-xs pt-1">
+                    <div className="bg-[#F2F6F4] p-2.5 rounded-lg border border-[#DAE5E0]">
+                      <div className="text-[10px] text-gray-500 font-bold">Role Selected</div>
+                      <div className="font-bold text-[#12211E]">Municipal Fisher</div>
+                    </div>
+                    <div className="bg-[#F2F6F4] p-2.5 rounded-lg border border-[#DAE5E0]">
+                      <div className="text-[10px] text-gray-500 font-bold">SMS Channel</div>
+                      <div className="font-bold text-[#00B37E]">2G GSM Enabled</div>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {currentStep.id === "complete-onboarding" && (
+                <div className="space-y-3 bg-white p-4 rounded-xl border border-[#DAE5E0] shadow-2xs">
+                  <div className="text-xs font-bold text-[#12211E]">Vessel Specifications</div>
+                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 text-xs">
+                    <div className="bg-[#F2F6F4] p-2 rounded-lg border border-[#DAE5E0]">
+                      <div className="text-[10px] text-gray-500">Boat Name</div>
+                      <div className="font-bold text-[#12211E] truncate">F/B Sto. Niño</div>
+                    </div>
+                    <div className="bg-[#F2F6F4] p-2 rounded-lg border border-[#DAE5E0]">
+                      <div className="text-[10px] text-gray-500">Gross Tonnage</div>
+                      <div className="font-bold text-[#12211E]">4.8 GT</div>
+                    </div>
+                    <div className="bg-[#F2F6F4] p-2 rounded-lg border border-[#DAE5E0]">
+                      <div className="text-[10px] text-gray-500">Hull Type</div>
+                      <div className="font-bold text-[#12211E]">Motorized Banca</div>
+                    </div>
+                    <div className="bg-[#F2F6F4] p-2 rounded-lg border border-[#DAE5E0]">
+                      <div className="text-[10px] text-gray-500">Primary Gear</div>
+                      <div className="font-bold text-[#12211E]">Handline / Kawil</div>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {currentStep.id === "find-vessel" && (
+                <div className="space-y-3 bg-white p-4 rounded-xl border border-[#DAE5E0] shadow-2xs">
+                  <div className="flex items-center justify-between text-xs">
+                    <span className="font-bold text-[#12211E]">Fleet Map Radar View</span>
+                    <span className="text-[10px] font-bold text-[#00B37E]">1 Craft Tracked</span>
+                  </div>
+                  <div className="bg-[#12211E] text-white p-3 rounded-lg text-xs font-mono space-y-1">
+                    <div className="text-gray-400">&gt; VESSEL: F/B Sto. Niño [ID: PH-CN-2026-081]</div>
+                    <div className="text-[#00B37E]">&gt; COORDS: 14.0122°N, 123.0114°E (Mercedes Anchor)</div>
+                    <div className="text-gray-300">&gt; STATUS: Moored · Sea state calm (0.8m)</div>
+                  </div>
+                </div>
+              )}
+
+              {currentStep.id === "register-home-port" && (
+                <div className="space-y-3 bg-white p-4 rounded-xl border border-[#DAE5E0] shadow-2xs">
+                  <div className="text-xs font-bold text-[#12211E]">Selected Municipal Home Port</div>
+                  <div className="flex items-center justify-between bg-[#F2F6F4] p-3 rounded-xl border border-[#DAE5E0]">
+                    <div className="flex items-center gap-2.5">
+                      <Anchor className="w-5 h-5 text-[#00B37E]" />
+                      <div>
+                        <div className="text-xs font-bold text-[#12211E]">Mercedes Fish Port</div>
+                        <div className="text-[11px] text-[#12211E]/60">Camarines Norte · 14.0122°N, 123.0114°E</div>
+                      </div>
+                    </div>
+                    <span className="text-[10px] font-bold text-[#9A5B18] bg-[#C57E2C]/10 px-2.5 py-1 rounded-full border border-[#C57E2C]/25">
+                      VHF Ch 16
+                    </span>
+                  </div>
+                </div>
+              )}
+
+              {currentStep.id === "read-sms-advisory" && (
+                <div className="space-y-3 bg-[#12211E] text-white p-4 rounded-xl shadow-inner font-mono text-xs">
+                  <div className="flex items-center justify-between text-[10px] text-gray-400 border-b border-white/10 pb-1.5">
+                    <span>SMS FROM: +63 PAROLA</span>
+                    <span className="text-[#00B37E]">04:30 PHT TODAY</span>
+                  </div>
+                  <p className="leading-relaxed text-gray-200">
+                    PAROLA (Mercedes): Safe to sail. Waves 0.8m, wind 9kts ENE. Zone 3 active for Tamban. Return harbor by 17:00 PHT. Reply ADVISORY for updates.
+                  </p>
+                </div>
+              )}
+
+              {currentStep.id === "check-fish-probability" && (
+                <div className="space-y-3 bg-white p-4 rounded-xl border border-[#DAE5E0] shadow-2xs">
+                  <div className="text-xs font-bold text-[#12211E]">Species Probability & Thermal Fronts</div>
+                  <div className="grid grid-cols-3 gap-2">
+                    <div className="bg-[#F2F6F4] p-2.5 rounded-lg border border-[#DAE5E0] text-center">
+                      <div className="text-[10px] text-gray-500">Tamban</div>
+                      <div className="text-base font-display font-black text-[#00B37E]">84%</div>
+                      <div className="text-[9px] text-gray-400">High Feeding</div>
+                    </div>
+                    <div className="bg-[#F2F6F4] p-2.5 rounded-lg border border-[#DAE5E0] text-center">
+                      <div className="text-[10px] text-gray-500">Galunggong</div>
+                      <div className="text-base font-display font-black text-[#12211E]">72%</div>
+                      <div className="text-[9px] text-gray-400">Moderate Run</div>
+                    </div>
+                    <div className="bg-[#F2F6F4] p-2.5 rounded-lg border border-[#DAE5E0] text-center">
+                      <div className="text-[10px] text-gray-500">Tuna Front</div>
+                      <div className="text-base font-display font-black text-[#C57E2C]">61%</div>
+                      <div className="text-[9px] text-gray-400">12km Offshore</div>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {currentStep.id === "submit-catch-feedback" && (
+                <div className="space-y-3 bg-[#12211E] text-white p-4 rounded-xl shadow-inner font-mono text-xs">
+                  <div className="text-[10px] text-gray-400 border-b border-white/10 pb-1.5">
+                    TWO-WAY SMS HARVEST REPORT
+                  </div>
+                  <div className="text-[#00B37E]">&gt; YOU: CATCH 180KG TAMBAN ZONE 3 22L</div>
+                  <div className="text-gray-300">
+                    &lt; PAROLA: Maraming salamat! Harvest recorded. Zone 3 calibrated. Total fleet haul today: 1.4 tons.
+                  </div>
+                </div>
+              )}
+
+              {currentStep.id === "respond-safety-hold" && (
+                <div className="space-y-3 bg-rose-50 border border-rose-200 p-4 rounded-xl text-xs">
+                  <div className="flex items-center justify-between text-rose-700 font-bold">
+                    <span className="flex items-center gap-1.5">
+                      <ShieldAlert className="w-4 h-4 text-rose-600" />
+                      CRITICAL SAFETY HOLD (Hs &gt; 1.5m)
+                    </span>
+                    <span className="bg-rose-200 text-rose-800 text-[10px] px-2 py-0.5 rounded-full">
+                      Departure Denied
+                    </span>
+                  </div>
+                  <p className="text-rose-900 leading-relaxed font-sans">
+                    PAGASA Gale Warning active across Camarines Norte coast. Significant wave heights exceed 1.8 meters. Remain moored at Mercedes Fish Port until advisory clears.
+                  </p>
+                </div>
+              )}
+            </div>
+
+            {/* Step-by-Step Instructions */}
+            <div className="space-y-4">
+              <h3 className="text-sm font-bold uppercase tracking-wider text-[#12211E]">
+                Practical Checklist
+              </h3>
+              <ol className="space-y-3 text-xs md:text-sm text-[#12211E]/80">
+                {currentStep.instructions.map((inst, idx) => (
+                  <li key={idx} className="flex items-start gap-3">
+                    <span className="w-5 h-5 rounded-full bg-[#F2F6F4] border border-[#DAE5E0] flex items-center justify-center text-[10px] font-bold text-[#12211E] shrink-0 mt-0.5">
+                      {idx + 1}
+                    </span>
+                    <span className="leading-relaxed">{inst}</span>
+                  </li>
+                ))}
+              </ol>
+            </div>
+
+            {/* Operational Tip Callout (Beacon Amber highlight) */}
+            <div className="p-4 rounded-2xl bg-[#C57E2C]/10 border border-[#C57E2C]/25 text-xs text-[#12211E] space-y-1">
+              <div className="font-bold text-[#9A5B18] uppercase tracking-wider text-[10px] flex items-center gap-1.5">
+                <Sparkles className="w-3.5 h-3.5 text-[#C57E2C]" />
+                <span>Field Operator Tip</span>
+              </div>
+              <p className="leading-relaxed text-[#12211E]/80">
+                {currentStep.operationalTip}
+              </p>
+            </div>
+
+            {/* Action Buttons: Mark Complete + Step Navigation */}
+            <div className="pt-4 border-t border-[#DAE5E0] flex flex-wrap items-center justify-between gap-4">
+              <button
+                onClick={() => toggleComplete(currentStep.id)}
+                className={`px-5 py-2.5 rounded-full font-bold text-xs uppercase tracking-wider transition-all flex items-center gap-2 cursor-pointer ${
+                  completedSteps.includes(currentStep.id)
+                    ? "bg-[#00B37E] text-white shadow-sm"
+                    : "bg-[#F2F6F4] hover:bg-[#E2EBE6] text-[#12211E] border border-[#DAE5E0]"
+                }`}
+              >
+                <Check className="w-4 h-4" />
+                <span>
+                  {completedSteps.includes(currentStep.id) ? "Marked as complete" : "Mark as complete"}
+                </span>
+              </button>
+
+              <div className="flex items-center gap-2">
+                <Link
+                  href={currentStep.actionUrl}
+                  className="px-4 py-2.5 rounded-full font-bold text-xs uppercase tracking-wider text-[#00B37E] hover:bg-[#00B37E]/10 transition-colors flex items-center gap-1.5"
+                >
+                  <span>{currentStep.actionLabel}</span>
+                  <ExternalLink className="w-3 h-3" />
+                </Link>
+
+                {activeIndex > 0 && (
+                  <button
+                    onClick={() => setActiveStepId(STEPS[activeIndex - 1].id)}
+                    className="p-2.5 rounded-full border border-[#DAE5E0] bg-white hover:bg-[#F2F6F4] text-[#12211E] transition-colors cursor-pointer"
+                    title="Previous lesson"
+                  >
+                    <ArrowLeft className="w-4 h-4" />
+                  </button>
+                )}
+
+                {activeIndex < STEPS.length - 1 && (
+                  <button
+                    onClick={() => setActiveStepId(STEPS[activeIndex + 1].id)}
+                    className="bg-[#12211E] hover:bg-[#12211E]/90 text-white px-5 py-2.5 rounded-full font-bold text-xs uppercase tracking-wider transition-all flex items-center gap-1.5 cursor-pointer shadow-sm"
+                  >
+                    <span>Next lesson</span>
+                    <ArrowRight className="w-3.5 h-3.5" />
+                  </button>
+                )}
+              </div>
+            </div>
+          </section>
+        </div>
+      </main>
+
+      {/* FOOTER (Grounded coastal tone, zero em-dashes) */}
+      <footer className="bg-[#E7EFEA] border-t border-[#DAE5E0] py-12 px-6 mt-16">
+        <div className="max-w-7xl mx-auto w-full flex flex-col md:flex-row items-center justify-between gap-6 text-xs text-[#12211E]/70">
+          <div className="flex items-center gap-3">
+            <ParolaLogo iconOnly className="w-7 h-7" />
+            <span className="font-display text-base font-black text-[#12211E] tracking-tight uppercase">
+              Parola Fisheries System
+            </span>
+          </div>
+
+          <nav className="flex flex-wrap items-center gap-6 font-semibold">
+            <Link href="/#how-it-works" className="hover:text-[#00B37E] transition-colors">
+              Features
+            </Link>
+            <Link href="/guide" className="text-[#00B37E] transition-colors">
+              System Guide
+            </Link>
+            <Link href="/pricing" className="hover:text-[#00B37E] transition-colors">
+              Pricing
+            </Link>
+            <Link href="/about" className="hover:text-[#00B37E] transition-colors">
+              About
+            </Link>
+            <Link href="/login" className="hover:text-[#00B37E] transition-colors">
+              Log In
+            </Link>
+            <Link href="/register" className="hover:text-[#00B37E] transition-colors">
+              Register
+            </Link>
+          </nav>
+
+          <div className="text-[11px] text-[#12211E]/55">
+            © {new Date().getFullYear()} Parola. All rights reserved.
+          </div>
+        </div>
+      </footer>
+    </div>
+  );
+}

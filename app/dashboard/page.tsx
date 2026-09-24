@@ -363,7 +363,7 @@ export default function DashboardPage() {
               </button>
             </div>
 
-            {/* 9 km Prediction Radius Indicator — only shown on map view */}
+            {/* 9 km Prediction Radius Indicator: only shown on map view */}
             {mapView && (
               <div className="bg-white/95 border border-emerald-200 shadow-md rounded-2xl px-3 py-2 flex items-center gap-2 pointer-events-none">
                 <Globe className="w-3.5 h-3.5 text-[#00B074] shrink-0" />

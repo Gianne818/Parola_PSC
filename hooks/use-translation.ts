@@ -22,10 +22,10 @@ export const DICTIONARY = {
     hil: "Sugod nga Libre"
   },
   smsFreeBadge: {
-    en: "Free via SMS — No mobile data needed",
-    tl: "Libre via SMS — Walang data na kailangan",
-    ceb: "Libre via SMS — Dili kinahanglan og data",
-    hil: "Libre via SMS — Wala sing data nga kinahanglan"
+    en: "Free via SMS - No mobile data needed",
+    tl: "Libre via SMS - Walang data na kailangan",
+    ceb: "Libre via SMS - Dili kinahanglan og data",
+    hil: "Libre via SMS - Wala sing data nga kinahanglan"
   },
   landingTitle: {
     en: "One tool to manage hotspots and your fleet",

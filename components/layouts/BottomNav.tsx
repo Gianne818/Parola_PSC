@@ -3,7 +3,7 @@
 import React from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { LayoutDashboard, Fuel, ShieldAlert, Bell, User, Settings } from "lucide-react";
+import { LayoutDashboard, ShieldAlert, Bell, User, Settings } from "lucide-react";
 import { useTranslation } from "../../hooks/use-translation";
 import { useApp } from "../../context/AppContext";
 
@@ -14,7 +14,6 @@ export const BottomNav: React.FC = () => {
 
   const tabs = [
     { href: "/dashboard", icon: LayoutDashboard, label: "Dash" },
-    { href: "/fuel", icon: Fuel, label: "Fuel" },
     { href: "/alerts", icon: ShieldAlert, label: "Alerts" },
     { href: "/notifications", icon: Bell, label: "Notifs", badge: true },
     { href: "/profile", icon: User, label: "Profile" },

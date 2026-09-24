@@ -866,7 +866,7 @@ export default function AlertsPage() {
                   {/* SMS 1: Pelagic */}
                   <div className="space-y-1">
                     <div className="flex items-center gap-1.5">
-                      <span className="text-[10px] font-black uppercase tracking-wider text-[#00B074]">SMS 1 — Pelagic</span>
+                      <span className="text-[10px] font-black uppercase tracking-wider text-[#00B074]">SMS 1 - Pelagic</span>
                       <span className={`px-1.5 py-0.5 rounded text-[9px] font-black ${
                         calculateSmsSegments(pelagicSmsText).segmentCount === 1 ? 'bg-emerald-100 text-emerald-800' : 'bg-amber-100 text-amber-800'
                       }`}>
@@ -880,7 +880,7 @@ export default function AlertsPage() {
                   {/* SMS 2: Demersal */}
                   <div className="space-y-1">
                     <div className="flex items-center gap-1.5">
-                      <span className="text-[10px] font-black uppercase tracking-wider text-blue-600">SMS 2 — Demersal</span>
+                      <span className="text-[10px] font-black uppercase tracking-wider text-blue-600">SMS 2 - Demersal</span>
                       <span className={`px-1.5 py-0.5 rounded text-[9px] font-black ${
                         calculateSmsSegments(demersalSmsText).segmentCount === 1 ? 'bg-emerald-100 text-emerald-800' : 'bg-amber-100 text-amber-800'
                       }`}>

@@ -73,7 +73,7 @@ export default function RegisterPage() {
 
 
 
-  // Show "already signed in" overlay instead of blindly redirecting —
+  // Show "already signed in" overlay instead of blindly redirecting -
   // lets the user choose to go to dashboard or register a new account.
   const [showAlreadyIn, setShowAlreadyIn] = useState(false);
 
@@ -250,7 +250,7 @@ export default function RegisterPage() {
 
   const activeLang = LANGUAGES.find(l => l.code === language) || LANGUAGES[0];
 
-  // Already signed-in gate — shown as overlay instead of instant redirect
+  // Already signed-in gate: shown as overlay instead of instant redirect
   if (showAlreadyIn) {
     return (
       <div className="min-h-screen bg-white flex flex-col items-center justify-center p-6 relative overflow-hidden font-sans antialiased">

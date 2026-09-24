@@ -386,7 +386,7 @@ export default function MapInner({
           </Marker>
         )}
 
-        {/* 9 km Prediction Radius Circles — auto-scale with zoom since Leaflet Circle uses real-world meters */}
+        {/* 9 km Prediction Radius Circles: auto-scale with zoom since Leaflet Circle uses real-world meters */}
         {showPredictionRadius && filteredHotspots.map((spot) => {
           const lat = spot.lat ?? (spot as any).position?.[0];
           const lng = spot.lng ?? (spot as any).position?.[1];

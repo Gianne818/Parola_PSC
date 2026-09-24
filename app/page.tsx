@@ -2,446 +2,672 @@
 
 import React, { useState } from "react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
+import Image from "next/image";
 import {
-  Globe,
-  ArrowRight,
   MessageSquare,
   Compass,
-  Map as MapIcon,
   ShieldAlert,
-  Zap,
-  Plus,
-  Minus,
-  Users,
+  Radio,
+  ArrowRight,
+  Fish,
   Anchor,
-  Fuel,
-  Bell
+  Globe,
+  CheckCircle2,
+  Ship,
+  Waves,
+  Navigation,
+  Sparkles,
+  ExternalLink
 } from "lucide-react";
-import { ParolaLogo } from "../components/ui/ParolaLogo";
-
-function DemoBackground() {
-  return (
-    <div className="absolute inset-0 pointer-events-none overflow-hidden -z-10 bg-white">
-      {/* Subtle light grid pattern */}
-      <div
-        className="absolute inset-0 opacity-[0.03]"
-        style={{
-          backgroundImage: `radial-gradient(#12211E 1px, transparent 1px)`,
-          backgroundSize: '24px 24px'
-        }}
-      />
-      {/* Soft light green ambient glow */}
-      <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[800px] h-[400px] bg-brand-green/5 blur-[120px] rounded-full" />
-    </div>
-  );
-}
+import { motion, useReducedMotion } from "motion/react";
+import { ParolaLogo } from "@/components/ui/ParolaLogo";
+import { useApp } from "@/context/AppContext";
 
 export default function LandingPage() {
-  const router = useRouter();
-  const [liters, setLiters] = useState(20);
+  const reduceMotion = useReducedMotion();
+  const { language, changeLanguage } = useApp();
+
+  // Interactive 2-Way SMS Command Engine Simulation
+  const [selectedCommand, setSelectedCommand] = useState<"ADVISORY" | "HOTSPOT" | "STATUS">("ADVISORY");
+
+  // Interactive Safety Hold Threshold Simulator
+  const [simulateGale, setSimulateGale] = useState<boolean>(false);
+
+  const toggleLanguage = () => {
+    changeLanguage(language === "en" ? "tl" : "en");
+  };
+
+  const smsResponses: Record<"ADVISORY" | "HOTSPOT" | "STATUS", { query: string; response: string }> = {
+    ADVISORY: {
+      query: "ADVISORY",
+      response: "PAROLA (Mercedes): Safe to sail. Waves 0.8m, wind 9kts ENE. Zone 3 active for Tamban. Return harbor by 17:00 PHT."
+    },
+    HOTSPOT: {
+      query: "HOTSPOT",
+      response: "PAROLA: Zone 3 (14.128°N, 123.084°E) active. 12km ENE offshore. SST 28.2°C thermal front. High Tamban feeding probability (84%)."
+    },
+    STATUS: {
+      query: "STATUS",
+      response: "PAROLA: F/B Sto. Niño [PH-CN-2026-081]. Home Port: Mercedes. Departure clearance: ACTIVE. Coast Guard alert level: Normal."
+    }
+  };
 
   return (
-    <div className="min-h-screen bg-white text-brand-black relative z-0 scroll-smooth font-sans antialiased overflow-x-hidden">
-      {/* BACKGROUND DECORATION */}
-      <DemoBackground />
+    <div className="min-h-screen bg-[#F2F6F4] text-[#12211E] relative z-0 scroll-smooth font-sans antialiased overflow-x-hidden selection:bg-[#00B37E]/20 selection:text-[#12211E]">
+      {/* Background Atmosphere: Coastal Ambient Depth */}
+      <div className="absolute inset-0 pointer-events-none overflow-hidden -z-10 bg-[#F2F6F4]">
+        {/* Subtle Maritime Coordinates Grid */}
+        <div
+          className="absolute inset-0 opacity-[0.045]"
+          style={{
+            backgroundImage: "radial-gradient(#12211E 1px, transparent 1px)",
+            backgroundSize: "24px 24px"
+          }}
+        />
+        {/* Radial Coastal Beacon Glow */}
+        <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[900px] h-[520px] bg-gradient-to-b from-[#00B37E]/10 via-[#00B37E]/3 to-transparent blur-[140px] rounded-full" />
+        <div className="absolute top-[35%] right-[-100px] w-[500px] h-[500px] bg-[#C57E2C]/5 blur-[120px] rounded-full" />
+      </div>
 
-      {/* SECTION 1: HERO SCREEN (Navigation + Hero) */}
-      <section className="min-h-screen flex flex-col justify-between w-full relative z-10">
-        {/* Navigation */}
-        <header className="w-full border-b border-gray-150/80 bg-white/60 backdrop-blur-md shrink-0">
-          <div className="flex items-center justify-between p-4 md:px-12 max-w-7xl mx-auto w-full">
-            <div className="flex items-center gap-3">
-              <ParolaLogo iconOnly className="w-9 h-9 hover:scale-105 transition-transform" />
-              <span className="font-display text-2xl font-black tracking-tight text-brand-black uppercase">Parola</span>
-            </div>
+      {/* HEADER / NAVIGATION (Single line, strictly capped at 68px height) */}
+      <header className="sticky top-0 w-full border-b border-[#DAE5E0] bg-[#F2F6F4]/90 backdrop-blur-md z-40">
+        <div className="flex items-center justify-between h-[68px] px-6 md:px-12 max-w-7xl mx-auto w-full">
+          <Link href="/" className="flex items-center gap-3 group">
+            <ParolaLogo iconOnly className="w-8 h-8 group-hover:scale-105 transition-transform" />
+            <span className="font-display text-xl font-black tracking-tight text-[#12211E] uppercase">
+              Parola
+            </span>
+          </Link>
 
-            <div className="hidden md:flex items-center gap-10 font-semibold text-xs uppercase tracking-wider text-brand-black/75">
-              <a href="#how-it-works" className="hover:text-brand-green transition-all duration-200">Features & Tools</a>
-              <Link href="/sms-studio" className="hover:text-brand-green transition-all duration-200 text-emerald-600 font-bold flex items-center gap-1">
-                <MessageSquare className="w-3.5 h-3.5" /> iPROG SMS Studio
-              </Link>
-            </div>
-
-            <div className="flex items-center gap-6">
-              <button className="flex items-center gap-2 text-brand-black/60 hover:text-brand-black font-semibold text-xs tracking-wider uppercase transition-colors">
-                <Globe className="w-4 h-4 text-brand-green" />
-                <span>EN / TL</span>
-              </button>
-              <Link href="/login" className="hidden sm:inline font-semibold text-xs uppercase tracking-wider text-brand-black hover:text-brand-green transition-all duration-200">Log In</Link>
-              <Link href="/register" className="bg-brand-green text-white px-6 py-3 rounded-full font-semibold text-xs uppercase tracking-widest hover:bg-brand-green/90 transition-all duration-300 shadow-sm hover:shadow-md hover:-translate-y-0.5 active:translate-y-0">
-                Register Now
-              </Link>
-            </div>
-          </div>
-        </header>
-
-        {/* Hero Body */}
-        <div className="flex-1 flex flex-col justify-center items-center py-6 px-6 max-w-5xl mx-auto text-center relative w-full">
-          {/* Top Badge */}
-          <div className="inline-flex items-center gap-2 bg-brand-green/10 border border-brand-green/20 text-brand-green px-5 py-2 rounded-full font-semibold text-xs uppercase tracking-widest mb-6 md:mb-8 shadow-sm">
-            <Zap className="w-3.5 h-3.5 fill-brand-green text-brand-green" />
-            <span>Free via SMS — No mobile data plan needed</span>
-          </div>
-
-          {/* Headline Display */}
-          <h1 className="text-3xl sm:text-5xl md:text-6xl lg:text-7xl font-display font-black leading-[1.05] tracking-tight text-brand-black max-w-4xl">
-            One tool to <span className="underline decoration-brand-green decoration-8 underline-offset-4">manage</span> hotspots and your fleet.
-          </h1>
-
-          {/* Subtitle */}
-          <p className="text-sm md:text-lg text-brand-black/60 max-w-2xl mt-5 md:mt-7 leading-relaxed font-normal">
-            Real-time weather, safety advisories, and fishing hotspots delivered straight to your phone. Know where the fish are before you leave port.
-          </p>
-
-          {/* CTA Buttons */}
-          <div className="mt-8 md:mt-10 w-full sm:w-auto flex justify-center">
-            <button
-              onClick={() => router.push("/register")}
-              className="bg-brand-green hover:bg-brand-green/90 text-white px-10 py-4 rounded-full font-semibold text-sm uppercase tracking-wider transition-all duration-300 shadow-md hover:shadow-lg hover:-translate-y-0.5 w-full sm:w-auto cursor-pointer"
-            >
-              Start for Free
-            </button>
-          </div>
-
-          {/* FLOATING DESIGN CARDS */}
-          {/* Top Left Floating Circle */}
-          <div className="hidden lg:flex absolute top-12 left-[-80px] bg-white border border-gray-150 p-4 rounded-2xl shadow-lg items-center gap-3.5 animate-bounce pointer-events-none" style={{ animationDuration: "4s" }}>
-            <div className="w-11 h-11 rounded-full bg-brand-green/10 border border-brand-green/20 flex items-center justify-center text-2xl shadow-inner">
-              🌊
-            </div>
-            <div className="text-left">
-              <div className="text-[10px] font-semibold text-brand-black/40 uppercase tracking-wider">Sea Condition</div>
-              <div className="text-sm font-black text-brand-green uppercase tracking-wide">Safe to Sail</div>
-            </div>
-          </div>
-
-          {/* Top Right Floating Circle */}
-          <div className="hidden lg:flex absolute top-20 right-[-80px] bg-white border border-gray-150 p-4 rounded-2xl shadow-lg items-center gap-3.5 animate-bounce pointer-events-none" style={{ animationDuration: "5s" }}>
-            <div className="w-11 h-11 rounded-full bg-brand-green/10 border border-brand-green/20 flex items-center justify-center text-2xl shadow-inner">
-              🐟
-            </div>
-            <div className="text-left">
-              <div className="text-[10px] font-semibold text-brand-black/40 uppercase tracking-wider">Surface Hotspot</div>
-              <div className="text-sm font-black text-brand-green uppercase tracking-wide">Tamban Active</div>
-            </div>
-          </div>
-
-          {/* Bottom Left Floating Circle */}
-          <div className="hidden lg:flex absolute bottom-16 left-[-60px] bg-white border border-gray-150 p-4 rounded-2xl shadow-lg items-center gap-3.5 animate-pulse pointer-events-none">
-            <div className="w-11 h-11 rounded-full bg-brand-green/10 border border-brand-green/20 flex items-center justify-center text-2xl shadow-inner">
-              🐠
-            </div>
-            <div className="text-left">
-              <div className="text-[10px] font-semibold text-brand-black/40 uppercase tracking-wider">Demersal Hotspot</div>
-              <div className="text-sm font-black text-brand-green uppercase tracking-wide">Lapu-lapu 88%</div>
-            </div>
-          </div>
-
-          {/* Bottom Right Floating Circle */}
-          <div className="hidden lg:flex absolute bottom-12 right-[-60px] bg-white border border-gray-150 p-4 rounded-2xl shadow-lg items-center gap-3.5 animate-pulse pointer-events-none" style={{ animationDuration: "3.5s" }}>
-            <div className="w-11 h-11 rounded-full bg-brand-green/10 border border-brand-green/20 flex items-center justify-center text-2xl shadow-inner">
-              ⛵
-            </div>
-            <div className="text-left">
-              <div className="text-[10px] font-semibold text-brand-black/40 uppercase tracking-wider">My Port</div>
-              <div className="text-sm font-black text-brand-green uppercase tracking-wide">Batangas Pier 1</div>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      {/* SECTION 2: FEATURES SCREEN */}
-      <section id="how-it-works" className="py-20 px-6 max-w-7xl mx-auto w-full relative z-10">
-        <div className="text-center space-y-3 mb-12">
-          <span className="text-xs font-bold text-brand-green uppercase tracking-widest bg-brand-green/10 px-3 py-1 rounded-full border border-brand-green/20">Features & Tools</span>
-          <h2 className="text-2xl sm:text-4xl font-display font-black text-brand-black uppercase leading-tight max-w-4xl mx-auto">
-            Latest advanced technologies to ensure everything you need
-          </h2>
-          <p className="text-xs sm:text-sm text-brand-black/60 max-w-2xl mx-auto font-normal">
-            Maximize your trip&apos;s productivity and safety with our durable, user-friendly fisherfolk portal.
-          </p>
-        </div>
-
-        {/* Layout Grid */}
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 md:gap-8 max-w-6xl mx-auto w-full">
-
-          {/* Card 1: Dynamic Dashboard */}
-          <div className="bg-white rounded-3xl p-6 md:p-8 border border-gray-150 flex flex-col justify-between shadow-sm relative overflow-hidden group hover:border-brand-green/30 transition-all">
-            <div className="space-y-3">
-              <div className="w-10 h-10 rounded-xl bg-brand-green/10 flex items-center justify-center text-brand-green mb-3 shadow-inner">
-                <Compass className="w-5.5 h-5.5" />
-              </div>
-              <h3 className="text-xl font-display font-extrabold text-brand-black uppercase">Dynamic dashboard</h3>
-              <p className="text-xs md:text-sm text-brand-black/60 leading-relaxed font-normal">
-                Get an instant overview of ocean temperatures, localized safety levels, and exact coordinates of hotspots. High density, no fluff.
-              </p>
-            </div>
-
-            <div className="w-full bg-brand-offwhite rounded-2xl p-4 border border-gray-150 shadow-inner space-y-3.5 mt-4">
-              <div className="flex justify-between items-center border-b border-gray-150 pb-2">
-                <span className="text-[9px] font-semibold text-brand-black/40 uppercase tracking-wider">Mercedes Port</span>
-                <div className="flex gap-1">
-                  <span className="w-2 h-2 rounded-full bg-brand-green"></span>
-                  <span className="w-2 h-2 rounded-full bg-brand-green/30"></span>
-                  <span className="w-2 h-2 rounded-full bg-brand-green/30"></span>
-                </div>
-              </div>
-
-              <div className="space-y-2">
-                <div className="flex justify-between text-[9px] font-semibold text-brand-black/60 uppercase tracking-wide">
-                  <span>Active Hotspots</span>
-                  <span className="font-bold text-brand-black">8 Zones</span>
-                </div>
-                <div className="h-1.5 w-full bg-gray-150 rounded-full overflow-hidden">
-                  <div className="h-full bg-brand-green w-4/5 rounded-full"></div>
-                </div>
-              </div>
-
-              <div className="space-y-2">
-                <div className="flex justify-between text-[9px] font-semibold text-brand-black/60 uppercase tracking-wide">
-                  <span>Wave Safety Limit</span>
-                  <span className="font-bold text-brand-black">1.2m</span>
-                </div>
-                <div className="h-1.5 w-full bg-gray-150 rounded-full overflow-hidden">
-                  <div className="h-full bg-brand-green w-2/5 rounded-full"></div>
-                </div>
-              </div>
-
-              <div className="bg-white p-2.5 rounded-xl border border-gray-150 flex items-center justify-between shadow-sm">
-                <div className="flex items-center gap-2">
-                  <Compass className="w-3.5 h-3.5 text-brand-green" />
-                  <span className="text-[9px] font-bold text-brand-black/80 uppercase">Zone 3</span>
-                </div>
-                <span className="text-[9px] font-bold text-brand-green uppercase tracking-wide">12km Away</span>
-              </div>
-            </div>
-
-            <div className="pt-4">
-              <button onClick={() => router.push("/login")} className="w-full text-center bg-brand-green hover:bg-brand-green/90 text-white px-5 py-2.5 rounded-full font-semibold text-[10px] uppercase tracking-widest transition-all cursor-pointer">
-                Explore Dashboard
-              </button>
-            </div>
-          </div>
-
-          {/* Card 2: Cooperative Fuel Program */}
-          <div className="bg-white rounded-3xl p-6 md:p-8 border border-gray-150 flex flex-col justify-between shadow-sm hover:border-brand-green/30 transition-all">
-            <div className="space-y-3">
-              <div className="flex justify-between items-start gap-2">
-                <div className="w-10 h-10 rounded-xl bg-brand-green/10 flex items-center justify-center text-brand-green shadow-inner">
-                  <Fuel className="w-5.5 h-5.5" />
-                </div>
-                <span className="text-[9px] font-bold text-brand-green uppercase bg-brand-green/10 px-2.5 py-1 rounded-full border border-brand-green/20 whitespace-nowrap shrink-0">
-                  Co-Op Discount
-                </span>
-              </div>
-              <h3 className="text-xl font-display font-extrabold text-brand-black uppercase">Cooperative fuel</h3>
-              <p className="text-xs md:text-sm text-brand-black/60 leading-relaxed font-normal">
-                Request fuel advances and lock in cooperative pricing directly through the portal, saving up to 15% on trip costs.
-              </p>
-            </div>
-
-            <div className="bg-brand-offwhite rounded-2xl border border-gray-150 shadow-inner p-4 mt-4 space-y-3.5">
-              <div className="flex items-center justify-between bg-white border border-gray-150 p-1.5 rounded-full shadow-sm">
-                <button
-                  onClick={() => setLiters(prev => Math.max(10, prev - 10))}
-                  className="w-8 h-8 rounded-full bg-brand-offwhite flex items-center justify-center text-brand-black hover:bg-gray-150 transition-all active:scale-90 text-sm font-bold border border-gray-150 cursor-pointer"
-                >
-                  <Minus className="w-3.5 h-3.5" />
-                </button>
-                <div className="text-center px-2">
-                  <span className="text-xl font-display font-black text-brand-black">{liters}</span>
-                  <span className="text-[10px] font-bold text-brand-black/40 ml-1 uppercase">Liters</span>
-                </div>
-                <button
-                  onClick={() => setLiters(prev => Math.min(200, prev + 10))}
-                  className="w-8 h-8 rounded-full bg-brand-offwhite flex items-center justify-center text-brand-black hover:bg-gray-150 transition-all active:scale-90 text-sm font-bold border border-gray-150 cursor-pointer"
-                >
-                  <Plus className="w-3.5 h-3.5" />
-                </button>
-              </div>
-
-              <div className="space-y-1.5 text-[10px]">
-                <div className="flex justify-between font-medium text-brand-black/60">
-                  <span>Standard Price</span>
-                  <span>₱{(liters * 62).toLocaleString()}</span>
-                </div>
-                <div className="flex justify-between font-bold text-brand-green">
-                  <span>Co-op Discounted</span>
-                  <span>₱{(liters * 55).toLocaleString()}</span>
-                </div>
-                <div className="border-t border-gray-150 pt-1.5 flex justify-between items-center">
-                  <span className="font-bold text-brand-black uppercase">Est. Cost</span>
-                  <span className="text-base font-display font-black text-brand-green">₱{(liters * 55).toLocaleString()}</span>
-                </div>
-              </div>
-
-              <button
-                onClick={() => router.push("/login")}
-                className="w-full bg-brand-green text-white font-bold text-[10px] uppercase tracking-widest py-2.5 rounded-full hover:bg-brand-green/90 transition-all duration-200 shadow-sm text-center cursor-pointer"
-              >
-                Request Advance
-              </button>
-            </div>
-          </div>
-
-          {/* Card 3: Smart Notifications */}
-          <div className="bg-white rounded-3xl p-6 md:p-8 border border-gray-150 flex flex-col justify-between shadow-sm hover:border-brand-green/30 transition-all">
-            <div className="space-y-3">
-              <div className="w-10 h-10 rounded-xl bg-brand-green/10 flex items-center justify-center text-brand-green mb-3 shadow-inner">
-                <Bell className="w-5.5 h-5.5" />
-              </div>
-              <h3 className="text-xl font-display font-extrabold text-brand-black uppercase">Smart notifications</h3>
-              <p className="text-xs md:text-sm text-brand-black/60 leading-relaxed font-normal">
-                Receive critical ocean alerts, safety signals, and coordinates directly to your SMS application without opening any extra web pages.
-              </p>
-            </div>
-
-            <div className="bg-brand-offwhite rounded-2xl border border-gray-150 shadow-inner p-4 mt-4 space-y-2.5">
-              <div className="flex justify-between items-center text-[9px] font-semibold text-brand-black/40 uppercase tracking-widest pb-1 border-b border-gray-150">
-                <span>SMS Channel</span>
-                <span className="font-bold text-brand-green">Active</span>
-              </div>
-
-              <div className="bg-white p-2.5 rounded-xl border border-gray-150 shadow-sm flex items-start gap-2.5">
-                <div className="p-1 rounded-md bg-brand-red/10 border border-brand-red/20 text-brand-red shrink-0">
-                  <ShieldAlert className="w-3.5 h-3.5" />
-                </div>
-                <div>
-                  <div className="text-[9px] font-bold text-brand-black uppercase">Storm Signal 1</div>
-                  <div className="text-[9px] text-brand-black/50 font-normal mt-0.5">Do not leave port. Heavy waves expected.</div>
-                </div>
-              </div>
-
-              <div className="bg-white p-2.5 rounded-xl border border-gray-150 shadow-sm flex items-start gap-2.5">
-                <div className="p-1 rounded-md bg-brand-green/10 border border-brand-green/20 text-brand-green shrink-0">
-                  <Zap className="w-3.5 h-3.5" />
-                </div>
-                <div>
-                  <div className="text-[9px] font-bold text-brand-black uppercase">Hotspot Shifting</div>
-                  <div className="text-[9px] text-brand-black/50 font-normal mt-0.5">Schools moved 5km SE of Zone 2.</div>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          {/* Card 4: How It Works Steps */}
-          <div className="lg:col-span-3 bg-white rounded-3xl p-8 md:p-10 border border-gray-150 flex flex-col lg:flex-row gap-8 items-center justify-between shadow-sm hover:border-brand-green/30 transition-all">
-            <div className="space-y-3 max-w-sm">
-              <div className="w-12 h-12 rounded-2xl bg-brand-green/10 flex items-center justify-center text-brand-green mb-3 shadow-inner">
-                <Anchor className="w-6 h-6" />
-              </div>
-              <h3 className="text-2xl font-display font-extrabold text-brand-black uppercase">How It Works</h3>
-              <p className="text-sm text-brand-black/60 leading-relaxed font-normal">
-                We designed Parola to be incredibly accessible. Connect in just three easy steps and keep sailing securely.
-              </p>
-            </div>
-
-            <div className="flex-1 w-full grid grid-cols-1 md:grid-cols-3 gap-4">
-              {[
-                { num: "1", title: "Register once", desc: "Sign up with just your mobile number." },
-                { num: "2", title: "Get SMS advisories", desc: "Receive daily updates on weather and fishing hotspots." },
-                { num: "3", title: "Fish smarter", desc: "Save fuel and catch more with accurate data." }
-              ].map((step) => (
-                <div key={step.num} className="bg-brand-offwhite p-5 rounded-2xl border border-gray-150 flex flex-col gap-4 hover:bg-white transition-all shadow-sm">
-                  <div className="w-9 h-9 rounded-full bg-brand-green text-white font-display font-black text-sm flex items-center justify-center shrink-0 shadow-sm">
-                    {step.num}
-                  </div>
-                  <div>
-                    <h4 className="text-xs font-bold text-brand-black uppercase tracking-wide leading-tight">{step.title}</h4>
-                    <p className="text-xs text-brand-black/60 font-normal mt-1.5 leading-relaxed">{step.desc}</p>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
-
-        </div>
-      </section>
-
-      {/* SECTION 3: DARK INTEGRATIONS SCREEN */}
-      <section className="py-20 bg-brand-black text-white px-6 relative overflow-hidden">
-        <div className="absolute inset-0 bg-[linear-gradient(to_right,rgba(255,255,255,0.02)_1px,transparent_1px),linear-gradient(to_bottom,rgba(255,255,255,0.02)_1px,transparent_1px)] bg-[size:3rem_3rem] pointer-events-none"></div>
-
-        <div className="max-w-4xl mx-auto text-center relative z-10 space-y-6 md:space-y-8 w-full">
-          <div>
-            <span className="text-[10px] font-semibold text-brand-green uppercase tracking-widest bg-brand-green/10 px-4 py-1.5 rounded-full border border-brand-green/20">Always Connected</span>
-          </div>
-          <h2 className="text-2xl sm:text-4xl md:text-5xl font-display font-black uppercase leading-tight max-w-2xl mx-auto">Don&apos;t replace. Integrate.</h2>
-          <p className="text-xs sm:text-sm md:text-base text-gray-400 max-w-xl mx-auto font-normal leading-relaxed">
-            We understand the hassle of replacing the long used tools in your process. That&apos;s why we integrate SMS, GPS, and standard cellular networks seamlessly.
-          </p>
-
-          <div className="pt-2">
-            <Link href="/register" className="inline-flex items-center gap-2.5 bg-brand-green hover:bg-brand-green/90 text-white font-bold text-xs uppercase tracking-widest px-8 py-3.5 rounded-full transition-all duration-200 shadow-md">
-              <span>Start Now</span>
-              <ArrowRight className="w-4 h-4" />
+          <nav className="hidden md:flex items-center gap-8 text-xs font-bold uppercase tracking-wider text-[#12211E]/75">
+            <a href="#how-it-works" className="hover:text-[#00B37E] transition-colors cursor-pointer">
+              Features
+            </a>
+            <Link href="/guide" className="hover:text-[#00B37E] transition-colors">
+              System Guide
             </Link>
-          </div>
+            <Link href="/pricing" className="hover:text-[#00B37E] transition-colors">
+              Pricing
+            </Link>
+            <Link href="/about" className="hover:text-[#00B37E] transition-colors">
+              About
+            </Link>
+          </nav>
 
-          {/* Icons Grid */}
-          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-4 pt-10 md:pt-14 max-w-4xl mx-auto">
-            {[
-              { name: "SMS Feed", desc: "Globe / Smart", icon: MessageSquare },
-              { name: "GPS Tracking", desc: "Satellite Map", icon: Compass },
-              { name: "Advisories", desc: "Real-time feed", icon: MapIcon },
-              { name: "Co-op Program", desc: "Fuel Support", icon: Anchor },
-              { name: "Safety Alerts", desc: "Instant updates", icon: ShieldAlert },
-              { name: "Port Status", desc: "Pier updates", icon: Users }
-            ].map((item, i) => (
-              <div key={i} className="bg-white/5 border border-white/10 p-4 rounded-2xl flex flex-col items-center justify-between text-center group hover:bg-white/10 hover:border-brand-green/30 transition-all duration-200">
-                <div className="p-2.5 rounded-xl bg-white/10 text-brand-green group-hover:scale-105 transition-transform duration-200 shadow-sm">
-                  <item.icon className="w-5 h-5" />
-                </div>
-                <div className="space-y-0.5 mt-3">
-                  <span className="block text-[11px] font-bold text-white/95 uppercase tracking-wide">{item.name}</span>
-                  <span className="block text-[9px] text-white/45 font-normal">{item.desc}</span>
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
-      </section>
-
-      {/* SECTION 4: BOTTOM CTA & FOOTER */}
-      <section className="bg-brand-black text-white pt-24 pb-12 px-6 relative overflow-hidden flex flex-col gap-16 border-t border-white/5">
-        <div className="absolute inset-0 bg-[linear-gradient(to_right,rgba(255,255,255,0.02)_1px,transparent_1px),linear-gradient(to_bottom,rgba(255,255,255,0.02)_1px,transparent_1px)] bg-[size:3rem_3rem] pointer-events-none"></div>
-
-        {/* Centered CTA */}
-        <div className="max-w-3xl mx-auto text-center relative z-10 space-y-8">
-          <h2 className="text-2xl sm:text-4xl md:text-5xl font-display font-black uppercase leading-tight">Discover the full scale of Parola capabilities</h2>
-          <div className="flex flex-col sm:flex-row gap-4 justify-center pt-2">
+          <div className="flex items-center gap-4">
+            {/* Functional Language Toggle Button */}
             <button
-              onClick={() => router.push("/register")}
-              className="bg-brand-green hover:bg-brand-green/90 text-white px-8 py-4 rounded-full font-semibold text-xs uppercase tracking-widest transition-all duration-300 shadow-md cursor-pointer"
+              onClick={toggleLanguage}
+              title={`Switch language to ${language === "en" ? "Tagalog" : "English"}`}
+              className="hidden sm:flex items-center gap-1.5 text-xs font-bold uppercase tracking-wider px-3 py-1.5 rounded-full border border-[#DAE5E0] bg-white hover:bg-[#EAF1ED] transition-all cursor-pointer shadow-2xs text-[#12211E]/75"
             >
-              Register Now
+              <Globe className="w-3.5 h-3.5 text-[#00B37E]" />
+              <span>{language === "en" ? "EN / TL" : "TL / EN"}</span>
             </button>
-            <button
-              onClick={() => router.push("/login")}
-              className="bg-white text-brand-black hover:bg-gray-100 px-8 py-4 rounded-full font-semibold text-xs uppercase tracking-widest transition-all duration-300 shadow-sm cursor-pointer"
+
+            <Link
+              href="/login"
+              className="text-xs font-bold uppercase tracking-wider text-[#12211E]/75 hover:text-[#12211E] transition-colors"
             >
               Log In
-            </button>
+            </Link>
+            <Link
+              href="/register"
+              className="bg-[#00B37E] hover:bg-[#00B37E]/90 text-white px-5 py-2.5 rounded-full font-bold text-xs uppercase tracking-wider transition-all shadow-sm hover:shadow active:scale-[0.98]"
+            >
+              Register Vessel
+            </Link>
           </div>
         </div>
+      </header>
 
-        {/* Footer */}
-        <footer className="border-t border-white/10 pt-8 max-w-7xl mx-auto w-full flex flex-col md:flex-row items-center justify-between gap-6 relative z-10 shrink-0">
+      {/* SECTION 1: ASYMMETRIC SPLIT HERO */}
+      <motion.section
+        initial={reduceMotion ? false : { opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.5, ease: [0.16, 1, 0.3, 1] }}
+        className="pt-8 md:pt-14 pb-16 px-6 max-w-7xl mx-auto w-full border-b border-[#DAE5E0]"
+      >
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-10 lg:gap-12 items-center">
+          {/* Left Column: Focused Maritime Value Prop */}
+          <div className="lg:col-span-6 space-y-6">
+            {/* Single Eyebrow with Beacon Amber accent */}
+            <div className="inline-flex items-center gap-2 px-3.5 py-1 rounded-full bg-[#C57E2C]/10 border border-[#C57E2C]/25 text-[#9A5B18] text-[11px] font-bold uppercase tracking-wider shadow-2xs">
+              <Radio className="w-3 h-3 text-[#C57E2C]" />
+              <span>2G SMS & Satellite Telemetry</span>
+            </div>
+
+            {/* Headline: strictly 2 lines on desktop */}
+            <h1 className="text-3xl sm:text-5xl lg:text-6xl font-display font-black tracking-tight text-[#12211E] leading-[1.05]">
+              Philippine maritime safety and fish hotspots via SMS.
+            </h1>
+
+            {/* Subtext: strictly <= 20 words and <= 4 lines */}
+            <p className="text-base md:text-lg text-[#12211E]/75 leading-relaxed font-normal max-w-xl">
+              Real-time weather advisories, oceanographic hotspots, and automated port safety holds delivered straight to standard mobile phones.
+            </p>
+
+            {/* CTAs: 1 primary + 1 secondary */}
+            <div className="flex flex-col sm:flex-row gap-3 pt-2">
+              <Link
+                href="/register"
+                className="bg-[#00B37E] hover:bg-[#00B37E]/90 text-white px-8 py-4 rounded-full font-bold text-xs uppercase tracking-wider transition-all shadow-md hover:shadow-lg active:scale-[0.98] text-center"
+              >
+                Register Your Vessel
+              </Link>
+              <Link
+                href="/guide"
+                className="bg-white hover:bg-[#EAF1ED] text-[#12211E] border border-[#DAE5E0] px-8 py-4 rounded-full font-bold text-xs uppercase tracking-wider transition-all text-center flex items-center justify-center gap-2 shadow-2xs"
+              >
+                <span>Explore System Guide</span>
+                <ArrowRight className="w-3.5 h-3.5 text-[#00B37E]" />
+              </Link>
+            </div>
+          </div>
+
+          {/* Right Column: Parola Platform Laptop Mockup */}
+          <div className="lg:col-span-6 flex items-center justify-center">
+            <motion.div
+              initial={reduceMotion ? false : { opacity: 0, y: 16 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.5, ease: [0.16, 1, 0.3, 1] }}
+              className="relative w-full max-w-xl lg:max-w-2xl group"
+            >
+              {/* Soft ambient back-glow behind laptop mockup */}
+              <div className="absolute inset-0 bg-[#00B37E]/12 blur-3xl rounded-full -z-10 transform scale-90 group-hover:scale-100 transition-transform duration-700" />
+              <div className="absolute -bottom-4 left-1/2 -translate-x-1/2 w-4/5 h-8 bg-[#12211E]/10 blur-xl rounded-full -z-10" />
+
+              <Image
+                src="/images/hero-image.png"
+                alt="Parola Platform Maritime Dashboard Laptop Mockup"
+                width={1200}
+                height={800}
+                priority
+                className="w-full h-auto object-contain drop-shadow-[0_20px_40px_rgba(18,33,30,0.14)] transition-transform duration-500 group-hover:scale-[1.015]"
+              />
+            </motion.div>
+          </div>
+        </div>
+      </motion.section>
+
+      {/* SECTION 2: SMS-FIRST MARITIME RESILIENCE BENTO (With simple scroll reveal) */}
+      <motion.section
+        id="how-it-works"
+        initial={reduceMotion ? false : { opacity: 0, y: 28 }}
+        whileInView={{ opacity: 1, y: 0 }}
+        viewport={{ once: true, margin: "-60px" }}
+        transition={{ duration: 0.55, ease: [0.16, 1, 0.3, 1] }}
+        className="py-20 px-6 max-w-7xl mx-auto w-full border-b border-[#DAE5E0]"
+      >
+        {/* Section Header */}
+        <div className="max-w-3xl mb-12">
+          <h2 className="text-2xl md:text-4xl font-display font-black text-[#12211E] tracking-tight leading-tight">
+            Engineered for real-world coastal conditions
+          </h2>
+          <p className="text-sm md:text-base text-[#12211E]/75 leading-relaxed font-normal mt-3 max-w-2xl">
+            Critical marine safety telemetry, catch feedback loops, and satellite hotspot models delivered without smartphone data dependencies.
+          </p>
+        </div>
+
+        {/* Bento Grid: 3 diverse cells with elevated contrast and interactive controls */}
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
+          {/* Cell 1: 2G SMS Protocol Engine */}
+          <div className="lg:col-span-7 bg-white border border-[#DAE5E0] rounded-3xl p-6 md:p-8 flex flex-col justify-between shadow-[0_2px_16px_rgba(18,33,30,0.04)]">
+            <div className="space-y-3">
+              <div className="w-10 h-10 rounded-xl bg-[#00B37E]/10 flex items-center justify-center text-[#00B37E]">
+                <Radio className="w-5 h-5" />
+              </div>
+              <h3 className="text-xl font-display font-extrabold text-[#12211E]">
+                Zero-data 2G GSM cellular resilience
+              </h3>
+              <p className="text-xs md:text-sm text-[#12211E]/75 leading-relaxed font-normal max-w-lg">
+                Works on basic keypad phones and remote coastal towers where mobile data drops. Fishermen receive scheduled morning dispatches and can text on-demand commands anytime.
+              </p>
+            </div>
+
+            {/* Fully Functional Interactive 2-Way Query Console */}
+            <div className="mt-6 bg-[#F2F6F4] border border-[#DAE5E0] rounded-2xl p-4 space-y-3">
+              <div className="flex items-center justify-between text-[10px] text-[#12211E]/55 font-bold uppercase pb-1 border-b border-[#DAE5E0]">
+                <span>Interactive 2-Way Command Simulator</span>
+                <span className="text-[#00B37E] font-bold">Simulate Command</span>
+              </div>
+
+              {/* Functional Command Switcher Buttons */}
+              <div className="flex gap-2">
+                {(["ADVISORY", "HOTSPOT", "STATUS"] as const).map((cmd) => (
+                  <button
+                    key={cmd}
+                    onClick={() => setSelectedCommand(cmd)}
+                    className={`px-3 py-1.5 rounded-full text-xs font-mono font-bold transition-all cursor-pointer ${
+                      selectedCommand === cmd
+                        ? "bg-[#00B37E] text-white shadow-xs"
+                        : "bg-white text-[#12211E]/70 hover:bg-[#E2EBE6] border border-[#DAE5E0]"
+                    }`}
+                  >
+                    {cmd}
+                  </button>
+                ))}
+              </div>
+
+              {/* Simulated Live Response Display */}
+              <div className="text-xs font-mono space-y-1.5 bg-[#12211E] text-white p-3 rounded-xl shadow-inner">
+                <div className="text-gray-400">&gt; YOU: {smsResponses[selectedCommand].query}</div>
+                <div className="text-[#00B37E] leading-relaxed">
+                  &lt; {smsResponses[selectedCommand].response}
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Cell 2: Automated Municipal Safety Hold */}
+          <div className="lg:col-span-5 bg-white border border-[#DAE5E0] rounded-3xl p-6 md:p-8 flex flex-col justify-between shadow-[0_2px_16px_rgba(18,33,30,0.04)]">
+            <div className="space-y-3">
+              <div className="w-10 h-10 rounded-xl bg-rose-500/10 flex items-center justify-center text-rose-600">
+                <ShieldAlert className="w-5 h-5" />
+              </div>
+              <h3 className="text-xl font-display font-extrabold text-[#12211E]">
+                Automated municipal safety hold
+              </h3>
+              <p className="text-xs md:text-sm text-[#12211E]/75 leading-relaxed font-normal">
+                Whenever wave heights exceed 1.5 meters or PAGASA issues a gale advisory, Parola immediately triggers a departure hold notification to protect small craft.
+              </p>
+            </div>
+
+            {/* Interactive Threshold Gate Simulator */}
+            <div className="mt-6 bg-[#F2F6F4] border border-[#DAE5E0] rounded-2xl p-4 space-y-3">
+              <div className="flex items-center justify-between">
+                <span className="text-xs font-bold text-[#12211E]">Threshold Gate Status</span>
+                <button
+                  onClick={() => setSimulateGale(!simulateGale)}
+                  className={`text-[10px] font-bold px-2.5 py-1 rounded-full border transition-all cursor-pointer ${
+                    simulateGale
+                      ? "bg-rose-100 border-rose-300 text-rose-700"
+                      : "bg-[#00B37E]/10 border-[#00B37E]/25 text-[#00B37E]"
+                  }`}
+                >
+                  {simulateGale ? "Hs > 1.5m Alert" : "Hs 0.8m Normal"}
+                </button>
+              </div>
+
+              <div
+                className={`p-2.5 rounded-xl text-xs transition-colors ${
+                  simulateGale
+                    ? "bg-rose-50 border border-rose-200 text-rose-800"
+                    : "bg-white border border-[#DAE5E0] text-[#12211E]/75"
+                }`}
+              >
+                {simulateGale ? (
+                  <span className="font-bold flex items-center gap-1.5 text-rose-700">
+                    <ShieldAlert className="w-4 h-4 shrink-0" />
+                    Departure Hold Enforced. Gale warnings active.
+                  </span>
+                ) : (
+                  <span>Clear harbor clearance. Safe to sail across municipal grounds.</span>
+                )}
+              </div>
+
+              <Link
+                href="/alerts"
+                className="inline-flex items-center gap-1 text-[11px] font-bold text-[#00B37E] hover:underline"
+              >
+                <span>Inspect full safety hold protocol</span>
+                <ArrowRight className="w-3 h-3" />
+              </Link>
+            </div>
+          </div>
+
+          {/* Cell 3: Satellite SST & Pelagic Hotspots (Full Width with soft ocean gradient) */}
+          <div className="lg:col-span-12 bg-gradient-to-r from-[#E5F1EB] to-[#F0F6F3] border border-[#DAE5E0] rounded-3xl p-6 md:p-8 flex flex-col md:flex-row items-center justify-between gap-6 shadow-[0_2px_16px_rgba(18,33,30,0.03)]">
+            <div className="space-y-2.5 max-w-xl">
+              <div className="w-10 h-10 rounded-xl bg-[#00B37E]/10 flex items-center justify-center text-[#00B37E]">
+                <Fish className="w-5 h-5" />
+              </div>
+              <h3 className="text-xl font-display font-extrabold text-[#12211E]">
+                Satellite sea surface temperature and hotspot models
+              </h3>
+              <p className="text-xs md:text-sm text-[#12211E]/75 leading-relaxed font-normal">
+                Identifies thermal upwelling fronts and chlorophyll zones where pelagic species like Tamban, Galunggong, and Tuna feed, shortening time spent searching offshore.
+              </p>
+            </div>
+
+            <div className="flex flex-col sm:flex-row gap-3 w-full md:w-auto shrink-0">
+              <Link
+                href="/guide"
+                className="bg-white hover:bg-[#EAF1ED] text-[#12211E] border border-[#DAE5E0] px-6 py-3 rounded-full font-bold text-xs uppercase tracking-wider transition-all text-center shadow-2xs"
+              >
+                View System Guide
+              </Link>
+              <Link
+                href="/pricing"
+                className="bg-[#00B37E] hover:bg-[#00B37E]/90 text-white px-6 py-3 rounded-full font-bold text-xs uppercase tracking-wider transition-all text-center shadow-sm"
+              >
+                View Tonnage Pricing
+              </Link>
+            </div>
+          </div>
+        </div>
+      </motion.section>
+
+      {/* SECTION 3: FOUR CORE PILLARS WALKTHROUGH PREVIEW (Scroll reveal on cards) */}
+      <motion.section
+        initial={reduceMotion ? false : { opacity: 0, y: 28 }}
+        whileInView={{ opacity: 1, y: 0 }}
+        viewport={{ once: true, margin: "-60px" }}
+        transition={{ duration: 0.55, ease: [0.16, 1, 0.3, 1] }}
+        className="py-20 px-6 max-w-7xl mx-auto w-full border-b border-[#DAE5E0]"
+      >
+        <div className="max-w-3xl mb-12">
+          <h2 className="text-2xl md:text-4xl font-display font-black text-[#12211E] tracking-tight leading-tight">
+            Connecting the complete coastal fisheries workflow
+          </h2>
+          <p className="text-sm md:text-base text-[#12211E]/75 leading-relaxed font-normal mt-3 max-w-2xl">
+            From vessel registration at the municipal dock to daily SMS marine bulletins and catch reports, Parola connects the entire fisheries workflow.
+          </p>
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-5">
+          {[
+            {
+              step: "Step 01",
+              title: "SMS Advisories",
+              desc: "Daily 04:30 PHT marine weather, wave heights, and hotspot telemetry sent directly over 2G cellular SMS.",
+              icon: MessageSquare,
+              href: "/guide"
+            },
+            {
+              step: "Step 02",
+              title: "Port Registration",
+              desc: "Register vessel once with home pier to calibrate local coastal bulletins and emergency search contacts.",
+              icon: Anchor,
+              href: "/onboarding"
+            },
+            {
+              step: "Step 03",
+              title: "Catch Feedback",
+              desc: "Simple SMS harvest reports calibrate shared ocean predictive models while safeguarding secret fishing marks.",
+              icon: Fish,
+              href: "/dashboard"
+            },
+            {
+              step: "Step 04",
+              title: "Safety Holds",
+              desc: "Automated departure holds trigger during gale warnings or extreme wave swells to protect lives at sea.",
+              icon: ShieldAlert,
+              href: "/alerts"
+            }
+          ].map((item, idx) => (
+            <motion.div
+              key={idx}
+              initial={reduceMotion ? false : { opacity: 0, y: 20 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              viewport={{ once: true, margin: "-40px" }}
+              transition={{ duration: 0.45, delay: idx * 0.08, ease: [0.16, 1, 0.3, 1] }}
+            >
+              <Link
+                href={item.href}
+                className="bg-white p-6 rounded-2xl border border-[#DAE5E0] flex flex-col justify-between hover:border-[#00B37E]/40 hover:-translate-y-1 hover:shadow-md transition-all shadow-[0_2px_12px_rgba(18,33,30,0.04)] h-full block group"
+              >
+                <div className="space-y-3">
+                  <div className="flex items-center justify-between">
+                    <div className="w-9 h-9 rounded-xl bg-[#F2F6F4] border border-[#DAE5E0] text-[#00B37E] flex items-center justify-center shadow-2xs group-hover:bg-[#00B37E] group-hover:text-white transition-colors">
+                      <item.icon className="w-4 h-4" />
+                    </div>
+                    <span className="text-[10px] font-bold text-[#9A5B18] bg-[#C57E2C]/10 border border-[#C57E2C]/20 px-2 py-0.5 rounded-full">
+                      {item.step}
+                    </span>
+                  </div>
+                  <h4 className="font-display font-bold text-base text-[#12211E] group-hover:text-[#00B37E] transition-colors flex items-center gap-1.5">
+                    <span>{item.title}</span>
+                    <ArrowRight className="w-3.5 h-3.5 opacity-0 group-hover:opacity-100 transition-opacity" />
+                  </h4>
+                  <p className="text-xs text-[#12211E]/70 leading-relaxed font-normal">
+                    {item.desc}
+                  </p>
+                </div>
+              </Link>
+            </motion.div>
+          ))}
+        </div>
+
+        <div className="mt-8 text-center">
+          <Link
+            href="/guide"
+            className="inline-flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-[#00B37E] hover:underline"
+          >
+            <span>Read the interactive step-by-step guide</span>
+            <ArrowRight className="w-3.5 h-3.5" />
+          </Link>
+        </div>
+      </motion.section>
+
+      {/* SECTION 4: VESSEL TONNAGE PRICING PREVIEW (Scroll reveal on cards) */}
+      <motion.section
+        initial={reduceMotion ? false : { opacity: 0, y: 28 }}
+        whileInView={{ opacity: 1, y: 0 }}
+        viewport={{ once: true, margin: "-60px" }}
+        transition={{ duration: 0.55, ease: [0.16, 1, 0.3, 1] }}
+        className="py-20 px-6 max-w-7xl mx-auto w-full border-b border-[#DAE5E0]"
+      >
+        <div className="max-w-3xl mb-12">
+          <h2 className="text-2xl md:text-4xl font-display font-black text-[#12211E] tracking-tight leading-tight">
+            Transparent tiering by vessel gross tonnage
+          </h2>
+          <p className="text-sm md:text-base text-[#12211E]/75 leading-relaxed font-normal mt-3 max-w-2xl">
+            Subscription plans scaled to Philippine vessel gross tonnage classes, ensuring affordable marine intelligence for small bancas and commercial fleets.
+          </p>
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+          {/* Tier 1: Small-Scale */}
+          <div className="bg-white border border-[#DAE5E0] rounded-3xl p-6 md:p-8 flex flex-col justify-between shadow-[0_2px_12px_rgba(18,33,30,0.04)]">
+            <div className="space-y-4">
+              <div className="flex items-center justify-between">
+                <span className="text-[10px] font-bold text-[#9A5B18] uppercase tracking-wider bg-[#C57E2C]/10 px-3 py-1 rounded-full border border-[#C57E2C]/20">
+                  3.1 to 20.0 GT
+                </span>
+                <Ship className="w-4 h-4 text-[#00B37E]" />
+              </div>
+              <h3 className="font-display font-black text-xl text-[#12211E]">
+                Small-Scale
+              </h3>
+              <div className="flex items-baseline gap-1">
+                <span className="text-3xl font-display font-black text-[#12211E]">₱799</span>
+                <span className="text-xs text-[#12211E]/55 font-medium">per vessel</span>
+              </div>
+              <p className="text-xs text-[#12211E]/75 leading-relaxed">
+                Optimized for municipal motorized bancas, handline fishers, and nearshore coastal crews.
+              </p>
+              <ul className="space-y-2 text-xs text-[#12211E]/80 pt-2 border-t border-[#DAE5E0]">
+                <li className="flex items-center gap-2">
+                  <CheckCircle2 className="w-3.5 h-3.5 text-[#00B37E] shrink-0" />
+                  <span>Daily 04:30 PHT morning SMS advisories</span>
+                </li>
+                <li className="flex items-center gap-2">
+                  <CheckCircle2 className="w-3.5 h-3.5 text-[#00B37E] shrink-0" />
+                  <span>Municipal port registration pairing</span>
+                </li>
+                <li className="flex items-center gap-2">
+                  <CheckCircle2 className="w-3.5 h-3.5 text-[#00B37E] shrink-0" />
+                  <span>PAGASA gale warnings and safety holds</span>
+                </li>
+              </ul>
+            </div>
+            <div className="pt-6">
+              <Link
+                href="/pricing"
+                className="w-full block bg-[#F2F6F4] hover:bg-[#E2EBE6] text-[#12211E] border border-[#DAE5E0] py-3 rounded-full font-bold text-xs uppercase tracking-wider text-center transition-all"
+              >
+                View Tier Details
+              </Link>
+            </div>
+          </div>
+
+          {/* Tier 2: Medium-Scale (Featured Elevated Card) */}
+          <div className="bg-white border-2 border-[#00B37E] rounded-3xl p-6 md:p-8 flex flex-col justify-between shadow-[0_8px_30px_rgba(0,179,126,0.12)] relative">
+            <div className="space-y-4">
+              <div className="flex items-center justify-between">
+                <span className="text-[10px] font-bold text-white uppercase tracking-wider bg-[#00B37E] px-3 py-1 rounded-full">
+                  20.1 to 150.0 GT
+                </span>
+                <span className="text-[10px] font-bold text-[#9A5B18] bg-[#C57E2C]/10 border border-[#C57E2C]/25 px-2.5 py-0.5 rounded-full uppercase tracking-wider">
+                  Recommended
+                </span>
+              </div>
+              <h3 className="font-display font-black text-xl text-[#12211E]">
+                Medium-Scale
+              </h3>
+              <div className="flex items-baseline gap-1">
+                <span className="text-3xl font-display font-black text-[#12211E]">₱2,499</span>
+                <span className="text-xs text-[#12211E]/55 font-medium">per vessel</span>
+              </div>
+              <p className="text-xs text-[#12211E]/75 leading-relaxed">
+                Tailored for commercial ring-netters, purse seiners, and multi-day island fishing operations.
+              </p>
+              <ul className="space-y-2 text-xs text-[#12211E]/80 pt-2 border-t border-[#DAE5E0]">
+                <li className="flex items-center gap-2">
+                  <CheckCircle2 className="w-3.5 h-3.5 text-[#00B37E] shrink-0" />
+                  <span>Everything in Small-Scale tier</span>
+                </li>
+                <li className="flex items-center gap-2">
+                  <CheckCircle2 className="w-3.5 h-3.5 text-[#00B37E] shrink-0" />
+                  <span>Multi-zone SST thermal front mapping</span>
+                </li>
+                <li className="flex items-center gap-2">
+                  <CheckCircle2 className="w-3.5 h-3.5 text-[#00B37E] shrink-0" />
+                  <span>Catch feedback telemetry loop access</span>
+                </li>
+                <li className="flex items-center gap-2">
+                  <CheckCircle2 className="w-3.5 h-3.5 text-[#00B37E] shrink-0" />
+                  <span>Priority harbor muster dispatch</span>
+                </li>
+              </ul>
+            </div>
+            <div className="pt-6">
+              <Link
+                href="/pricing"
+                className="w-full block bg-[#00B37E] hover:bg-[#00B37E]/90 text-white py-3 rounded-full font-bold text-xs uppercase tracking-wider text-center transition-all shadow-sm active:scale-[0.98]"
+              >
+                Select Medium-Scale
+              </Link>
+            </div>
+          </div>
+
+          {/* Tier 3: Large-Scale */}
+          <div className="bg-white border border-[#DAE5E0] rounded-3xl p-6 md:p-8 flex flex-col justify-between shadow-[0_2px_12px_rgba(18,33,30,0.04)]">
+            <div className="space-y-4">
+              <div className="flex items-center justify-between">
+                <span className="text-[10px] font-bold text-[#9A5B18] uppercase tracking-wider bg-[#C57E2C]/10 px-3 py-1 rounded-full border border-[#C57E2C]/20">
+                  &gt;150.0 GT
+                </span>
+                <Ship className="w-4 h-4 text-[#00B37E]" />
+              </div>
+              <h3 className="font-display font-black text-xl text-[#12211E]">
+                Large-Scale
+              </h3>
+              <div className="flex items-baseline gap-1">
+                <span className="text-3xl font-display font-black text-[#12211E]">₱6,199</span>
+                <span className="text-xs text-[#12211E]/55 font-medium">per vessel</span>
+              </div>
+              <p className="text-xs text-[#12211E]/75 leading-relaxed">
+                Designed for distant-water longliners, commercial motherships, and multi-vessel cooperatives.
+              </p>
+              <ul className="space-y-2 text-xs text-[#12211E]/80 pt-2 border-t border-[#DAE5E0]">
+                <li className="flex items-center gap-2">
+                  <CheckCircle2 className="w-3.5 h-3.5 text-[#00B37E] shrink-0" />
+                  <span>Everything in Medium-Scale tier</span>
+                </li>
+                <li className="flex items-center gap-2">
+                  <CheckCircle2 className="w-3.5 h-3.5 text-[#00B37E] shrink-0" />
+                  <span>Full Philippine EEZ satellite telemetry</span>
+                </li>
+                <li className="flex items-center gap-2">
+                  <CheckCircle2 className="w-3.5 h-3.5 text-[#00B37E] shrink-0" />
+                  <span>Cooperative API and port marshal feeds</span>
+                </li>
+              </ul>
+            </div>
+            <div className="pt-6">
+              <Link
+                href="/pricing"
+                className="w-full block bg-[#F2F6F4] hover:bg-[#E2EBE6] text-[#12211E] border border-[#DAE5E0] py-3 rounded-full font-bold text-xs uppercase tracking-wider text-center transition-all"
+              >
+                View Tier Details
+              </Link>
+            </div>
+          </div>
+        </div>
+      </motion.section>
+
+      {/* SECTION 5: INSTITUTIONAL MISSION CALLOUT (With scroll reveal) */}
+      <motion.section
+        initial={reduceMotion ? false : { opacity: 0, y: 28 }}
+        whileInView={{ opacity: 1, y: 0 }}
+        viewport={{ once: true, margin: "-60px" }}
+        transition={{ duration: 0.55, ease: [0.16, 1, 0.3, 1] }}
+        className="py-20 px-6 max-w-7xl mx-auto w-full"
+      >
+        <div className="bg-gradient-to-br from-[#E4F2EC] via-[#EBF5F0] to-[#F2F6F4] border border-[#DAE5E0] rounded-3xl p-8 md:p-14 text-[#12211E] relative overflow-hidden shadow-sm">
+          <div className="max-w-3xl space-y-5 relative z-10">
+            <h2 className="text-2xl md:text-4xl font-display font-black tracking-tight leading-tight">
+              Democratizing ocean science for municipal fisherfolk
+            </h2>
+            <p className="text-xs md:text-sm text-[#12211E]/75 font-normal leading-relaxed max-w-xl">
+              Parola is purpose-built to reduce preventable maritime fatalities, cut search times at sea, and support sustainable fisheries management aligned with BFAR and municipal port workflows.
+            </p>
+            <div className="flex flex-col sm:flex-row gap-3 pt-3">
+              <Link
+                href="/about"
+                className="bg-[#00B37E] hover:bg-[#00B37E]/90 text-white px-8 py-3.5 rounded-full font-bold text-xs uppercase tracking-wider transition-all shadow-md active:scale-[0.98] text-center"
+              >
+                Learn More About Parola
+              </Link>
+              <Link
+                href="/register"
+                className="bg-white text-[#12211E] hover:bg-[#F2F6F4] border border-[#DAE5E0] px-8 py-3.5 rounded-full font-bold text-xs uppercase tracking-wider transition-all shadow-2xs active:scale-[0.98] text-center"
+              >
+                Register Your Vessel
+              </Link>
+            </div>
+          </div>
+        </div>
+      </motion.section>
+
+      {/* FOOTER (Grounded coastal tone, zero em-dashes) */}
+      <footer className="bg-[#E7EFEA] border-t border-[#DAE5E0] py-12 px-6">
+        <div className="max-w-7xl mx-auto w-full flex flex-col md:flex-row items-center justify-between gap-6 text-xs text-[#12211E]/70">
           <div className="flex items-center gap-3">
-            <ParolaLogo iconOnly className="w-9 h-9 hover:scale-105 transition-transform" />
-            <span className="font-display text-xl font-black tracking-tight text-white uppercase">Parola</span>
+            <ParolaLogo iconOnly className="w-7 h-7" />
+            <span className="font-display text-base font-black text-[#12211E] tracking-tight uppercase">
+              Parola Fisheries System
+            </span>
           </div>
 
-          <div className="flex flex-wrap gap-6 md:gap-12 text-[11px] font-semibold uppercase tracking-wider text-white/70">
-            <a href="#how-it-works" className="hover:text-brand-green transition-colors duration-250">Features & Tools</a>
-          </div>
+          <nav className="flex flex-wrap items-center gap-6 font-semibold">
+            <a href="#how-it-works" className="hover:text-[#00B37E] transition-colors cursor-pointer">
+              Features
+            </a>
+            <Link href="/guide" className="hover:text-[#00B37E] transition-colors">
+              System Guide
+            </Link>
+            <Link href="/pricing" className="hover:text-[#00B37E] transition-colors">
+              Pricing
+            </Link>
+            <Link href="/about" className="hover:text-[#00B37E] transition-colors">
+              About
+            </Link>
+            <Link href="/login" className="hover:text-[#00B37E] transition-colors">
+              Log In
+            </Link>
+            <Link href="/register" className="hover:text-[#00B37E] transition-colors">
+              Register
+            </Link>
+          </nav>
 
-          <div className="text-[10px] text-white/35 font-normal tracking-wide">
-            © {new Date().getFullYear()} Parola Fisheries System. All rights reserved.
+          <div className="text-[11px] text-[#12211E]/55">
+            © {new Date().getFullYear()} Parola. All rights reserved.
           </div>
-        </footer>
-      </section>
+        </div>
+      </footer>
     </div>
   );
 }
