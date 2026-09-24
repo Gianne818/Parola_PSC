@@ -89,7 +89,7 @@ def download_model_if_needed():
         model = lgb.train(params, dtrain, num_boost_round=10)
 
 # ============================================================================
-# 1. WEATHER & SAFETY OVERRIDE ENGINE (StarISDAWorkflow Conversion)
+# 1. WEATHER & SAFETY OVERRIDE ENGINE (Parola Safety Engine)
 # ============================================================================
 
 def http_get_json(url, params=None):
@@ -105,7 +105,7 @@ def http_get_json(url, params=None):
 
 def fetch_open_meteo_marine_and_wind(lat=10.3157, lon=123.8854):
     """
-    Fetches Open-Meteo Marine wave height and wind forecast (converted from StarISDAWorkflow).
+    Fetches Open-Meteo Marine wave height and wind forecast.
     """
     weather_info = {
         'max_wave_height_m': 0.0,
@@ -156,7 +156,7 @@ def fetch_open_meteo_marine_and_wind(lat=10.3157, lon=123.8854):
 
 def fetch_pagasa_bulletins():
     """
-    Fetches active PAGASA Tropical Cyclone warnings (converted from StarISDAWorkflow).
+    Fetches active PAGASA Tropical Cyclone warnings.
     """
     pagasa_info = {
         'storm_name': 'No active bulletin',
@@ -181,7 +181,7 @@ def fetch_pagasa_bulletins():
 
 def evaluate_safety_override(weather_info, pagasa_info):
     """
-    Evaluates safety rules matching StarISDAWorkflow:
+    Evaluates safety rules for maritime alerts:
     - wave_height >= 3.0m -> high wave height
     - wind_speed >= 20.0 knots -> strong wind
     - PAGASA bulletin active -> PAGASA warning
@@ -396,7 +396,7 @@ def handler(event, context):
         # Step 1: Load ML Models (Pelagic + Demersal)
         download_model_if_needed()
 
-        # Step 2: Run StarISDA Weather & PAGASA Safety Override Engine
+        # Step 2: Run Parola Weather & PAGASA Safety Override Engine
         weather_info = fetch_open_meteo_marine_and_wind()
         pagasa_info = fetch_pagasa_bulletins()
         safety_override = evaluate_safety_override(weather_info, pagasa_info)

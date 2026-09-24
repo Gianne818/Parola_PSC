@@ -3,7 +3,7 @@ Transform: AWS::Serverless-2016-10-31
 Description: >
   parola-inference-pipeline
   
-  SAM Template for the Parola Project Pelagic Model inference pipeline with StarISDAWorkflow cloud features.
+  SAM Template for the Parola Project Pelagic Model inference pipeline with Parola cloud features.
 
 Resources:
   ParolaInferenceFunction:

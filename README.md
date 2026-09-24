@@ -1,6 +1,6 @@
 # PAROLA: AI-Powered Blue Economy Platform for Municipal Fisherfolk
 
-**Team Name:** StarIsda  
+**Team Name:** Parola  
 **Primary Focus:** Artificial Intelligence for Sustainable Fisheries, Marine Safety, and Digital Equity  
 
 ---
@@ -239,5 +239,5 @@ node tests/verify.js
 ## License & Acknowledgments
 
 * **License:** Developed for AI Hackathon 2026.
-* **Team:** StarIsda
+* **Team:** Parola
 * **Data Providers:** Copernicus Marine Service, EOG VIIRS, GBIF, FishBase, BFAR, GEBCO, Allen Coral Atlas, Open-Meteo, and PAGASA.

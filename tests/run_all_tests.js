@@ -2,7 +2,7 @@ const http = require('http');
 const https = require('https');
 
 console.log('====================================================');
-console.log('🧪 PAROLA & STARISDA END-TO-END INTEGRATION SUITE');
+console.log('🧪 PAROLA END-TO-END INTEGRATION SUITE');
 console.log('====================================================\n');
 
 let totalTests = 0;

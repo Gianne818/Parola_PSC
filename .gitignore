@@ -7,30 +7,63 @@ yarn-error.log*
 pnpm-debug.log*
 lerna-debug.log*
 
+# Node & Build artifacts
 node_modules
 dist
 dist-ssr
 *.local
 *.tsbuildinfo
+.next
+out
+build
+.vercel
+coverage
 
-# Editor directories and files
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+.venv
+venv/
+ENV/
+env/
+.pytest_cache/
+.coverage
+htmlcov/
+
+# Jupyter Notebooks
+.ipynb_checkpoints
+
+# AWS SAM & Serverless
+.aws-sam/
+
+# Editor & OS files
 .vscode/*
 !.vscode/extensions.json
 .idea
 .DS_Store
 **/.DS_Store
+Thumbs.db
+ehthumbs.db
+[Dd]esktop.ini
 *.suo
 *.ntvs*
 *.njsproj
 *.sln
 *.sw?
 
-# Next.js
-.next
-out
-build
-.vercel
-coverage
+# Backup & Temporary files
+*.bak
+*.backup
+*.tmp
+*.temp
+*~
+
+# AI Agent Customizations & Skills
+.agents/
+SKILL.md
 
 # Environment files — NEVER commit real secrets
 .env

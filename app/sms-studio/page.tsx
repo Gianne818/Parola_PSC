@@ -241,7 +241,7 @@ export default function SmsStudioPage() {
 
   // Generate Prompt
   const handleGeneratePrompt = () => {
-    const p = `Act as an expert Tagalog Emergency Broadcast Communication Specialist for StarISDA Parola Fisherman Safety Platform.
+    const p = `Act as an expert Tagalog Emergency Broadcast Communication Specialist for Parola Fisherman Safety Platform.
 
 Task: Generate an SMS notification broadcast for fishermen in Manila Bay regarding: "${promptTopic}".
 Target Audience: Local Filipino fishermen (Ka-Isda)
@@ -272,7 +272,7 @@ Strict Constraints:
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
     a.href = url;
-    a.download = `StarISDA_Parola_SMS_Prompt_${promptTopic.replace(/\s+/g, "_")}.md`;
+    a.download = `Parola_SMS_Prompt_${promptTopic.replace(/\s+/g, "_")}.md`;
     a.click();
   };
 
@@ -289,7 +289,7 @@ Strict Constraints:
             <Link href="/" className="flex items-center gap-2 group">
               <ParolaLogo iconOnly className="w-8 h-8 group-hover:rotate-12 transition-transform" />
               <span className="font-black text-xl tracking-tight bg-gradient-to-r from-emerald-400 via-teal-300 to-cyan-400 bg-clip-text text-transparent">
-                StarISDA Parola
+                Parola
               </span>
             </Link>
             <span className="text-xs px-2.5 py-1 rounded-full bg-emerald-500/10 text-emerald-400 font-mono border border-emerald-500/20 font-medium">
@@ -754,7 +754,7 @@ Strict Constraints:
                   <FileCode className="w-4 h-4 text-emerald-400" />
                   <span className="text-xs font-mono text-slate-300 font-bold">{selectedFile.path}</span>
                 </div>
-                <span className="text-xs text-slate-500 font-mono">Hackathon2026StarISDA_Parola</span>
+                <span className="text-xs text-slate-500 font-mono">Hackathon2026_Parola</span>
               </div>
 
               <pre className="bg-slate-950 border border-slate-800 rounded-xl p-5 text-xs font-mono text-emerald-300 leading-relaxed overflow-x-auto">
