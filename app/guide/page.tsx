@@ -77,7 +77,7 @@ const STEPS: StepGuide[] = [
       "Select your hull type (motorized banca, wooden hull, or steel hull) and enter gross tonnage (GT).",
       "Choose your primary gear (handline, gillnet, ring net, or longline) so hotspot telemetry matches your target fish species."
     ],
-    operationalTip: "Small bancas under 3.0 GT qualify for municipal exemptions, while 3.1 to 20.0 GT vessels belong to the Small-Scale commercial tier.",
+    operationalTip: "Artisanal bancas under 3.0 GT qualify for zero-cost municipal access, while 3.1 to 20.0 GT vessels belong to the Small-Scale commercial tier under Section 3(n) of RA 8550 as amended by RA 10654.",
     image: "/images/guide-vessel-profile.png",
     imageAlt: "Parola Captain & Vessel Profile specifications screen",
     imageCaption: "Vessel and captain profile showing registered vessel F/B Sto. Niño, gross tonnage (GT), hull type, and SMS verification status."

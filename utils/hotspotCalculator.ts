@@ -162,7 +162,8 @@ export function formatConciseSmsAdvisory(
   portName: string,
   target: HotspotCalculationResult,
   waveHeightMeters: number,
-  windSpeedKmh: number
+  windSpeedKmh: number,
+  sponsorName: string = "Petron"
 ): string {
   const lat = target.hotspot.lat;
   const lng = target.hotspot.lng;
@@ -173,11 +174,17 @@ export function formatConciseSmsAdvisory(
   const prob = target.catchProbability;
   const mapUrl = `maps.google.com/?q=${lat.toFixed(3)},${lng.toFixed(3)}`;
 
+  // Pillar 2 Non-Intrusive Free-Tier Monetization: 
+  // Daily municipal SMS advisories feature a single, non-intrusive sponsor acknowledgment on final line (max 20-25 chars)
+  const sponsorFooter = `Ligtas pumalaot hatid ng ${sponsorName}`;
+
   return (
     `Parola Advisory:\n` +
     `Hotspot: ${latLabel}, ${lngLabel} (${dist}km ${bearing})\n` +
     `Prob: ${prob}%\n` +
     `Map: ${mapUrl}\n` +
-    `Waves: ${waveHeightMeters}m, Wind: ${windSpeedKmh}kph`
+    `Waves: ${waveHeightMeters}m, Wind: ${windSpeedKmh}kph\n` +
+    `${sponsorFooter}`
   );
 }
+
