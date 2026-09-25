@@ -222,7 +222,7 @@ export default function AboutPage() {
               <div className="flex items-start gap-3">
                 <CheckCircle2 className="w-4 h-4 text-[#00B37E] shrink-0 mt-0.5" />
                 <span className="text-xs text-[#12211E]/80 leading-relaxed">
-                  <strong>Sustainable Catch Monitoring:</strong> Aggregated harvest feedback telemetry provides municipal fisheries officers with empirical landing data for sustainable stock management.
+                  <strong>B2G Spatial Data & Catch Intelligence:</strong> Anonymized fleet mobility heatmaps and harvest telemetry support BFAR and coastal LGUs with empirical data for FMA closed-season compliance, municipal coastal zoning, and stock replenishment research.
                 </span>
               </div>
             </div>

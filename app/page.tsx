@@ -17,7 +17,15 @@ import {
   Waves,
   Navigation,
   Sparkles,
-  ExternalLink
+  ExternalLink,
+  Download,
+  Lock,
+  Building2,
+  Satellite,
+  PhoneCall,
+  Layers,
+  ShieldCheck,
+  BarChart3
 } from "lucide-react";
 import { motion, useReducedMotion } from "motion/react";
 import { ParolaLogo } from "@/components/ui/ParolaLogo";
@@ -40,17 +48,18 @@ export default function LandingPage() {
   const smsResponses: Record<"ADVISORY" | "HOTSPOT" | "STATUS", { query: string; response: string }> = {
     ADVISORY: {
       query: "ADVISORY",
-      response: "PAROLA (Mercedes): Safe to sail. Waves 0.8m, wind 9kts ENE. Zone 3 active for Tamban. Return harbor by 17:00 PHT."
+      response: "PAROLA (Mercedes): Waves 0.8m, wind 9kts ENE. Zone 3 active for Tamban. Return harbor by 17:00 PHT.\nLigtas pumalaot hatid ng Petron"
     },
     HOTSPOT: {
       query: "HOTSPOT",
-      response: "PAROLA: Zone 3 (14.128°N, 123.084°E) active. 12km ENE offshore. SST 28.2°C thermal front. High Tamban feeding probability (84%)."
+      response: "PAROLA: Zone 3 (14.128°N, 123.084°E) active. 12km ENE offshore. SST 28.2°C thermal front. Tamban prob 84%.\nLigtas pumalaot hatid ng Petron"
     },
     STATUS: {
       query: "STATUS",
-      response: "PAROLA: F/B Sto. Niño [PH-CN-2026-081]. Home Port: Mercedes. Departure clearance: ACTIVE. Coast Guard alert level: Normal."
+      response: "PAROLA: F/B Sto. Niño [PH-CN-2026-081]. Home Port: Mercedes. Departure clearance: ACTIVE.\nLigtas pumalaot hatid ng Petron"
     }
   };
+
 
   return (
     <div className="min-h-screen bg-[#F2F6F4] text-[#12211E] relative z-0 scroll-smooth font-sans antialiased overflow-x-hidden selection:bg-[#00B37E]/20 selection:text-[#12211E]">
@@ -449,16 +458,20 @@ export default function LandingPage() {
         className="py-20 px-6 max-w-7xl mx-auto w-full border-b border-[#DAE5E0]"
       >
         <div className="max-w-3xl mb-12">
+          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-[#C57E2C]/10 border border-[#C57E2C]/25 text-[#9A5B18] text-[11px] font-bold uppercase tracking-wider mb-3 shadow-2xs">
+            <Ship className="w-3.5 h-3.5 text-[#C57E2C]" />
+            <span>Republic Act No. 8550 as amended by RA 10654 · Section 3(n)</span>
+          </div>
           <h2 className="text-2xl md:text-4xl font-display font-black text-[#12211E] tracking-tight leading-tight">
-            Transparent tiering by vessel gross tonnage
+            Enterprise B2B SaaS subscriptions by vessel gross tonnage
           </h2>
           <p className="text-sm md:text-base text-[#12211E]/75 leading-relaxed font-normal mt-3 max-w-2xl">
-            Subscription plans scaled to Philippine vessel gross tonnage classes, ensuring affordable marine intelligence for small bancas and commercial fleets.
+            Single-vessel recurring software subscriptions and chartplotter Geo-Packs scaled to official Philippine commercial vessel classes, with quota-managed zone downloads.
           </p>
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-          {/* Tier 1: Small-Scale */}
+          {/* Tier 1: Small-Scale Commercial */}
           <div className="bg-white border border-[#DAE5E0] rounded-3xl p-6 md:p-8 flex flex-col justify-between shadow-[0_2px_12px_rgba(18,33,30,0.04)]">
             <div className="space-y-4">
               <div className="flex items-center justify-between">
@@ -467,16 +480,28 @@ export default function LandingPage() {
                 </span>
                 <Ship className="w-4 h-4 text-[#00B37E]" />
               </div>
-              <h3 className="font-display font-black text-xl text-[#12211E]">
-                Small-Scale
-              </h3>
+              <div>
+                <h3 className="font-display font-black text-xl text-[#12211E]">
+                  Small-Scale Commercial
+                </h3>
+                <div className="text-[10px] font-mono text-gray-400">Sec. 3(n)(1) RA 8550</div>
+              </div>
               <div className="flex items-baseline gap-1">
                 <span className="text-3xl font-display font-black text-[#12211E]">₱799</span>
-                <span className="text-xs text-[#12211E]/55 font-medium">per vessel</span>
+                <span className="text-xs text-[#12211E]/55 font-medium">/ mo per vessel</span>
               </div>
               <p className="text-xs text-[#12211E]/75 leading-relaxed">
-                Optimized for municipal motorized bancas, handline fishers, and nearshore coastal crews.
+                50 km radius from home port outside municipal waters, with multi-species target selection.
               </p>
+              <div className="bg-[#F2F6F4] p-3 rounded-xl border border-[#DAE5E0] text-[11px] space-y-1">
+                <span className="font-bold text-[#12211E] flex items-center gap-1">
+                  <Lock className="w-3 h-3 text-[#00B37E]" />
+                  <span>Daily Download Quota:</span>
+                </span>
+                <span className="text-[#12211E]/75 block">
+                  1 locked zone / day (unlimited re-downloads of that same zone for 24 hours).
+                </span>
+              </div>
               <ul className="space-y-2 text-xs text-[#12211E]/80 pt-2 border-t border-[#DAE5E0]">
                 <li className="flex items-center gap-2">
                   <CheckCircle2 className="w-3.5 h-3.5 text-[#00B37E] shrink-0" />
@@ -484,25 +509,25 @@ export default function LandingPage() {
                 </li>
                 <li className="flex items-center gap-2">
                   <CheckCircle2 className="w-3.5 h-3.5 text-[#00B37E] shrink-0" />
-                  <span>Municipal port registration pairing</span>
+                  <span>Offline chartplotter Geo-Packs (.GPX, .KML)</span>
                 </li>
                 <li className="flex items-center gap-2">
                   <CheckCircle2 className="w-3.5 h-3.5 text-[#00B37E] shrink-0" />
-                  <span>PAGASA gale warnings and safety holds</span>
+                  <span>PAGASA gale warnings & safety holds</span>
                 </li>
               </ul>
             </div>
             <div className="pt-6">
               <Link
-                href="/pricing"
+                href="/pricing#vessel-subscriptions"
                 className="w-full block bg-[#F2F6F4] hover:bg-[#E2EBE6] text-[#12211E] border border-[#DAE5E0] py-3 rounded-full font-bold text-xs uppercase tracking-wider text-center transition-all"
               >
-                View Tier Details
+                View Small-Scale Details
               </Link>
             </div>
           </div>
 
-          {/* Tier 2: Medium-Scale (Featured Elevated Card) */}
+          {/* Tier 2: Medium-Scale Commercial (Featured Elevated Card) */}
           <div className="bg-white border-2 border-[#00B37E] rounded-3xl p-6 md:p-8 flex flex-col justify-between shadow-[0_8px_30px_rgba(0,179,126,0.12)] relative">
             <div className="space-y-4">
               <div className="flex items-center justify-between">
@@ -513,28 +538,40 @@ export default function LandingPage() {
                   Recommended
                 </span>
               </div>
-              <h3 className="font-display font-black text-xl text-[#12211E]">
-                Medium-Scale
-              </h3>
+              <div>
+                <h3 className="font-display font-black text-xl text-[#12211E]">
+                  Medium-Scale Commercial
+                </h3>
+                <div className="text-[10px] font-mono text-gray-400">Sec. 3(n)(2) RA 8550</div>
+              </div>
               <div className="flex items-baseline gap-1">
                 <span className="text-3xl font-display font-black text-[#12211E]">₱2,499</span>
-                <span className="text-xs text-[#12211E]/55 font-medium">per vessel</span>
+                <span className="text-xs text-[#12211E]/55 font-medium">/ mo per vessel</span>
               </div>
               <p className="text-xs text-[#12211E]/75 leading-relaxed">
-                Tailored for commercial ring-netters, purse seiners, and multi-day island fishing operations.
+                Permits full coverage of 1 selected Fisheries Management Area (FMA) and multi-species target selection.
               </p>
+              <div className="bg-[#F2F6F4] p-3 rounded-xl border border-[#DAE5E0] text-[11px] space-y-1">
+                <span className="font-bold text-[#12211E] flex items-center gap-1">
+                  <Lock className="w-3 h-3 text-[#00B37E]" />
+                  <span>Daily Download Quota:</span>
+                </span>
+                <span className="text-[#12211E]/75 block">
+                  1 locked zone / day, unlimited re-downloads for 24h.
+                </span>
+              </div>
               <ul className="space-y-2 text-xs text-[#12211E]/80 pt-2 border-t border-[#DAE5E0]">
                 <li className="flex items-center gap-2">
                   <CheckCircle2 className="w-3.5 h-3.5 text-[#00B37E] shrink-0" />
-                  <span>Everything in Small-Scale tier</span>
+                  <span>Full coverage of 1 designated FMA</span>
+                </li>
+                <li className="flex items-center gap-2">
+                  <CheckCircle2 className="w-3.5 h-3.5 text-[#00B37E] shrink-0" />
+                  <span>24–72h spatial forecast Geo-Packs (.GPX, .KML, .GeoJSON)</span>
                 </li>
                 <li className="flex items-center gap-2">
                   <CheckCircle2 className="w-3.5 h-3.5 text-[#00B37E] shrink-0" />
                   <span>Multi-zone SST thermal front mapping</span>
-                </li>
-                <li className="flex items-center gap-2">
-                  <CheckCircle2 className="w-3.5 h-3.5 text-[#00B37E] shrink-0" />
-                  <span>Catch feedback telemetry loop access</span>
                 </li>
                 <li className="flex items-center gap-2">
                   <CheckCircle2 className="w-3.5 h-3.5 text-[#00B37E] shrink-0" />
@@ -544,7 +581,7 @@ export default function LandingPage() {
             </div>
             <div className="pt-6">
               <Link
-                href="/pricing"
+                href="/pricing#vessel-subscriptions"
                 className="w-full block bg-[#00B37E] hover:bg-[#00B37E]/90 text-white py-3 rounded-full font-bold text-xs uppercase tracking-wider text-center transition-all shadow-sm active:scale-[0.98]"
               >
                 Select Medium-Scale
@@ -552,7 +589,7 @@ export default function LandingPage() {
             </div>
           </div>
 
-          {/* Tier 3: Large-Scale */}
+          {/* Tier 3: Large-Scale Commercial */}
           <div className="bg-white border border-[#DAE5E0] rounded-3xl p-6 md:p-8 flex flex-col justify-between shadow-[0_2px_12px_rgba(18,33,30,0.04)]">
             <div className="space-y-4">
               <div className="flex items-center justify-between">
@@ -561,42 +598,181 @@ export default function LandingPage() {
                 </span>
                 <Ship className="w-4 h-4 text-[#00B37E]" />
               </div>
-              <h3 className="font-display font-black text-xl text-[#12211E]">
-                Large-Scale
-              </h3>
+              <div>
+                <h3 className="font-display font-black text-xl text-[#12211E]">
+                  Large-Scale Commercial
+                </h3>
+                <div className="text-[10px] font-mono text-gray-400">Sec. 3(n)(3) RA 8550</div>
+              </div>
               <div className="flex items-baseline gap-1">
                 <span className="text-3xl font-display font-black text-[#12211E]">₱6,199</span>
-                <span className="text-xs text-[#12211E]/55 font-medium">per vessel</span>
+                <span className="text-xs text-[#12211E]/55 font-medium">/ mo per vessel</span>
               </div>
               <p className="text-xs text-[#12211E]/75 leading-relaxed">
-                Designed for distant-water longliners, commercial motherships, and multi-vessel cooperatives.
+                Full Philippine EEZ access, multi-species target selection, and priority support.
               </p>
+              <div className="bg-[#F2F6F4] p-3 rounded-xl border border-[#DAE5E0] text-[11px] space-y-1">
+                <span className="font-bold text-[#12211E] flex items-center gap-1">
+                  <Lock className="w-3 h-3 text-[#00B37E]" />
+                  <span>Daily Download Quota:</span>
+                </span>
+                <span className="text-[#12211E]/75 block">
+                  1 locked zone / day, unlimited re-downloads for 24h.
+                </span>
+              </div>
               <ul className="space-y-2 text-xs text-[#12211E]/80 pt-2 border-t border-[#DAE5E0]">
                 <li className="flex items-center gap-2">
                   <CheckCircle2 className="w-3.5 h-3.5 text-[#00B37E] shrink-0" />
-                  <span>Everything in Medium-Scale tier</span>
+                  <span>Full nationwide Philippine EEZ coverage</span>
                 </li>
                 <li className="flex items-center gap-2">
                   <CheckCircle2 className="w-3.5 h-3.5 text-[#00B37E] shrink-0" />
-                  <span>Full Philippine EEZ satellite telemetry</span>
+                  <span>Priority 24/7 dedicated support & direct API</span>
                 </li>
                 <li className="flex items-center gap-2">
                   <CheckCircle2 className="w-3.5 h-3.5 text-[#00B37E] shrink-0" />
-                  <span>Cooperative API and port marshal feeds</span>
+                  <span>Automated harvest reporting for BFAR compliance</span>
                 </li>
               </ul>
             </div>
             <div className="pt-6">
               <Link
-                href="/pricing"
+                href="/pricing#vessel-subscriptions"
                 className="w-full block bg-[#F2F6F4] hover:bg-[#E2EBE6] text-[#12211E] border border-[#DAE5E0] py-3 rounded-full font-bold text-xs uppercase tracking-wider text-center transition-all"
               >
-                View Tier Details
+                View Large-Scale Details
+              </Link>
+            </div>
+          </div>
+        </div>
+
+        {/* Custom Fleet Enterprise & Satellite Add-on Callout */}
+        <div className="mt-8 bg-gradient-to-r from-white via-[#F8FBFA] to-[#EBF5F0] border border-[#DAE5E0] rounded-3xl p-6 md:p-8 flex flex-col md:flex-row items-center justify-between gap-6 shadow-2xs">
+          <div className="space-y-2 max-w-2xl">
+            <div className="flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-[#00B37E]">
+              <Building2 className="w-4 h-4" />
+              <span>Custom Fleet Enterprise Contracts & Satellite Sync</span>
+            </div>
+            <h4 className="text-lg font-display font-bold text-[#12211E]">
+              Operating 5+ commercial vessels or requiring offshore satellite refresh?
+            </h4>
+            <p className="text-xs text-[#12211E]/75 leading-relaxed">
+              Discounted annual licenses for commercial operators with 5+ vessels featuring central fleet dashboard views, multi-zone downloads, and low-bandwidth satellite sync (Starlink, Iridium, Inmarsat) at just ~1.8 KB per refresh.
+            </p>
+          </div>
+
+          <div className="flex flex-col sm:flex-row gap-3 shrink-0">
+            <Link
+              href="/pricing#fleet-enterprise"
+              className="bg-[#00B37E] hover:bg-[#00B37E]/90 text-white px-6 py-3 rounded-full font-bold text-xs uppercase tracking-wider transition-all text-center shadow-sm"
+            >
+              Explore Fleet Enterprise
+            </Link>
+            <Link
+              href="/pricing#geopack-satellite"
+              className="bg-white hover:bg-[#F2F6F4] text-[#12211E] border border-[#DAE5E0] px-6 py-3 rounded-full font-bold text-xs uppercase tracking-wider transition-all text-center shadow-2xs"
+            >
+              Satellite Sync Add-on
+            </Link>
+          </div>
+        </div>
+      </motion.section>
+
+      {/* SECTION 5: THREE-PILLAR SUSTAINABLE BUSINESS MODEL SHOWCASE */}
+      <motion.section
+        initial={reduceMotion ? false : { opacity: 0, y: 28 }}
+        whileInView={{ opacity: 1, y: 0 }}
+        viewport={{ once: true, margin: "-60px" }}
+        transition={{ duration: 0.55, ease: [0.16, 1, 0.3, 1] }}
+        className="py-20 px-6 max-w-7xl mx-auto w-full border-b border-[#DAE5E0]"
+      >
+        <div className="max-w-3xl mb-12">
+          <div className="text-[10px] font-bold uppercase tracking-wider text-[#00B37E] bg-[#00B37E]/10 border border-[#00B37E]/20 px-3 py-0.5 rounded-full inline-block mb-2">
+            Sustainable Economic Architecture
+          </div>
+          <h2 className="text-2xl md:text-4xl font-display font-black text-[#12211E] tracking-tight leading-tight">
+            A three-pillar business model built for maritime scale
+          </h2>
+          <p className="text-sm md:text-base text-[#12211E]/75 leading-relaxed font-normal mt-3 max-w-2xl">
+            How Parola pairs commercial enterprise subscriptions with non-intrusive municipal subsidies and government spatial data licensing.
+          </p>
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+          {/* Pillar 1: Enterprise B2B SaaS */}
+          <div className="bg-white border border-[#DAE5E0] rounded-3xl p-6 md:p-8 flex flex-col justify-between shadow-[0_2px_12px_rgba(18,33,30,0.04)]">
+            <div className="space-y-4">
+              <div className="w-10 h-10 rounded-xl bg-[#00B37E]/10 flex items-center justify-center text-[#00B37E]">
+                <Ship className="w-5 h-5" />
+              </div>
+              <div>
+                <span className="text-[10px] font-bold uppercase tracking-wider text-gray-400">Pillar 01</span>
+                <h3 className="font-display font-bold text-lg text-[#12211E]">
+                  Enterprise B2B SaaS & Offline Exports
+                </h3>
+              </div>
+              <p className="text-xs text-[#12211E]/75 leading-relaxed">
+                Recurring single-vessel subscriptions aligned with RA 8550 Section 3(n) commercial classes (₱799 to ₱6,199/month), 24–72h chartplotter Geo-Packs (.GPX, .KML, .GeoJSON), custom fleet licenses, and compressed satellite sync.
+              </p>
+            </div>
+            <div className="pt-4 border-t border-[#DAE5E0]">
+              <Link href="/pricing#vessel-subscriptions" className="text-xs font-bold text-[#00B37E] hover:underline flex items-center gap-1">
+                <span>View SaaS Tiers</span>
+                <ArrowRight className="w-3.5 h-3.5" />
+              </Link>
+            </div>
+          </div>
+
+          {/* Pillar 2: Non-Intrusive Free-Tier Monetization */}
+          <div className="bg-white border border-[#DAE5E0] rounded-3xl p-6 md:p-8 flex flex-col justify-between shadow-[0_2px_12px_rgba(18,33,30,0.04)]">
+            <div className="space-y-4">
+              <div className="w-10 h-10 rounded-xl bg-[#C57E2C]/10 flex items-center justify-center text-[#C57E2C]">
+                <PhoneCall className="w-5 h-5" />
+              </div>
+              <div>
+                <span className="text-[10px] font-bold uppercase tracking-wider text-gray-400">Pillar 02</span>
+                <h3 className="font-display font-bold text-lg text-[#12211E]">
+                  Non-Intrusive Free-Tier Subsidies
+                </h3>
+              </div>
+              <p className="text-xs text-[#12211E]/75 leading-relaxed">
+                Zero-cost municipal dispatches for small bancas (&le;3.0 GT) subsidized through sponsored SMS footers (&ldquo;Ligtas pumalaot hatid ng [Brand]&rdquo;), generic programmatic web display ads, and telco zero-rating partnerships (reducing SMS costs to &lt;₱0.08).
+              </p>
+            </div>
+            <div className="pt-4 border-t border-[#DAE5E0]">
+              <Link href="/pricing#free-tier-subsidies" className="text-xs font-bold text-[#C57E2C] hover:underline flex items-center gap-1">
+                <span>Inspect Subsidies</span>
+                <ArrowRight className="w-3.5 h-3.5" />
+              </Link>
+            </div>
+          </div>
+
+          {/* Pillar 3: B2G & ESG Spatial Data Licensing */}
+          <div className="bg-white border border-[#DAE5E0] rounded-3xl p-6 md:p-8 flex flex-col justify-between shadow-[0_2px_12px_rgba(18,33,30,0.04)]">
+            <div className="space-y-4">
+              <div className="w-10 h-10 rounded-xl bg-[#00B37E]/10 flex items-center justify-center text-[#00B37E]">
+                <Layers className="w-5 h-5" />
+              </div>
+              <div>
+                <span className="text-[10px] font-bold uppercase tracking-wider text-gray-400">Pillar 03</span>
+                <h3 className="font-display font-bold text-lg text-[#12211E]">
+                  B2G & ESG Spatial Data Licensing
+                </h3>
+              </div>
+              <p className="text-xs text-[#12211E]/75 leading-relaxed">
+                Anonymized fishing effort aggregations, fleet mobility heatmaps, and environmental density correlations licensed to BFAR (FMA monitoring), Coastal LGUs (Bantay-Dagat patrol dispatch), and Marine Conservation Foundations (MPA delineation).
+              </p>
+            </div>
+            <div className="pt-4 border-t border-[#DAE5E0]">
+              <Link href="/pricing#b2g-licensing" className="text-xs font-bold text-[#00B37E] hover:underline flex items-center gap-1">
+                <span>View B2G Feeds</span>
+                <ArrowRight className="w-3.5 h-3.5" />
               </Link>
             </div>
           </div>
         </div>
       </motion.section>
+
 
       {/* SECTION 5: INSTITUTIONAL MISSION CALLOUT (With scroll reveal) */}
       <motion.section

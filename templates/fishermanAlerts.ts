@@ -13,7 +13,7 @@ export const FISHERMAN_ALERT_TEMPLATES: Record<string, AlertTemplate> = {
     category: 'weather',
     title: 'High Wave / Sea Advisory',
     tagline: 'Malalaking Alon Warning',
-    templateText: '[PAROLA ALERT] Babala sa mga mangingisda: Malalaking alon (3.5m-4.5m) sa Look ng Maynila. Mangyaring manatili muna sa daungan.',
+    templateText: '[PAROLA ALERT] Babala sa mga mangingisda: Malalaking alon (3.5m-4.5m) sa Look ng Maynila. Manatili sa daungan.\nLigtas pumalaot hatid ng Petron',
   },
   storm_emergency: {
     id: 'storm_emergency',
@@ -27,7 +27,7 @@ export const FISHERMAN_ALERT_TEMPLATES: Record<string, AlertTemplate> = {
     category: 'catch_log',
     title: 'Catch Log Confirmation',
     tagline: 'Fisherman Catch Log Receipt',
-    templateText: '[PAROLA LOG] Maraming salamat Ka-Isda! Naitala ang iyong huli: {weight}kg {fishType}. Ref ID: LOG-2026-{refId}. Ligtas na paglalayag!',
+    templateText: '[PAROLA LOG] Maraming salamat Ka-Isda! Naitala ang iyong huli: {weight}kg {fishType}. Ref ID: LOG-2026-{refId}.\nLigtas pumalaot hatid ng Smart',
     sampleVariables: {
       weight: '45',
       fishType: 'Tulingan',
@@ -39,7 +39,7 @@ export const FISHERMAN_ALERT_TEMPLATES: Record<string, AlertTemplate> = {
     category: 'port_alert',
     title: 'Port Security & Weather Alert',
     tagline: 'Gale & Security Broadcast',
-    templateText: '[PAROLA PORT] Paalala sa daungan: Inaasahan ang malakas na hangin at ulan ngayong hapon. Seguruhin ang pagkakatali ng inyong bangka at mag-ingat sa pumapalaot.',
+    templateText: '[PAROLA PORT] Paalala sa daungan: Malakas na hangin at ulan ngayong hapon. Seguruhin ang pagkakatali ng bangka.\nLigtas pumalaot hatid ng Globe',
   },
 };
 
