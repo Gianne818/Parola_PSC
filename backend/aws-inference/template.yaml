@@ -5,6 +5,23 @@ Description: >
   
   SAM Template for the Parola Project Pelagic Model inference pipeline with Parola cloud features.
 
+Parameters:
+  ModelBucketName:
+    Type: String
+    Description: S3 bucket containing the model and output advisories. Pass via --parameter-overrides.
+  CopernicusUsername:
+    Type: String
+    NoEcho: true
+    Description: Copernicus Marine Service username. Pass via --parameter-overrides, never commit.
+  CopernicusPassword:
+    Type: String
+    NoEcho: true
+    Description: Copernicus Marine Service password. Pass via --parameter-overrides, never commit.
+  DatabaseUrl:
+    Type: String
+    NoEcho: true
+    Description: Supabase Postgres connection string (pooler). Pass via --parameter-overrides, never commit.
+
 Resources:
   ParolaInferenceFunction:
     Type: AWS::Serverless::Function
@@ -15,14 +32,16 @@ Resources:
       MemorySize: 3008
       Timeout: 900
       FunctionUrlConfig:
-        AuthType: NONE
+        # IAM auth: invoking the function URL requires SigV4 credentials with
+        # permission to call it. Never use AuthType NONE (public internet).
+        AuthType: AWS_IAM
       Environment:
         Variables:
-          MODEL_BUCKET_NAME: "parola-data-bucket-715991411553-us-east-1"
+          MODEL_BUCKET_NAME: !Ref ModelBucketName
           MODEL_KEY: "models/parola_pelagic_model_v2.txt"
-          COPERNICUS_USERNAME: "sstu"
-          COPERNICUS_PASSWORD: "StarISDA!234"
-          DATABASE_URL: "postgresql://postgres.aafqdvhfycqbsvmvaxmz:StarISDA!23@aws-1-ap-southeast-2.pooler.supabase.com:6543/postgres?pgbouncer=true"
+          COPERNICUS_USERNAME: !Ref CopernicusUsername
+          COPERNICUS_PASSWORD: !Ref CopernicusPassword
+          DATABASE_URL: !Ref DatabaseUrl
           OPEN_METEO_MARINE_API_URL: "https://marine-api.open-meteo.com/v1/marine"
           OPEN_METEO_FORECAST_API_URL: "https://api.open-meteo.com/v1/forecast"
           PAGASA_BULLETIN_API_URL: "https://pagasa.chlod.net/api/v1/bulletin/list"
@@ -30,9 +49,9 @@ Resources:
           SAFETY_WAVE_THRESHOLD_METERS: "3.0"
       Policies:
         - S3ReadPolicy:
-            BucketName: "parola-data-bucket-715991411553-us-east-1"
+            BucketName: !Ref ModelBucketName
         - S3WritePolicy:
-            BucketName: "parola-data-bucket-715991411553-us-east-1"
+            BucketName: !Ref ModelBucketName
       Events:
         SixHourInferenceSchedule:
           Type: Schedule
@@ -59,4 +78,4 @@ Outputs:
     Value: !GetAtt ParolaInferenceFunctionUrl.FunctionUrl
   ParolaDataBucketName:
     Description: "S3 Bucket containing the model and output advisories"
-    Value: "parola-data-bucket-715991411553-us-east-1"
+    Value: !Ref ModelBucketName

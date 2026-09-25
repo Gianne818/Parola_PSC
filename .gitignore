@@ -61,11 +61,22 @@ ehthumbs.db
 *.temp
 *~
 
+# Local tool binaries (e.g. gitleaks used for secret-scan verification)
+.tools/
+
 # AI Agent Customizations & Assistant files
 .agents/
+.gemini/
+.antigravity/
 SKILL.md
 CLAUDE.md
 .claude/
+.cursor/
+
+# Build caches & test runner artifacts
+.turbo/
+.cache/
+vitest.config.*.timestamp*
 
 # Environment files - NEVER commit real secrets
 .env

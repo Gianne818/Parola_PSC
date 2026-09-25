@@ -46,14 +46,14 @@ class CreateFeedbackRequest(BaseModel):
 
 
 class UserCreate(BaseModel):
-    phone_number: str = Field(..., example="09171234567")
-    full_name: str = Field(..., example="Juan Dela Cruz")
-    home_port_name: Optional[str] = Field("Brgy Pasil, Cebu", example="Brgy Pasil, Cebu")
+    phone_number: str = Field(..., min_length=7, max_length=32, example="09171234567")
+    full_name: str = Field(..., min_length=1, max_length=100, example="Juan Dela Cruz")
+    home_port_name: Optional[str] = Field("Brgy Pasil, Cebu", max_length=100, example="Brgy Pasil, Cebu")
     latitude: float = Field(..., ge=-90, le=90, example=10.2929)
     longitude: float = Field(..., ge=-180, le=180, example=123.8961)
     preferred_advisory_time: Optional[time] = Field(default="05:00:00")
     coop_id: Optional[uuid.UUID] = None
-    password: Optional[str] = Field(None, example="secret123")
+    password: Optional[str] = Field(None, min_length=8, max_length=128, example="secret123")
 
 
 class UserLogin(BaseModel):

@@ -1,0 +1,33 @@
+#!/bin/sh
+# Pre-commit secret guard for Parola PSC.
+#
+# Install (one time per clone):
+#   cp .githooks/pre-commit .git/hooks/pre-commit && chmod +x .git/hooks/pre-commit
+#
+# Prefers real gitleaks when installed (https://github.com/gitleaks/gitleaks);
+# otherwise falls back to the stdlib scanner in scripts/secret-scan.py so the
+# hook still protects every commit.
+
+set -u
+
+if command -v gitleaks >/dev/null 2>&1; then
+  gitleaks protect --staged --verbose --redact --config .gitleaks.toml
+  status=$?
+  if [ "$status" -ne 0 ]; then
+    echo "pre-commit: gitleaks blocked this commit (status $status)." >&2
+    echo "If a finding is a placeholder, allowlist it in .gitleaks.toml + scripts/secret-scan.py." >&2
+    exit "$status"
+  fi
+  exit 0
+fi
+
+echo "pre-commit: gitleaks not found; using scripts/secret-scan.py fallback." >&2
+# Pick the first interpreter that actually runs (Git Bash msys python3 is
+# broken on some machines, so probe before exec).
+for py in python3 python; do
+  if command -v "$py" >/dev/null 2>&1 && "$py" -c 'import sys; sys.exit(0)' >/dev/null 2>&1; then
+    exec "$py" scripts/secret-scan.py --staged
+  fi
+done
+echo "pre-commit: no working python3/python found; cannot scan for secrets." >&2
+exit 1

@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
@@ -27,6 +27,9 @@ import dynamic from "next/dynamic";
 
 const GalunggongMascot = dynamic(() => import("../../components/ui/GalunggongMascot"), {
   ssr: false,
+  loading: () => (
+    <div className="w-full h-full rounded-3xl bg-white/10 animate-pulse" aria-label="Loading mascot" />
+  ),
 });
 
 interface Ripple {
@@ -65,6 +68,20 @@ export default function RegisterPage() {
   // Background ripples state
   const [ripples, setRipples] = useState<Ripple[]>([]);
 
+  // Tracked timeouts so pending callbacks never fire after unmount
+  const timeoutsRef = useRef<number[]>([]);
+  const later = (fn: () => void, ms: number) => {
+    const id = window.setTimeout(fn, ms);
+    timeoutsRef.current.push(id);
+  };
+  useEffect(() => {
+    const pending = timeoutsRef.current;
+    return () => {
+      pending.forEach((id) => clearTimeout(id));
+      timeoutsRef.current = [];
+    };
+  }, []);
+
   // OTP Modal open state
   const [otpModalOpen, setOtpModalOpen] = useState(false);
   const [otpDigits, setOtpDigits] = useState<string[]>(Array(6).fill(''));
@@ -100,7 +117,7 @@ export default function RegisterPage() {
       y
     };
     setRipples(prev => [...prev, newRipple]);
-    setTimeout(() => {
+    later(() => {
       setRipples(prev => prev.filter(r => r.id !== newRipple.id));
     }, 800);
   };
@@ -129,7 +146,7 @@ export default function RegisterPage() {
       const msg = "Please enter a valid mobile phone number (e.g. +63 912 345 6789).";
       setTriggerFailure(true);
       setFormError(msg);
-      setTimeout(() => setTriggerFailure(false), 1500);
+      later(() => setTriggerFailure(false), 1500);
       return;
     }
 
@@ -137,7 +154,7 @@ export default function RegisterPage() {
       const msg = "Password must be at least 6 characters long.";
       setTriggerFailure(true);
       setFormError(msg);
-      setTimeout(() => setTriggerFailure(false), 1500);
+      later(() => setTriggerFailure(false), 1500);
       return;
     }
 
@@ -154,7 +171,7 @@ export default function RegisterPage() {
           const errorMsg = "An account with this phone number already exists. Please sign in instead.";
           setTriggerFailure(true);
           setFormError(errorMsg);
-          setTimeout(() => setTriggerFailure(false), 1500);
+          later(() => setTriggerFailure(false), 1500);
           return;
         }
       }
@@ -204,14 +221,14 @@ export default function RegisterPage() {
     if (enteredOtp.length < 6) {
       setTriggerFailure(true);
       setOtpError('Please enter all 6 digits.');
-      setTimeout(() => setTriggerFailure(false), 1500);
+      later(() => setTriggerFailure(false), 1500);
       return;
     }
 
     if (enteredOtp !== '482910' && enteredOtp !== '123456') {
       setTriggerFailure(true);
       setOtpError('Incorrect verification code. Please enter 482910.');
-      setTimeout(() => setTriggerFailure(false), 1500);
+      later(() => setTriggerFailure(false), 1500);
       return;
     }
 
@@ -232,12 +249,12 @@ export default function RegisterPage() {
       } else {
         setTriggerFailure(true);
         setOtpError(result.error || "Registration failed. Please try again.");
-        setTimeout(() => setTriggerFailure(false), 1500);
+        later(() => setTriggerFailure(false), 1500);
       }
     } catch (err: any) {
       setTriggerFailure(true);
       setOtpError(err?.message || "Registration failed. Please try again.");
-      setTimeout(() => setTriggerFailure(false), 1500);
+      later(() => setTriggerFailure(false), 1500);
     }
   };
 
@@ -295,10 +312,12 @@ export default function RegisterPage() {
       className="min-h-screen relative flex flex-col justify-center items-center p-4 sm:p-6 md:p-10 overflow-hidden font-sans antialiased select-none cursor-default"
     >
       {/* 1. Full-Bleed Panoramic Background Image */}
-      {/* eslint-disable-next-line @next/next/no-img-element */}
-      <img
+      <Image
         src="/images/auth-bg.jpeg"
         alt="Parola Lighthouse Coastline"
+        fill
+        priority
+        sizes="100vw"
         className="absolute inset-0 w-full h-full object-cover object-left md:object-center pointer-events-none select-none z-0"
       />
 

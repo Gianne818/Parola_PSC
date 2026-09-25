@@ -23,6 +23,7 @@ import {
   X
 } from "lucide-react";
 import { motion, AnimatePresence } from "motion/react";
+import Image from "next/image";
 import { ParolaLogo } from "@/components/ui/ParolaLogo";
 
 interface StepGuide {
@@ -488,11 +489,12 @@ export default function GuidePage() {
                 className="group relative rounded-xl overflow-hidden border border-[#DAE5E0] bg-white shadow-xs cursor-pointer"
               >
                 <div className="relative aspect-[16/10] sm:aspect-[16/9] w-full overflow-hidden bg-[#E2EBE6]">
-                  <img
+                  <Image
                     src={currentStep.image}
                     alt={currentStep.imageAlt}
-                    className="w-full h-full object-contain sm:object-cover object-top transition-transform duration-300 group-hover:scale-[1.01]"
-                    loading="eager"
+                    fill
+                    sizes="(max-width: 640px) 100vw, 50vw"
+                    className="object-contain sm:object-cover object-top transition-transform duration-300 group-hover:scale-[1.01]"
                   />
                   {/* Subtle hover overlay with zoom prompt */}
                   <div className="absolute inset-0 bg-black/0 group-hover:bg-black/15 transition-all flex items-center justify-center">
@@ -677,11 +679,13 @@ export default function GuidePage() {
               </div>
 
               {/* Modal Image Body */}
-              <div className="overflow-auto p-2 sm:p-4 bg-slate-900/5 flex items-center justify-center">
-                <img
+              <div className="relative overflow-auto p-2 sm:p-4 bg-slate-900/5 flex items-center justify-center h-[68vh] w-full">
+                <Image
                   src={zoomImage.src}
                   alt={zoomImage.title}
-                  className="max-h-[68vh] w-auto max-w-full rounded-lg object-contain shadow-sm"
+                  fill
+                  sizes="(max-width: 1024px) 90vw, 896px"
+                  className="object-contain rounded-lg"
                 />
               </div>
 

@@ -59,10 +59,17 @@ export async function fetchHotspotsFromApi(userLat: number, userLng: number, sel
   try {
     let url = `/api/advisories/nearest?lat=${userLat}&lon=${userLng}&limit=1000`;
     if (selectedSpecies && selectedSpecies.length > 0 && selectedSpecies[0]) {
-      url += `&species=${encodeURIComponent(selectedSpecies[0])}`;
+      url += `&species=${encodeURIComponent(selectedSpecies[0].slice(0, 100))}`;
     }
 
-    const res = await fetch(url);
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 10000);
+    let res: Response;
+    try {
+      res = await fetch(url, { signal: controller.signal });
+    } finally {
+      clearTimeout(timeout);
+    }
     if (!res.ok) {
       console.warn('API route error:', res.statusText);
       return [];

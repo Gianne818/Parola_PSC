@@ -130,3 +130,37 @@ nextjs-portal,
 button[aria-label*="Next.js"] {
   display: none !important;
 }
+
+/* Leaflet Nautical Zoom Controls - Padded Bottom Right */
+.leaflet-bottom.leaflet-right {
+  margin-bottom: 20px !important;
+  margin-right: 20px !important;
+}
+
+.leaflet-control-zoom {
+  border: 1px solid #DAE5E0 !important;
+  border-radius: 9999px !important;
+  overflow: hidden !important;
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.08) !important;
+  background-color: white !important;
+}
+
+.leaflet-control-zoom-in,
+.leaflet-control-zoom-out {
+  color: #12211E !important;
+  font-family: var(--font-display) !important;
+  font-weight: 900 !important;
+  font-size: 14px !important;
+  width: 36px !important;
+  height: 36px !important;
+  line-height: 36px !important;
+  background-color: white !important;
+  border-bottom: 1px solid #DAE5E0 !important;
+  transition: all 0.15s ease !important;
+}
+
+.leaflet-control-zoom-in:hover,
+.leaflet-control-zoom-out:hover {
+  background-color: #F2F6F4 !important;
+  color: #00B37E !important;
+}

@@ -1,190 +1,833 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
+import { useRouter } from "next/navigation";
 import { AuthLayout } from "../../components/layouts/AuthLayout";
 import { useApp } from "../../context/AppContext";
 import { useTranslation } from "../../hooks/use-translation";
 import { fontScales } from "../../utils/fontScale";
+import { storageService } from "../../services/storageService";
 import {
+  User,
+  Ship,
+  MapPin,
+  Clock,
   Sun,
   Moon,
+  Eye,
+  Sliders,
   Globe,
   Check,
-  Sliders
+  CheckCircle2,
+  ChevronDown,
+  ChevronUp,
+  Radio,
+  ShieldCheck,
+  Edit3,
+  Smartphone,
+  Anchor,
+  Zap,
+  Info
 } from "lucide-react";
 
+interface SmsPreferences {
+  preferredTime: string;
+  smsDialect: string;
+  secondaryPhone: string;
+  secondaryEnabled: boolean;
+}
+
+interface SeaReadabilityPreferences {
+  highContrast: boolean;
+  largeTouchTargets: boolean;
+}
+
 export default function SettingsPage() {
+  const router = useRouter();
   const {
+    userProfile,
+    updateProfile,
     language,
     changeLanguage,
     fontScale,
     changeFontScale,
+    theme,
+    toggleTheme,
     showToast
   } = useApp();
 
   const { t } = useTranslation(language);
 
-  // Theme state
-  const [theme, setTheme] = useState<"light" | "dark">("light");
+  // Active section for sticky jumper navigation
+  const [activeSection, setActiveSection] = useState<"profile" | "port" | "advisories" | "readability" | "preferences">("profile");
+
+  // Progressive disclosure for GPS coordinates
+  const [showCoordinateDetails, setShowCoordinateDetails] = useState(false);
+
+  // New Sea Setting A: Daily SMS Dispatch Preferences (persisted in storageService)
+  const [smsPrefs, setSmsPrefs] = useState<SmsPreferences>(() => {
+    return storageService.getItem<SmsPreferences>("parola-sms-preferences", {
+      preferredTime: "04:30",
+      smsDialect: "tl",
+      secondaryPhone: "",
+      secondaryEnabled: false
+    });
+  });
+
+  // New Sea Setting B: At-Sea Sunlight Readability (persisted in storageService)
+  const [readabilityPrefs, setReadabilityPrefs] = useState<SeaReadabilityPreferences>(() => {
+    return storageService.getItem<SeaReadabilityPreferences>("parola-sea-readability", {
+      highContrast: false,
+      largeTouchTargets: false
+    });
+  });
+
+  // Local theme state synced with context
+  const [currentTheme, setCurrentTheme] = useState<"light" | "dark">(theme || "light");
+
+  // Handle URL hash navigation on mount
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      const hash = window.location.hash.replace("#", "") as typeof activeSection;
+      if (["profile", "port", "advisories", "readability", "preferences"].includes(hash)) {
+        setActiveSection(hash);
+        const el = document.getElementById(hash);
+        if (el) {
+          setTimeout(() => el.scrollIntoView({ behavior: "smooth", block: "start" }), 150);
+        }
+      }
+    }
+  }, []);
 
   const languages = [
-    { code: "en", name: "English", flag: "🇺🇸" },
-    { code: "tl", name: "Tagalog", flag: "🇵🇭" },
-    { code: "ceb", name: "Cebuano", flag: "🇵🇭" },
-    { code: "hil", name: "Hiligaynon", flag: "🇵🇭" },
+    { code: "en", name: "English", sub: "International", flag: "US" },
+    { code: "tl", name: "Tagalog", sub: "Pambansang Wika", flag: "PH" },
+    { code: "ceb", name: "Cebuano", sub: "Bisaya", flag: "PH" },
+    { code: "hil", name: "Hiligaynon", sub: "Ilonggo", flag: "PH" },
   ] as const;
 
-  const handleSavePreferences = () => {
-    showToast("General preferences saved successfully!", "success");
+  const dispatchTimes = [
+    { value: "04:00", label: "04:00 PHT (Early Run)" },
+    { value: "04:30", label: "04:30 PHT (Standard)" },
+    { value: "05:00", label: "05:00 PHT" },
+    { value: "05:30", label: "05:30 PHT" }
+  ];
+
+  const handleUpdateSmsPrefs = (updates: Partial<SmsPreferences>) => {
+    const updated = { ...smsPrefs, ...updates };
+    setSmsPrefs(updated);
+    storageService.setItem("parola-sms-preferences", updated);
+  };
+
+  const handleUpdateReadability = (updates: Partial<SeaReadabilityPreferences>) => {
+    const updated = { ...readabilityPrefs, ...updates };
+    setReadabilityPrefs(updated);
+    storageService.setItem("parola-sea-readability", updated);
+  };
+
+  const handleSaveAll = () => {
+    storageService.setItem("parola-sms-preferences", smsPrefs);
+    storageService.setItem("parola-sea-readability", readabilityPrefs);
+    showToast("Vessel preferences and settings saved successfully.", "success");
+  };
+
+  const jumperItems = [
+    { id: "profile", label: "Vessel Profile", subtitle: "Operator & boat registration", icon: User },
+    { id: "port", label: "Home Port", subtitle: "Anchorage & safe zone radius", icon: Anchor },
+    { id: "advisories", label: "SMS Dispatch", subtitle: "Daily schedule & dialect", icon: Clock },
+    { id: "readability", label: "At-Sea Display", subtitle: "Glare contrast & touch sizing", icon: Eye },
+    { id: "preferences", label: "Preferences", subtitle: "Theme & interface language", icon: Sliders }
+  ] as const;
+
+  // Sync active section with scroll position
+  useEffect(() => {
+    const sectionIds = ["profile", "port", "advisories", "readability", "preferences"];
+    const handleScroll = () => {
+      const scrollPosition = window.scrollY + 160;
+      for (const id of sectionIds) {
+        const el = document.getElementById(id);
+        if (el) {
+          const top = el.offsetTop;
+          const height = el.offsetHeight;
+          if (scrollPosition >= top && scrollPosition < top + height) {
+            setActiveSection(id as any);
+            break;
+          }
+        }
+      }
+    };
+    window.addEventListener("scroll", handleScroll, { passive: true });
+    return () => window.removeEventListener("scroll", handleScroll);
+  }, []);
+
+  const scrollToSection = (id: typeof activeSection) => {
+    setActiveSection(id);
+    const element = document.getElementById(id);
+    if (element) {
+      element.scrollIntoView({ behavior: "smooth", block: "start" });
+    }
   };
 
   return (
     <AuthLayout>
-      <div className="space-y-6 pb-16 pt-4 max-w-5xl mx-auto">
+      {/* Background Atmosphere: Subtle Maritime Dot Grid & Ambient Beacon Glows */}
+      <div className="fixed inset-0 pointer-events-none overflow-hidden -z-10 bg-[#F2F6F4]">
+        <div
+          className="absolute inset-0 opacity-[0.045]"
+          style={{
+            backgroundImage: "radial-gradient(#12211E 1px, transparent 1px)",
+            backgroundSize: "24px 24px"
+          }}
+        />
+        <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[850px] h-[480px] bg-gradient-to-b from-[#00B37E]/10 via-[#00B37E]/3 to-transparent blur-[130px] rounded-full" />
+        <div className="absolute top-[35%] right-[-80px] w-[450px] h-[450px] bg-[#C57E2C]/5 blur-[110px] rounded-full" />
+      </div>
 
-        {/* Page Header */}
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-2">
-          <div className="flex items-center gap-3">
-            <div className="p-3 bg-emerald-50 rounded-2xl text-[#00B074]">
-              <Sliders className="w-6 h-6" />
+      <div className="space-y-6 pb-20 pt-2 max-w-7xl mx-auto px-4 sm:px-6 selection:bg-[#00B37E]/20 selection:text-[#12211E]">
+
+        {/* Top Header Block */}
+        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 pb-2 border-b border-[#DAE5E0]">
+          <div className="space-y-2">
+            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-[#C57E2C]/10 border border-[#C57E2C]/25 text-[#9A5B18] text-[11px] font-bold uppercase tracking-wider shadow-2xs">
+              <Sliders className="w-3.5 h-3.5 text-[#C57E2C]" />
+              <span>Vessel Credentials & Preferences</span>
             </div>
-            <div>
-              <h1 className="font-display font-[900] text-2xl sm:text-3xl tracking-tight text-slate-900">
-                GENERAL SETTINGS
-              </h1>
-              <p className="text-xs font-semibold text-gray-400 mt-0.5">
-                Customize appearance themes, accessibility text scaling, and application language preferences.
+            <h1 className="font-display font-black text-2xl sm:text-3xl lg:text-4xl tracking-tight text-[#12211E]">
+              Settings & Vessel Profile
+            </h1>
+            <p className="text-xs sm:text-sm font-normal text-[#12211E]/75 max-w-2xl">
+              Manage vessel credentials, home port anchorage, automated SMS schedules, and at-sea readability.
+            </p>
+          </div>
+
+          <div className="flex items-center gap-2.5 self-start md:self-auto">
+            <button
+              type="button"
+              onClick={handleSaveAll}
+              className="inline-flex items-center justify-center gap-2 px-6 py-2.5 rounded-full bg-[#00B37E] hover:bg-[#00B37E]/90 text-white font-bold text-xs uppercase tracking-wider transition shadow-sm hover:shadow active:scale-[0.98] cursor-pointer"
+            >
+              <Check className="w-4 h-4 stroke-[2.5]" />
+              <span>Save Settings</span>
+            </button>
+          </div>
+        </div>
+
+        {/* Sticky Mobile Section Jumper Bar (Visible < lg only) */}
+        <div className="sticky top-0 z-20 bg-[#F2F6F4]/90 backdrop-blur-md py-2.5 -mx-4 px-4 lg:hidden">
+          <nav className="flex items-center gap-1.5 sm:gap-2 p-1.5 bg-white border border-[#DAE5E0] rounded-full shadow-2xs max-w-2xl mx-auto overflow-x-auto scrollbar-none">
+            {jumperItems.map((item) => {
+              const Icon = item.icon;
+              const isActive = activeSection === item.id;
+              return (
+                <button
+                  key={item.id}
+                  onClick={() => scrollToSection(item.id)}
+                  className={`flex-1 flex items-center justify-center gap-1.5 py-1.5 px-3 rounded-full text-xs font-bold transition-all text-center cursor-pointer whitespace-nowrap ${
+                    isActive
+                      ? "bg-[#00B37E] text-white shadow-2xs"
+                      : "text-[#12211E]/70 hover:text-[#12211E] hover:bg-[#EAF1ED]"
+                  }`}
+                >
+                  <Icon className="w-3.5 h-3.5 shrink-0" />
+                  <span className="truncate">{item.label}</span>
+                </button>
+              );
+            })}
+          </nav>
+        </div>
+
+        {/* Desktop Two-Column Master-Detail Grid */}
+        <div className="lg:grid lg:grid-cols-12 lg:gap-8 items-start">
+
+          {/* Left Column: Sticky Sub-Nav & Vessel Summary Widget */}
+          <aside className="hidden lg:block lg:col-span-4 lg:sticky lg:top-6 space-y-4">
+            {/* Master Sub-Nav Card */}
+            <div className="bg-white border border-[#DAE5E0] rounded-3xl p-4 shadow-sm space-y-1">
+              <div className="px-3 pt-2 pb-2">
+                <span className="text-[10px] font-bold uppercase tracking-wider text-[#12211E]/50">
+                  Settings Hub
+                </span>
+              </div>
+              {jumperItems.map((item) => {
+                const Icon = item.icon;
+                const isActive = activeSection === item.id;
+                return (
+                  <button
+                    key={item.id}
+                    type="button"
+                    onClick={() => scrollToSection(item.id)}
+                    className={`w-full flex items-center gap-3 p-3 rounded-2xl text-left transition cursor-pointer ${
+                      isActive
+                        ? "bg-[#00B37E] text-white shadow-2xs font-bold"
+                        : "text-[#12211E] hover:bg-[#EAF1ED]"
+                    }`}
+                  >
+                    <div className={`p-2 rounded-xl shrink-0 transition-colors ${
+                      isActive ? "bg-white/20 text-white" : "bg-[#F2F6F4] text-[#00B37E]"
+                    }`}>
+                      <Icon className="w-4 h-4" />
+                    </div>
+                    <div className="min-w-0 flex-1">
+                      <div className="text-xs font-bold tracking-tight truncate">
+                        {item.label}
+                      </div>
+                      <div className={`text-[10px] truncate ${isActive ? "text-white/80" : "text-[#12211E]/60"}`}>
+                        {item.subtitle}
+                      </div>
+                    </div>
+                  </button>
+                );
+              })}
+            </div>
+
+            {/* Vessel Credential Quick Context Widget */}
+            <div className="bg-white border border-[#DAE5E0] rounded-3xl p-5 shadow-sm space-y-3.5">
+              <div className="flex items-center justify-between border-b border-[#DAE5E0]/70 pb-3">
+                <span className="text-[10px] font-bold uppercase tracking-wider text-[#12211E]/60">
+                  Vessel Status
+                </span>
+                <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-emerald-100 text-[#00B37E] text-[10px] font-bold uppercase tracking-wider">
+                  <CheckCircle2 className="w-3 h-3" />
+                  Verified
+                </span>
+              </div>
+
+              <div className="space-y-1">
+                <div className="text-sm font-black text-[#12211E] truncate">
+                  {userProfile.vesselName || "F/B Sto. Niño"}
+                </div>
+                <div className="text-[11px] text-[#00B37E] font-medium flex items-center gap-1">
+                  <Ship className="w-3 h-3" />
+                  <span>PH-CN-2026-081</span>
+                </div>
+              </div>
+
+              <div className="p-3 bg-[#F2F6F4]/70 rounded-2xl border border-[#DAE5E0] space-y-2 text-xs">
+                <div className="flex justify-between items-center">
+                  <span className="text-[10px] font-bold uppercase tracking-wider text-[#12211E]/55">Home Port</span>
+                  <span className="font-bold text-[#12211E] truncate max-w-[140px]">{userProfile.port || "Mercedes Port"}</span>
+                </div>
+                <div className="flex justify-between items-center">
+                  <span className="text-[10px] font-bold uppercase tracking-wider text-[#12211E]/55">Morning SMS</span>
+                  <span className="font-bold text-[#00B37E]">{smsPrefs.preferredTime} PHT ({smsPrefs.smsDialect.toUpperCase()})</span>
+                </div>
+                <div className="flex justify-between items-center">
+                  <span className="text-[10px] font-bold uppercase tracking-wider text-[#12211E]/55">Font Scale</span>
+                  <span className="font-bold text-[#12211E]">{fontScales[fontScale]}%</span>
+                </div>
+              </div>
+
+              <button
+                type="button"
+                onClick={handleSaveAll}
+                className="w-full py-2.5 px-4 rounded-full bg-[#00B37E] hover:bg-[#00B37E]/90 text-white font-bold text-xs uppercase tracking-wider transition shadow-2xs hover:shadow active:scale-[0.98] cursor-pointer flex items-center justify-center gap-1.5"
+              >
+                <Check className="w-3.5 h-3.5 stroke-[2.5]" />
+                <span>Save All Settings</span>
+              </button>
+            </div>
+          </aside>
+
+          {/* Right Column: Detail Content Sections */}
+          <main className="lg:col-span-8 space-y-6">
+
+        {/* ============================================================ */}
+        {/* SECTION 1: VESSEL & OPERATOR PROFILE */}
+        {/* ============================================================ */}
+        <section
+          id="profile"
+          className="scroll-mt-20 bg-white border border-[#DAE5E0] rounded-3xl p-6 sm:p-8 shadow-sm space-y-6"
+        >
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-[#DAE5E0]/70 pb-5">
+            <div className="flex items-start gap-3.5">
+              <div className="w-12 h-12 rounded-2xl bg-emerald-50 border border-emerald-100 text-[#00B37E] flex items-center justify-center shrink-0">
+                <Ship className="w-6 h-6" />
+              </div>
+              <div className="space-y-0.5">
+                <div className="flex items-center gap-2 flex-wrap">
+                  <h2 className="font-display font-black text-lg sm:text-xl text-[#12211E] tracking-tight">
+                    {userProfile.vesselName || "F/B Sto. Niño"}
+                  </h2>
+                  <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-emerald-100 text-[#00B37E] text-[10px] font-bold uppercase tracking-wider">
+                    <CheckCircle2 className="w-3 h-3" />
+                    SMS Verified
+                  </span>
+                </div>
+                <p className="text-xs font-medium text-[#00B37E]">
+                  Active Municipal Operator • Registration PH-CN-2026-081
+                </p>
+              </div>
+            </div>
+
+            <button
+              type="button"
+              onClick={() => router.push("/onboarding?from=profile")}
+              className="inline-flex items-center gap-1.5 px-4 py-2 rounded-full border border-[#DAE5E0] bg-white hover:bg-[#EAF1ED] text-[#12211E] text-xs font-bold transition shadow-2xs self-start sm:self-auto cursor-pointer active:scale-[0.98]"
+            >
+              <Edit3 className="w-3.5 h-3.5 text-[#00B37E]" />
+              <span>Edit Vessel Info</span>
+            </button>
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3.5">
+            <div className="bg-[#F2F6F4]/60 border border-[#DAE5E0] rounded-2xl p-4">
+              <span className="text-[10px] font-bold text-[#12211E]/55 uppercase block tracking-wider">
+                Registered Contact
+              </span>
+              <span className="text-sm font-black text-[#12211E] mt-1 block">
+                {userProfile.phone || "+63 917 123 4567"}
+              </span>
+              <span className="text-[10px] text-[#00B37E] font-medium block mt-0.5">
+                Cellular 2G Link Active
+              </span>
+            </div>
+
+            <div className="bg-[#F2F6F4]/60 border border-[#DAE5E0] rounded-2xl p-4">
+              <span className="text-[10px] font-bold text-[#12211E]/55 uppercase block tracking-wider">
+                Vessel Category
+              </span>
+              <span className="text-sm font-black text-[#12211E] mt-1 block">
+                Motorized Banca (&lt; 3 GT)
+              </span>
+              <span className="text-[10px] text-[#12211E]/65 block mt-0.5">
+                Municipal Water Permitted
+              </span>
+            </div>
+
+            <div className="bg-[#F2F6F4]/60 border border-[#DAE5E0] rounded-2xl p-4">
+              <span className="text-[10px] font-bold text-[#12211E]/55 uppercase block tracking-wider">
+                Target Fishery
+              </span>
+              <span className="text-sm font-black text-[#12211E] mt-1 block capitalize">
+                {userProfile.speciesPreference === "pelagic"
+                  ? "Pelagic (Surface)"
+                  : userProfile.speciesPreference === "demersal"
+                    ? "Demersal (Reef)"
+                    : "General (Both Groups)"}
+              </span>
+              <span className="text-[10px] text-[#12211E]/65 block mt-0.5">
+                ML Advisory Tuned
+              </span>
+            </div>
+          </div>
+        </section>
+
+        {/* ============================================================ */}
+        {/* SECTION 2: HOME PORT & MARINE ANCHORAGE */}
+        {/* ============================================================ */}
+        <section
+          id="port"
+          className="scroll-mt-20 bg-white border border-[#DAE5E0] rounded-3xl p-6 sm:p-8 shadow-sm space-y-6"
+        >
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-[#DAE5E0]/70 pb-5">
+            <div className="flex items-start gap-3">
+              <div className="p-2.5 bg-emerald-50 rounded-2xl text-[#00B37E] shrink-0 border border-emerald-100">
+                <Anchor className="w-5 h-5" />
+              </div>
+              <div className="space-y-0.5">
+                <h2 className="font-display font-black text-lg sm:text-xl text-[#12211E] tracking-tight">
+                  Home Port & Anchorage Geocenter
+                </h2>
+                <p className="text-xs text-[#12211E]/75">
+                  Designated departure harbor establishing municipal boundaries and automated port safety hold radiuses.
+                </p>
+              </div>
+            </div>
+
+            <button
+              type="button"
+              onClick={() => router.push("/onboarding?from=profile")}
+              className="inline-flex items-center gap-1.5 px-4 py-2 rounded-full border border-[#DAE5E0] bg-white hover:bg-[#EAF1ED] text-[#12211E] text-xs font-bold transition shadow-2xs self-start sm:self-auto cursor-pointer active:scale-[0.98]"
+            >
+              <MapPin className="w-3.5 h-3.5 text-[#00B37E]" />
+              <span>Change Port</span>
+            </button>
+          </div>
+
+          <div className="bg-[#F2F6F4]/50 border border-[#DAE5E0] rounded-2xl p-5 space-y-4">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+              <div>
+                <span className="text-[10px] font-bold text-[#12211E]/55 uppercase block tracking-wider">
+                  Active Marine Zone
+                </span>
+                <span className="text-base font-black text-[#12211E] block mt-0.5">
+                  {userProfile.port || "Mercedes Fish Port (Camarines Norte)"}
+                </span>
+              </div>
+              <span className="inline-flex items-center gap-1 px-3 py-1 rounded-full bg-emerald-50 border border-emerald-200 text-[#00B37E] text-[10px] font-bold uppercase self-start sm:self-auto">
+                Municipal Water Zone 3
+              </span>
+            </div>
+
+            {/* Coordinates Summary with Progressive Disclosure */}
+            <div className="pt-3 border-t border-[#DAE5E0] flex flex-col sm:flex-row sm:items-center justify-between gap-2 text-xs">
+              <span className="text-[#12211E]/70 font-medium">
+                Anchor Coordinates: {userProfile.lat ? userProfile.lat.toFixed(4) : "14.0122"}° N, {userProfile.lng ? userProfile.lng.toFixed(4) : "123.0114"}° E
+              </span>
+
+              <button
+                type="button"
+                onClick={() => setShowCoordinateDetails(!showCoordinateDetails)}
+                className="inline-flex items-center gap-1 text-[11px] font-bold text-[#00B37E] hover:underline cursor-pointer self-start sm:self-auto"
+              >
+                <span>{showCoordinateDetails ? "Hide Boundary Details" : "View Boundary Details"}</span>
+                {showCoordinateDetails ? <ChevronUp className="w-3.5 h-3.5" /> : <ChevronDown className="w-3.5 h-3.5" />}
+              </button>
+            </div>
+
+            {showCoordinateDetails && (
+              <div className="p-4 bg-white rounded-xl border border-[#DAE5E0] text-xs space-y-2 font-mono">
+                <div className="flex justify-between items-center text-[#12211E]/80">
+                  <span className="font-sans font-medium text-[#12211E]/60">GPS Latitude:</span>
+                  <span className="font-bold">{userProfile.lat ? userProfile.lat.toFixed(6) : "14.012200"}° N</span>
+                </div>
+                <div className="flex justify-between items-center text-[#12211E]/80">
+                  <span className="font-sans font-medium text-[#12211E]/60">GPS Longitude:</span>
+                  <span className="font-bold">{userProfile.lng ? userProfile.lng.toFixed(6) : "123.011400"}° E</span>
+                </div>
+                <div className="flex justify-between items-center text-[#12211E]/80">
+                  <span className="font-sans font-medium text-[#12211E]/60">Safety Hold Boundary:</span>
+                  <span className="font-bold text-[#00B37E]">15.0 km Coastal Radius</span>
+                </div>
+                <p className="font-sans text-[11px] text-[#12211E]/65 pt-1 border-t border-[#DAE5E0]/60 leading-relaxed">
+                  Vessel telemetry exceeding this boundary during gale warnings prompts automated Coast Guard port holds.
+                </p>
+              </div>
+            )}
+          </div>
+        </section>
+
+        {/* ============================================================ */}
+        {/* SECTION 3: DAILY SMS ADVISORY DISPATCH (NEW SETTING A) */}
+        {/* ============================================================ */}
+        <section
+          id="advisories"
+          className="scroll-mt-20 bg-white border border-[#DAE5E0] rounded-3xl p-6 sm:p-8 shadow-sm space-y-6"
+        >
+          <div className="flex items-start gap-3 border-b border-[#DAE5E0]/70 pb-5">
+            <div className="p-2.5 bg-emerald-50 rounded-2xl text-[#00B37E] shrink-0 border border-emerald-100">
+              <Clock className="w-5 h-5" />
+            </div>
+            <div className="space-y-0.5">
+              <h2 className="font-display font-black text-lg sm:text-xl text-[#12211E] tracking-tight">
+                Daily SMS Advisory Schedule
+              </h2>
+              <p className="text-xs text-[#12211E]/75">
+                Automated morning oceanographic broadcast delivered directly to 2G keypad phones before departure.
               </p>
             </div>
           </div>
 
-          <button
-            onClick={handleSavePreferences}
-            className="inline-flex items-center justify-center gap-2 px-6 py-3 rounded-full bg-[#00B074] hover:bg-[#009B66] text-white font-black text-xs uppercase tracking-wider transition shadow-sm self-start sm:self-auto active:scale-95 cursor-pointer"
-          >
-            <Check className="w-4 h-4 stroke-[3]" />
-            <span>SAVE PREFERENCES</span>
-          </button>
-        </div>
-
-        {/* Single Card: Theme & UI Scaling + Application Language */}
-        <div className="mt-4 sm:mt-6 bg-white border border-gray-200/80 rounded-[2.5rem] p-6 sm:p-8 shadow-md">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-8 items-start">
-
-            {/* Left Section: Theme & UI Scaling */}
-            <div className="space-y-6">
-              <div className="flex items-center gap-2">
-                <Sun className="w-4.5 h-4.5 text-[#00B074]" />
-                <h2 className="font-display font-black text-xs uppercase tracking-wider text-slate-900">
-                  THEME & UI SCALING
-                </h2>
-              </div>
-
-              {/* Appearance Skin Switcher */}
-              <div className="space-y-2">
-                <label className="text-[10px] font-black uppercase tracking-wider text-gray-400 block">
-                  APPEARANCE SKIN
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
+            {/* Preferred Morning Broadcast Time */}
+            <div className="bg-[#F2F6F4]/50 border border-[#DAE5E0] rounded-2xl p-5 space-y-3">
+              <div className="flex items-center justify-between">
+                <label className="text-xs font-bold uppercase tracking-wider text-[#12211E]">
+                  Morning Broadcast Time
                 </label>
-                <div className="bg-slate-100 p-1.5 rounded-2xl grid grid-cols-2 gap-1">
-                  <button
-                    type="button"
-                    onClick={() => setTheme("light")}
-                    className={`py-3 rounded-xl text-xs font-black flex items-center justify-center gap-2 transition cursor-pointer ${
-                      theme === "light"
-                        ? "bg-white text-[#00B074] shadow-sm"
-                        : "text-gray-500 hover:text-slate-800"
-                    }`}
-                  >
-                    <Sun className="w-4 h-4" />
-                    <span>LIGHT THEME</span>
-                  </button>
-
-                  <button
-                    type="button"
-                    onClick={() => setTheme("dark")}
-                    className={`py-3 rounded-xl text-xs font-black flex items-center justify-center gap-2 transition cursor-pointer ${
-                      theme === "dark"
-                        ? "bg-slate-900 text-white shadow-sm"
-                        : "text-gray-500 hover:text-slate-800"
-                    }`}
-                  >
-                    <Moon className="w-4 h-4" />
-                    <span>DARK THEME</span>
-                  </button>
-                </div>
+                <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-100 text-[#00B37E]">
+                  Pre-Dawn Departure
+                </span>
               </div>
 
-              {/* Accessibility Font Scale Slider */}
-              <div className="space-y-3 pt-2">
-                <div className="flex justify-between items-center">
-                  <label className="text-[10px] font-black uppercase tracking-wider text-gray-400">
-                    ACCESSIBILITY FONT SCALE
-                  </label>
-                  <span className="text-xs font-black text-[#00B074] bg-emerald-50 px-2 py-0.5 rounded-full border border-emerald-200">
-                    {fontScales[fontScale]}% Size
-                  </span>
-                </div>
+              <select
+                value={smsPrefs.preferredTime}
+                onChange={(e) => handleUpdateSmsPrefs({ preferredTime: e.target.value })}
+                className="w-full py-2.5 px-3.5 rounded-xl border border-[#DAE5E0] bg-white text-xs font-bold text-[#12211E] focus:outline-none focus:ring-2 focus:ring-[#00B37E] cursor-pointer"
+              >
+                {dispatchTimes.map((t) => (
+                  <option key={t.value} value={t.value}>{t.label}</option>
+                ))}
+              </select>
 
-                <input
-                  type="range"
-                  min={0}
-                  max={4}
-                  value={fontScale}
-                  onChange={(e) => changeFontScale(parseInt(e.target.value))}
-                  style={{
-                    background: `linear-gradient(to right, #00B074 0%, #00B074 ${fontScale * 25}%, #E2E8F0 ${fontScale * 25}%, #E2E8F0 100%)`
-                  }}
-                  className="w-full h-2 rounded-lg appearance-none cursor-pointer accent-[#00B074]"
+              <p className="text-[11px] font-normal text-[#12211E]/65 leading-relaxed">
+                Dispatched prior to pre-dawn sailing while banca remains within coastal cellular reception.
+              </p>
+            </div>
+
+            {/* Preferred SMS Broadcast Dialect */}
+            <div className="bg-[#F2F6F4]/50 border border-[#DAE5E0] rounded-2xl p-5 space-y-3">
+              <label className="text-xs font-bold uppercase tracking-wider text-[#12211E] block">
+                SMS Advisory Dialect
+              </label>
+
+              <div className="grid grid-cols-2 gap-2">
+                {[
+                  { code: "tl", label: "Tagalog" },
+                  { code: "ceb", label: "Cebuano" },
+                  { code: "hil", label: "Hiligaynon" },
+                  { code: "en", label: "English" }
+                ].map((d) => (
+                  <button
+                    key={d.code}
+                    type="button"
+                    onClick={() => handleUpdateSmsPrefs({ smsDialect: d.code })}
+                    className={`py-2 px-3 rounded-xl text-xs font-bold border transition text-center cursor-pointer ${
+                      smsPrefs.smsDialect === d.code
+                        ? "bg-[#00B37E] text-white border-[#00B37E] shadow-2xs"
+                        : "bg-white border-[#DAE5E0] text-[#12211E]/75 hover:bg-[#EAF1ED]"
+                    }`}
+                  >
+                    {d.label}
+                  </button>
+                ))}
+              </div>
+
+              <p className="text-[11px] font-normal text-[#12211E]/65 leading-relaxed">
+                Advisory messages are formatted in standard GSM-7 text using this chosen dialect.
+              </p>
+            </div>
+          </div>
+
+          {/* Optional Second Crew / Shore Mobile Number */}
+          <div className="p-4.5 bg-[#F2F6F4]/50 border border-[#DAE5E0] rounded-2xl space-y-3">
+            <div className="flex items-center justify-between">
+              <div>
+                <span className="text-xs font-bold uppercase tracking-wider text-[#12211E] block">
+                  Secondary Shore or Crew Contact
+                </span>
+                <span className="text-[11px] text-[#12211E]/65">
+                  Sends simultaneous SMS advisory to family shore watch or chief crew mate.
+                </span>
+              </div>
+
+              <button
+                type="button"
+                onClick={() => handleUpdateSmsPrefs({ secondaryEnabled: !smsPrefs.secondaryEnabled })}
+                className={`relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none ${
+                  smsPrefs.secondaryEnabled ? "bg-[#00B37E]" : "bg-[#DAE5E0]"
+                }`}
+              >
+                <span
+                  className={`pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow-md transition duration-200 ease-in-out ${
+                    smsPrefs.secondaryEnabled ? "translate-x-5" : "translate-x-0"
+                  }`}
                 />
+              </button>
+            </div>
 
-                <div className="flex justify-between items-center text-[10px] font-bold text-gray-400 pt-1">
-                  <span>80% Compact</span>
-                  <span>100% Default</span>
-                  <span>130% Large Type</span>
-                </div>
+            {smsPrefs.secondaryEnabled && (
+              <div className="pt-2 border-t border-[#DAE5E0]">
+                <input
+                  type="text"
+                  placeholder="+63 9XX XXX XXXX (Shore / Family Contact)"
+                  value={smsPrefs.secondaryPhone}
+                  onChange={(e) => handleUpdateSmsPrefs({ secondaryPhone: e.target.value })}
+                  className="w-full py-2.5 px-3.5 rounded-xl border border-[#DAE5E0] bg-white text-xs font-semibold text-[#12211E] placeholder-[#12211E]/40 focus:outline-none focus:ring-2 focus:ring-[#00B37E]"
+                />
+              </div>
+            )}
+          </div>
+        </section>
+
+        {/* ============================================================ */}
+        {/* SECTION 4: AT-SEA SUNLIGHT READABILITY (NEW SETTING B) */}
+        {/* ============================================================ */}
+        <section
+          id="readability"
+          className="scroll-mt-20 bg-white border border-[#DAE5E0] rounded-3xl p-6 sm:p-8 shadow-sm space-y-6"
+        >
+          <div className="flex items-start gap-3 border-b border-[#DAE5E0]/70 pb-5">
+            <div className="p-2.5 bg-emerald-50 rounded-2xl text-[#00B37E] shrink-0 border border-emerald-100">
+              <Eye className="w-5 h-5" />
+            </div>
+            <div className="space-y-0.5">
+              <h2 className="font-display font-black text-lg sm:text-xl text-[#12211E] tracking-tight">
+                At-Sea Sunlight Readability & Accessibility
+              </h2>
+              <p className="text-xs text-[#12211E]/75">
+                Optimize display contrast and touch surface hit areas for glare and moving vessel decks.
+              </p>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            {/* Sunlight High Contrast Toggle */}
+            <div className="p-4.5 bg-[#F2F6F4]/50 border border-[#DAE5E0] rounded-2xl flex items-center justify-between">
+              <div className="space-y-0.5 pr-2">
+                <span className="text-xs font-bold uppercase tracking-wider text-[#12211E] block">
+                  Sunlight High Contrast
+                </span>
+                <span className="text-[11px] text-[#12211E]/65 block">
+                  Maximizes text sharpness and border contrast under direct tropical glare.
+                </span>
+              </div>
+              <button
+                type="button"
+                onClick={() => handleUpdateReadability({ highContrast: !readabilityPrefs.highContrast })}
+                className={`relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none ${
+                  readabilityPrefs.highContrast ? "bg-[#00B37E]" : "bg-[#DAE5E0]"
+                }`}
+              >
+                <span
+                  className={`pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow-md transition duration-200 ease-in-out ${
+                    readabilityPrefs.highContrast ? "translate-x-5" : "translate-x-0"
+                  }`}
+                />
+              </button>
+            </div>
+
+            {/* Large Touch Targets Toggle */}
+            <div className="p-4.5 bg-[#F2F6F4]/50 border border-[#DAE5E0] rounded-2xl flex items-center justify-between">
+              <div className="space-y-0.5 pr-2">
+                <span className="text-xs font-bold uppercase tracking-wider text-[#12211E] block">
+                  Large Touch Targets
+                </span>
+                <span className="text-[11px] text-[#12211E]/65 block">
+                  Expands button spacing and tap zones for wet hands and rolling decks.
+                </span>
+              </div>
+              <button
+                type="button"
+                onClick={() => handleUpdateReadability({ largeTouchTargets: !readabilityPrefs.largeTouchTargets })}
+                className={`relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none ${
+                  readabilityPrefs.largeTouchTargets ? "bg-[#00B37E]" : "bg-[#DAE5E0]"
+                }`}
+              >
+                <span
+                  className={`pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow-md transition duration-200 ease-in-out ${
+                    readabilityPrefs.largeTouchTargets ? "translate-x-5" : "translate-x-0"
+                  }`}
+                />
+              </button>
+            </div>
+          </div>
+
+          {/* Accessibility Font Scale Slider */}
+          <div className="bg-[#F2F6F4]/50 border border-[#DAE5E0] rounded-2xl p-5 space-y-3.5">
+            <div className="flex justify-between items-center">
+              <label className="text-xs font-bold uppercase tracking-wider text-[#12211E]">
+                Accessibility Font Scale
+              </label>
+              <span className="text-xs font-black text-[#00B37E] bg-white px-3 py-1 rounded-full border border-[#DAE5E0] shadow-2xs">
+                {fontScales[fontScale]}% Size
+              </span>
+            </div>
+
+            <input
+              type="range"
+              min={0}
+              max={4}
+              value={fontScale}
+              onChange={(e) => changeFontScale(parseInt(e.target.value))}
+              style={{
+                background: `linear-gradient(to right, #00B37E 0%, #00B37E ${fontScale * 25}%, #DAE5E0 ${fontScale * 25}%, #DAE5E0 100%)`
+              }}
+              className="w-full h-2 rounded-full appearance-none cursor-pointer accent-[#00B37E]"
+            />
+
+            <div className="flex justify-between items-center text-[10px] font-bold text-[#12211E]/60 pt-1">
+              <span>80% Compact</span>
+              <span>100% Default</span>
+              <span>115% Large</span>
+              <span>130% Extra Large</span>
+            </div>
+          </div>
+        </section>
+
+        {/* ============================================================ */}
+        {/* SECTION 5: APPEARANCE & APPLICATION LANGUAGE */}
+        {/* ============================================================ */}
+        <section
+          id="preferences"
+          className="scroll-mt-20 bg-white border border-[#DAE5E0] rounded-3xl p-6 sm:p-8 shadow-sm space-y-6"
+        >
+          <div className="flex items-start gap-3 border-b border-[#DAE5E0]/70 pb-5">
+            <div className="p-2.5 bg-emerald-50 rounded-2xl text-[#00B37E] shrink-0 border border-emerald-100">
+              <Sliders className="w-5 h-5" />
+            </div>
+            <div className="space-y-0.5">
+              <h2 className="font-display font-black text-lg sm:text-xl text-[#12211E] tracking-tight">
+                Appearance & Language Preferences
+              </h2>
+              <p className="text-xs text-[#12211E]/75">
+                Customize visual interface theme and select application dialect for telemetry labels.
+              </p>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
+            {/* Appearance Theme Switcher */}
+            <div className="space-y-3">
+              <label className="text-xs font-bold uppercase tracking-wider text-[#12211E] block">
+                Visual Theme
+              </label>
+              <div className="bg-[#F2F6F4] p-1 rounded-full border border-[#DAE5E0] grid grid-cols-2 gap-1 shadow-2xs">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setCurrentTheme("light");
+                    if (theme !== "light" && toggleTheme) toggleTheme();
+                  }}
+                  className={`py-2 px-3 rounded-full text-xs font-bold flex items-center justify-center gap-1.5 transition cursor-pointer ${
+                    currentTheme === "light"
+                      ? "bg-white text-[#00B37E] shadow-2xs"
+                      : "text-[#12211E]/70 hover:text-[#12211E]"
+                  }`}
+                >
+                  <Sun className="w-4 h-4" />
+                  <span>Light Theme</span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => {
+                    setCurrentTheme("dark");
+                    if (theme !== "dark" && toggleTheme) toggleTheme();
+                  }}
+                  className={`py-2 px-3 rounded-full text-xs font-bold flex items-center justify-center gap-1.5 transition cursor-pointer ${
+                    currentTheme === "dark"
+                      ? "bg-[#12211E] text-white shadow-2xs"
+                      : "text-[#12211E]/70 hover:text-[#12211E]"
+                  }`}
+                >
+                  <Moon className="w-4 h-4" />
+                  <span>Dark Theme</span>
+                </button>
               </div>
             </div>
 
-            {/* Right Section: Application Language */}
-            <div className="space-y-6 md:border-l md:border-gray-200/80 md:pl-8 pt-6 md:pt-0 border-t md:border-t-0 border-gray-100">
-              <div className="space-y-1">
-                <div className="flex items-center gap-2">
-                  <Globe className="w-4.5 h-4.5 text-[#00B074]" />
-                  <h2 className="font-display font-black text-xs uppercase tracking-wider text-slate-900">
-                    APPLICATION LANGUAGE
-                  </h2>
-                </div>
-                <p className="text-xs font-semibold text-gray-400">
-                  Select your preferred dialect for navigation labels, weather metrics, and vessel advisories.
-                </p>
-              </div>
+            {/* Application Language Selection */}
+            <div className="space-y-3">
+              <label className="text-xs font-bold uppercase tracking-wider text-[#12211E] block">
+                Application Language
+              </label>
 
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 pt-1">
+              <div className="grid grid-cols-2 gap-2">
                 {languages.map((lang) => {
                   const isSelected = language === lang.code;
                   return (
                     <button
                       key={lang.code}
                       type="button"
-                      onClick={() => changeLanguage(lang.code)}
-                      className={`flex items-center justify-between px-4 py-3.5 rounded-2xl border text-xs font-bold transition cursor-pointer ${
+                      onClick={() => {
+                        changeLanguage(lang.code as any);
+                        showToast(`Language switched to ${lang.name}.`, "info");
+                      }}
+                      className={`p-3 rounded-2xl border text-left transition cursor-pointer flex items-center justify-between ${
                         isSelected
-                          ? "border-[#00B074] bg-emerald-50/60 text-[#00B074]"
-                          : "border-gray-200/80 bg-slate-50 text-slate-700 hover:bg-slate-100"
+                          ? "bg-[#EAF1ED] border-[#00B37E] shadow-2xs"
+                          : "bg-[#F2F6F4]/50 border-[#DAE5E0] hover:bg-[#F2F6F4]"
                       }`}
                     >
-                      <div className="flex items-center gap-2.5">
-                        <span className="text-base">{lang.flag}</span>
-                        <span>{lang.name}</span>
+                      <div>
+                        <span className={`text-xs font-bold block ${isSelected ? "text-[#00B37E]" : "text-[#12211E]"}`}>
+                          {lang.name}
+                        </span>
+                        <span className="text-[10px] text-[#12211E]/55 block">
+                          {lang.sub}
+                        </span>
                       </div>
-                      {isSelected && <div className="w-2.5 h-2.5 rounded-full bg-[#00B074]" />}
+                      {isSelected && <Check className="w-4 h-4 text-[#00B37E] stroke-[2.5]" />}
                     </button>
                   );
                 })}
               </div>
             </div>
-
           </div>
+        </section>
+
+          </main>
         </div>
 
       </div>

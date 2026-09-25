@@ -1,14 +1,16 @@
 import uuid
 import hashlib
+import os
 import secrets
 from datetime import date as date_type, datetime
 from typing import List, Optional
 from fastapi import FastAPI, Depends, HTTPException, Query, status, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
+from fastapi.security import APIKeyHeader
 from sqlalchemy.exc import OperationalError
 from sqlalchemy.orm import Session
-from sqlalchemy import text
+from sqlalchemy import func, text
 from database import get_db
 import models
 import schemas
@@ -210,9 +212,46 @@ app = FastAPI(
     version="2.0.0"
 )
 
+def get_allowed_origins() -> List[str]:
+    """Explicit CORS origins from CORS_ALLOWED_ORIGINS (comma-separated).
+
+    Never use ["*"] together with allow_credentials=True: browsers reject
+    wildcard + credentials, and it exposes credentialed endpoints to any site.
+    """
+    raw = os.environ.get("CORS_ALLOWED_ORIGINS", "")
+    origins = [o.strip() for o in raw.split(",") if o.strip()]
+    if origins:
+        return origins
+    # Secure local-dev default: the Next.js frontend only.
+    return ["http://localhost:3000"]
+
+
+API_KEY_HEADER = APIKeyHeader(name="X-API-Key", auto_error=False)
+
+
+def require_api_key(api_key: Optional[str] = Depends(API_KEY_HEADER)) -> str:
+    """Shared-secret auth for trusted callers (Next.js proxies, ingest jobs).
+
+    Fails closed with 503 when PAROLA_API_KEY is not configured so a missing
+    secret can't silently leave protected endpoints open.
+    """
+    expected = os.environ.get("PAROLA_API_KEY", "")
+    if not expected:
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail="API key authentication is not configured.",
+        )
+    if not api_key or not secrets.compare_digest(api_key, expected):
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Invalid or missing API key.",
+        )
+    return api_key
+
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origins=get_allowed_origins(),
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -426,7 +465,8 @@ def get_nearest_advisories(
 @app.post(
     "/api/advisories/log",
     status_code=status.HTTP_201_CREATED,
-    tags=["Advisories"]
+    tags=["Advisories"],
+    dependencies=[Depends(require_api_key)],
 )
 def log_sent_advisory(payload: schemas.CreateAdvisoryRequest, db: Session = Depends(get_db)):
     advisory = models.DailyAdvisory(
@@ -450,7 +490,8 @@ def log_sent_advisory(payload: schemas.CreateAdvisoryRequest, db: Session = Depe
 @app.post(
     "/api/feedback/submit",
     status_code=status.HTTP_201_CREATED,
-    tags=["Feedback"]
+    tags=["Feedback"],
+    dependencies=[Depends(require_api_key)],
 )
 def submit_feedback(payload: schemas.CreateFeedbackRequest, db: Session = Depends(get_db)):
     feedback = models.CatchFeedback(
@@ -477,14 +518,14 @@ def register_user(payload: schemas.UserCreate, db: Session = Depends(get_db)):
             detail="An account with this phone number already exists. Please sign in instead."
         )
 
-    point_wkt = f"SRID=4326;POINT({payload.longitude} {payload.latitude})"
+    home_port_geom = func.ST_SetSRID(func.ST_MakePoint(payload.longitude, payload.latitude), 4326)
     pwd_hash = hash_password(payload.password) if payload.password else None
 
     new_user = models.User(
         phone_number=cleaned_phone,
         full_name=payload.full_name,
         home_port_name=payload.home_port_name,
-        home_port_geom=point_wkt,
+        home_port_geom=home_port_geom,
         preferred_advisory_time=payload.preferred_advisory_time or "05:00:00",
         password_hash=pwd_hash
     )
@@ -508,7 +549,7 @@ def register_user(payload: schemas.UserCreate, db: Session = Depends(get_db)):
     )
 
 
-@app.put("/api/users/profile", response_model=schemas.UserResponse, tags=["Users"])
+@app.put("/api/users/profile", response_model=schemas.UserResponse, tags=["Users"], dependencies=[Depends(require_api_key)])
 def update_user_profile(payload: schemas.UserCreate, db: Session = Depends(get_db)):
     cleaned_phone = payload.phone_number.strip()
     existing = db.query(models.User).filter(models.User.phone_number == cleaned_phone).first()
@@ -516,10 +557,10 @@ def update_user_profile(payload: schemas.UserCreate, db: Session = Depends(get_d
     if not existing:
         raise HTTPException(status_code=404, detail="User profile not found.")
 
-    point_wkt = f"SRID=4326;POINT({payload.longitude} {payload.latitude})"
+    home_port_geom = func.ST_SetSRID(func.ST_MakePoint(payload.longitude, payload.latitude), 4326)
     existing.full_name = payload.full_name
     existing.home_port_name = payload.home_port_name
-    existing.home_port_geom = point_wkt
+    existing.home_port_geom = home_port_geom
     if payload.preferred_advisory_time:
         existing.preferred_advisory_time = payload.preferred_advisory_time
     if payload.password:
@@ -577,7 +618,7 @@ def login_user(payload: schemas.UserLogin, db: Session = Depends(get_db)):
     )
 
 
-@app.get("/api/users/by-phone", response_model=schemas.UserResponse, tags=["Users"])
+@app.get("/api/users/by-phone", response_model=schemas.UserResponse, tags=["Users"], dependencies=[Depends(require_api_key)])
 def get_user_by_phone(phone_number: str = Query(...), db: Session = Depends(get_db)):
     cleaned_phone = phone_number.strip()
     user_obj = db.query(models.User).filter(models.User.phone_number == cleaned_phone).first()
@@ -600,19 +641,19 @@ def get_user_by_phone(phone_number: str = Query(...), db: Session = Depends(get_
     )
 
 
-@app.post("/api/predictions/ingest", status_code=status.HTTP_201_CREATED, tags=["Advisories"])
+@app.post("/api/predictions/ingest", status_code=status.HTTP_201_CREATED, tags=["Advisories"], dependencies=[Depends(require_api_key)])
 def ingest_daily_predictions(payload: schemas.BatchPredictionIngestRequest, db: Session = Depends(get_db)):
     inserted_count = 0
     for item in payload.predictions:
-        centroid_wkt = f"SRID=4326;POINT({item.lon} {item.lat})"
+        centroid_geom = func.ST_SetSRID(func.ST_MakePoint(item.lon, item.lat), 4326)
         d = 0.005
-        poly_wkt = f"SRID=4326;POLYGON(({item.lon - d} {item.lat - d}, {item.lon + d} {item.lat - d}, {item.lon + d} {item.lat + d}, {item.lon - d} {item.lat + d}, {item.lon - d} {item.lat - d}))"
+        grid_cell_geom = func.ST_MakeEnvelope(item.lon - d, item.lat - d, item.lon + d, item.lat + d, 4326)
 
         pred = models.DailyGridPrediction(
             prediction_date=item.prediction_date,
             model_type=item.model_type,
-            grid_cell_geom=poly_wkt,
-            centroid_geom=centroid_wkt,
+            grid_cell_geom=grid_cell_geom,
+            centroid_geom=centroid_geom,
             catch_probability=item.catch_probability,
             dbscan_cluster_id=item.dbscan_cluster_id,
             sst=item.sst,

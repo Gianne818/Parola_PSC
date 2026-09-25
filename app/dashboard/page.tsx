@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useMemo, useRef } from "react";
 import { AuthLayout } from "../../components/layouts/AuthLayout";
 import { useApp } from "../../context/AppContext";
 import { useTranslation } from "../../hooks/use-translation";
@@ -9,7 +9,9 @@ import { Modal } from "../../components/ui/Modal";
 import { TierProgressBar } from "../../components/ui/TierProgressBar";
 import { calculateDistance, calculateBearing } from "../../utils/spatial";
 import { calculateHotspotMetrics, calculateEfficiencyRatio } from "../../utils/hotspotCalculator";
+import { authHeaders } from "../../utils/auth-fetch";
 import { fetchHotspots } from "../../services/supabaseHotspotService";
+import { Hotspot, ProcessedHotspot } from "../../types";
 import { CATEGORIZED_SPECIES, getSpeciesConfig, getSpeciesColor, getHotspotDisplayColor, GENERAL_PELAGIC_COLOR, GENERAL_DEMERSAL_COLOR } from "../../utils/speciesColors";
 import {
   AlertTriangle,
@@ -42,6 +44,7 @@ import {
   HelpCircle,
   Info,
   Lightbulb,
+  Navigation,
   X
 } from "lucide-react";
 
@@ -79,7 +82,7 @@ export default function DashboardPage() {
   // Selected Family & Species Filters
   const [checkedFamilies, setCheckedFamilies] = useState<string[]>([]);
   const [selectedSpecies, setSelectedSpecies] = useState<string[]>([]);
-  const [selectedHotspot, setSelectedHotspot] = useState<any>(null);
+  const [selectedHotspot, setSelectedHotspot] = useState<Hotspot | null>(null);
   const [searchQuery] = useState("");
   const [sortBy, setSortBy] = useState<'distance' | 'probability' | 'ratio'>('distance');
 
@@ -104,6 +107,22 @@ export default function DashboardPage() {
   const minAdvisorWidth = 450;
   const maxAdvisorWidth = 880;
 
+  // Active resize listeners + pending feedback timeout, cleaned up on unmount
+  // so a mid-gesture unmount can't leak window listeners or fire setState late.
+  const resizeListenersRef = useRef<Array<{ type: string; handler: EventListener }>>([]);
+  const feedbackTimeoutRef = useRef<number | null>(null);
+  useEffect(() => {
+    const listeners = resizeListenersRef.current;
+    return () => {
+      listeners.forEach(({ type, handler }) => window.removeEventListener(type, handler));
+      listeners.length = 0;
+      if (feedbackTimeoutRef.current !== null) {
+        clearTimeout(feedbackTimeoutRef.current);
+        feedbackTimeoutRef.current = null;
+      }
+    };
+  }, []);
+
   const handleMouseDownResize = (e: React.MouseEvent) => {
     e.preventDefault();
     setIsResizing(true);
@@ -124,8 +143,15 @@ export default function DashboardPage() {
       setIsResizing(false);
       window.removeEventListener("mousemove", handleMouseMove);
       window.removeEventListener("mouseup", handleMouseUp);
+      resizeListenersRef.current = resizeListenersRef.current.filter(
+        (l) => l.handler !== handleMouseMove && l.handler !== handleMouseUp
+      );
     };
 
+    resizeListenersRef.current.push(
+      { type: "mousemove", handler: handleMouseMove as EventListener },
+      { type: "mouseup", handler: handleMouseUp as EventListener }
+    );
     window.addEventListener("mousemove", handleMouseMove);
     window.addEventListener("mouseup", handleMouseUp);
   };
@@ -150,8 +176,15 @@ export default function DashboardPage() {
       setIsResizing(false);
       window.removeEventListener("touchmove", handleTouchMove);
       window.removeEventListener("touchend", handleTouchEnd);
+      resizeListenersRef.current = resizeListenersRef.current.filter(
+        (l) => l.handler !== handleTouchMove && l.handler !== handleTouchEnd
+      );
     };
 
+    resizeListenersRef.current.push(
+      { type: "touchmove", handler: handleTouchMove as EventListener },
+      { type: "touchend", handler: handleTouchEnd as EventListener }
+    );
     window.addEventListener("touchmove", handleTouchMove);
     window.addEventListener("touchend", handleTouchEnd);
   };
@@ -173,7 +206,7 @@ export default function DashboardPage() {
     try {
       await fetch('/api/sms/send', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: await authHeaders({ 'Content-Type': 'application/json' }),
         body: JSON.stringify({ recipient: userProfile.phone || '09171234567', message: msg, category: 'weather' })
       });
       showToast(isDangerous ? `⚠️ Storm/Gale Warning SMS dispatched to ${userProfile.phone || 'your phone number'}!` : `Weather advisory SMS dispatched to ${userProfile.phone || 'your phone number'}!`, isDangerous ? "error" : "success");
@@ -186,8 +219,10 @@ export default function DashboardPage() {
 
   const handleFeedback = (level: string) => {
     setSubmittedFeedback(level === "1" ? "High" : level === "2" ? "Medium" : "Low");
-    setTimeout(() => {
+    if (feedbackTimeoutRef.current !== null) clearTimeout(feedbackTimeoutRef.current);
+    feedbackTimeoutRef.current = window.setTimeout(() => {
       setSubmittedFeedback(null);
+      feedbackTimeoutRef.current = null;
     }, 3500);
   };
 
@@ -199,9 +234,12 @@ export default function DashboardPage() {
     );
   };
 
-  const allSpeciesList = Array.from(new Set(hotspots.flatMap((h) => h.species)));
+  const allSpeciesList = useMemo(
+    () => Array.from(new Set(hotspots.flatMap((h) => h.species))),
+    [hotspots]
+  );
 
-  const [speciesHotspots, setSpeciesHotspots] = useState<any[] | null>(null);
+  const [speciesHotspots, setSpeciesHotspots] = useState<Hotspot[] | null>(null);
 
   useEffect(() => {
     let isMounted = true;
@@ -235,11 +273,11 @@ export default function DashboardPage() {
     }
   };
 
-  // Process and sort hotspot distance & catch efficiency data
+  // Process and sort hotspot distance & catch efficiency data (memoized: was re-mapped/sorted/filtered every render)
   const rawHotspotData = speciesHotspots || hotspots;
-  const processedHotspots = rawHotspotData.map((spot) => {
-    const lat = spot.lat ?? (spot as any).position?.[0] ?? 0;
-    const lng = spot.lng ?? (spot as any).position?.[1] ?? 0;
+  const processedHotspots: ProcessedHotspot[] = useMemo(() => rawHotspotData.map((spot) => {
+    const lat = spot.lat ?? spot.position?.[0] ?? 0;
+    const lng = spot.lng ?? spot.position?.[1] ?? 0;
     const dist = calculateDistance(userProfile.lat, userProfile.lng, lat, lng);
     const brng = calculateBearing(userProfile.lat, userProfile.lng, lat, lng);
     
@@ -266,15 +304,15 @@ export default function DashboardPage() {
       catchProbPercent,
       efficiencyRatio
     };
-  });
+  }), [rawHotspotData, userProfile.lat, userProfile.lng]);
 
-  const sortedHotspots = [...processedHotspots].sort((a, b) => {
+  const sortedHotspots = useMemo(() => [...processedHotspots].sort((a, b) => {
     if (sortBy === 'probability') return b.catchProbPercent - a.catchProbPercent;
     if (sortBy === 'ratio') return b.efficiencyRatio - a.efficiencyRatio;
     return a.distValue - b.distValue; // default 'distance' ascending
-  });
+  }), [processedHotspots, sortBy]);
 
-  const filteredHotspots = sortedHotspots.filter((spot) => {
+  const filteredHotspots = useMemo(() => sortedHotspots.filter((spot) => {
     if (searchQuery) {
       const term = searchQuery.toLowerCase();
       const nameMatch = spot.name.toLowerCase().includes(term);
@@ -321,12 +359,12 @@ export default function DashboardPage() {
     }
 
     return true;
-  });
+  }), [sortedHotspots, searchQuery, activeTab, selectedSpecies, showGeneralPelagic, showGeneralDemersal]);
 
-  const mapHotspots = filteredHotspots.map((spot) => ({
+  const mapHotspots = useMemo(() => filteredHotspots.map((spot) => ({
     ...spot,
     isUnsafe: isSafetyHoldActive
-  }));
+  })), [filteredHotspots, isSafetyHoldActive]);
 
   const labelSailing = isSafetyHoldActive ? t("holdSail") : t("favorableSail");
   const activePool = fuelPools.find((p) => p.id === selectedPoolId);
@@ -338,200 +376,189 @@ export default function DashboardPage() {
         {/* ================= LEFT COLUMN: MAP / LIST VIEW AREA ================= */}
         <div className="flex-1 w-full min-w-0 flex flex-col gap-4 h-full relative">
 
-          {/* Floating View Toolbar (overlay on top of the left column) */}
-          <div className="absolute top-4 left-4 z-[1000] flex items-center gap-3">
-            <div className="bg-white p-1 rounded-2xl border border-gray-200/80 shadow-md flex gap-1">
+          {/* Floating View Toolbar (Centered top pill overlay, perfectly avoiding zoom controls) */}
+          <div className="absolute top-4 left-1/2 -translate-x-1/2 z-[1000] flex items-center gap-2">
+            <div className="bg-white/95 backdrop-blur-md p-1 rounded-full border border-[#DAE5E0] shadow-sm flex items-center gap-1">
               <button
+                type="button"
                 onClick={() => setMapView(true)}
-                className={`flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-black uppercase tracking-wider transition-all cursor-pointer ${mapView
-                  ? "bg-[#00B074] text-white shadow-sm"
-                  : "text-slate-500 hover:text-slate-800"
-                  }`}
+                className={`flex items-center gap-1.5 px-4 py-1.5 rounded-full text-xs font-bold uppercase tracking-wider transition-all cursor-pointer ${
+                  mapView
+                    ? "bg-[#00B37E] text-white shadow-2xs"
+                    : "text-[#12211E]/70 hover:text-[#12211E] hover:bg-[#EAF1ED]"
+                }`}
               >
-                <MapIcon className="w-4 h-4" />
-                <span>MAP VIEW</span>
+                <MapIcon className="w-3.5 h-3.5" />
+                <span>Map View</span>
               </button>
               <button
+                type="button"
                 onClick={() => setMapView(false)}
-                className={`flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-black uppercase tracking-wider transition-all cursor-pointer ${!mapView
-                  ? "bg-[#00B074] text-white shadow-sm"
-                  : "text-slate-500 hover:text-slate-800"
-                  }`}
+                className={`flex items-center gap-1.5 px-4 py-1.5 rounded-full text-xs font-bold uppercase tracking-wider transition-all cursor-pointer ${
+                  !mapView
+                    ? "bg-[#00B37E] text-white shadow-2xs"
+                    : "text-[#12211E]/70 hover:text-[#12211E] hover:bg-[#EAF1ED]"
+                }`}
               >
-                <List className="w-4 h-4" />
-                <span>LIST VIEW</span>
+                <List className="w-3.5 h-3.5" />
+                <span>List View</span>
               </button>
             </div>
+          </div>
 
-            {/* 9 km Prediction Radius Indicator: only shown on map view */}
-            {mapView && (
-              <div className="bg-white/95 border border-emerald-200 shadow-md rounded-2xl px-3 py-2 flex items-center gap-2 pointer-events-none">
-                <Globe className="w-3.5 h-3.5 text-[#00B074] shrink-0" />
-                <div>
-                  <span className="text-[10px] font-black uppercase tracking-wider text-emerald-700 block leading-tight">
-                    9 km Prediction Radius
-                  </span>
-                  <span className="text-[8.5px] font-bold text-gray-400 leading-tight block">
-                    Zoom in to see boundaries
-                  </span>
+          {/* 9 km Prediction Radius Indicator: top-left overlay */}
+          {mapView && (
+            <div className="absolute top-4 left-4 z-[900] bg-white/95 backdrop-blur-md border border-[#DAE5E0] shadow-sm rounded-2xl px-3 py-2 flex items-center gap-2 pointer-events-none">
+              <Globe className="w-3.5 h-3.5 text-[#00B37E] shrink-0" />
+              <div>
+                <span className="text-[10px] font-bold uppercase tracking-wider text-[#00B37E] block leading-tight">
+                  9 km Prediction Radius
+                </span>
+                <span className="text-[8.5px] font-medium text-[#12211E]/60 leading-tight block">
+                  ML-calibrated boundary
+                </span>
+              </div>
+            </div>
+          )}
+
+          {/* Map Canvas / Grid List */}
+          <div className="w-full flex-1 h-full min-h-0 relative">
+            {mapView ? (
+              <div className="h-full w-full rounded-3xl overflow-hidden border border-[#DAE5E0] shadow-sm bg-white relative">
+                <MapComponent
+                  hotspots={mapHotspots}
+                  selectedHotspot={selectedHotspot}
+                  onSelectHotspot={setSelectedHotspot}
+                  filterType={activeTab}
+                  selectedSpecies={selectedSpecies}
+                  hideSidebar={true}
+                />
+              </div>
+            ) : (
+              <div className="h-full bg-[#F2F6F4]/50 border border-[#DAE5E0] p-4 sm:p-6 pt-20 rounded-3xl shadow-sm space-y-4 overflow-y-auto">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between border-b border-[#DAE5E0] pb-3 gap-2">
+                  <div>
+                    <h3 className="text-sm font-display font-black text-[#12211E] tracking-tight">
+                      Active Hotspot Coordinates
+                    </h3>
+                    <p className="text-[11px] text-[#12211E]/65 font-medium mt-0.5">
+                      Showing {filteredHotspots.length} localized municipal marine grids.
+                    </p>
+                  </div>
+
+                  <div className="flex items-center gap-1.5 flex-wrap">
+                    <span className="text-[10px] font-bold text-[#12211E]/55 uppercase tracking-wider mr-1">Sort:</span>
+                    <button
+                      type="button"
+                      onClick={() => setSortBy('distance')}
+                      className={`px-3 py-1 rounded-full text-[11px] font-bold transition cursor-pointer ${
+                        sortBy === 'distance'
+                          ? 'bg-[#00B37E] text-white shadow-2xs'
+                          : 'bg-white border border-[#DAE5E0] text-[#12211E]/70 hover:bg-[#EAF1ED]'
+                      }`}
+                    >
+                      Nearest (Distance)
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setSortBy('probability')}
+                      className={`px-3 py-1 rounded-full text-[11px] font-bold transition cursor-pointer ${
+                        sortBy === 'probability'
+                          ? 'bg-[#00B37E] text-white shadow-2xs'
+                          : 'bg-white border border-[#DAE5E0] text-[#12211E]/70 hover:bg-[#EAF1ED]'
+                      }`}
+                    >
+                      Catch Prob %
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setSortBy('ratio')}
+                      className={`px-3 py-1 rounded-full text-[11px] font-bold transition cursor-pointer ${
+                        sortBy === 'ratio'
+                          ? 'bg-[#00B37E] text-white shadow-2xs'
+                          : 'bg-white border border-[#DAE5E0] text-[#12211E]/70 hover:bg-[#EAF1ED]'
+                      }`}
+                    >
+                      Efficiency (%/km)
+                    </button>
+                  </div>
                 </div>
+
+                {filteredHotspots.length === 0 ? (
+                  <div className="bg-white border border-[#DAE5E0] rounded-3xl p-10 text-center space-y-2 max-w-md mx-auto">
+                    <AlertTriangle className="w-8 h-8 text-[#C57E2C] mx-auto" />
+                    <h4 className="font-display font-black text-sm text-[#12211E]">
+                      No Hotspots Match Filters
+                    </h4>
+                    <p className="text-xs text-[#12211E]/65 max-w-sm mx-auto font-medium">
+                      Try enabling General categories or clearing active species filters.
+                    </p>
+                  </div>
+                ) : (
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    {filteredHotspots.map((spot) => {
+                      const probVal = spot.catchProbPercent ?? (spot.catchProbability !== undefined ? (spot.catchProbability * (spot.catchProbability <= 1 ? 100 : 1)).toFixed(0) : undefined);
+                      return (
+                        <div
+                          key={spot.id}
+                          className="bg-white p-4.5 sm:p-5 rounded-2xl border border-[#DAE5E0] shadow-sm hover:shadow-md transition-all flex flex-col justify-between space-y-3 relative group"
+                        >
+                          <div className="space-y-2">
+                            {/* Hotspot Title & Catch Probability */}
+                            <div className="flex items-center justify-between gap-2">
+                              <h4 className="font-display font-black text-sm sm:text-base text-[#12211E] truncate">
+                                {spot.name}
+                              </h4>
+                              {probVal !== undefined && (
+                                <span className="text-xs font-bold text-[#00B37E] bg-emerald-50 px-2.5 py-0.5 rounded-full border border-emerald-100 shrink-0">
+                                  {probVal}% Catch Prob
+                                </span>
+                              )}
+                            </div>
+
+                            {/* Nautical Telemetry Row */}
+                            <div className="flex flex-wrap items-center gap-2 text-xs font-medium text-[#12211E]/75">
+                              <span>{spot.distance}</span>
+                              <span className="text-[#DAE5E0]">•</span>
+                              <span>Bearing {spot.bearing}</span>
+                              <span className="text-[#DAE5E0]">•</span>
+                              <span>{spot.depth}m depth</span>
+                            </div>
+
+                            {/* Species Description */}
+                            <p className="text-[11px] font-medium text-[#12211E]/65 truncate">
+                              Target: {(spot.species || []).join(", ") || spot.desc || "General local species"}
+                            </p>
+                          </div>
+
+                          {/* Footer Row: Efficiency Ratio & Action */}
+                          <div className="flex items-center justify-between border-t border-[#DAE5E0]/70 pt-3">
+                            {spot.efficiencyRatio !== undefined ? (
+                              <span className="inline-flex items-center gap-1 text-[10px] font-bold text-[#9A5B18] bg-[#C57E2C]/10 border border-[#C57E2C]/25 px-2.5 py-0.5 rounded-full">
+                                Yield: {spot.efficiencyRatio} %/km
+                              </span>
+                            ) : <span />}
+
+                            <button
+                              type="button"
+                              onClick={() => {
+                                setSelectedHotspot(spot);
+                                setMapView(true);
+                              }}
+                              className="px-3.5 py-1.5 rounded-full bg-[#00B37E] hover:bg-[#00B37E]/90 text-white text-xs font-bold transition shadow-2xs active:scale-[0.98] cursor-pointer flex items-center gap-1.5"
+                            >
+                              <Navigation className="w-3 h-3" />
+                              <span>Plot on Map</span>
+                            </button>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
               </div>
             )}
           </div>
-
-            {/* Map Canvas / Grid List - Strictly match height */}
-            <div className="w-full flex-1 h-full min-h-0 relative">
-              {mapView ? (
-                <div className="h-full w-full rounded-3xl overflow-hidden border border-gray-200 shadow-md bg-white relative">
-                  <MapComponent
-                    hotspots={mapHotspots}
-                    selectedHotspot={selectedHotspot}
-                    onSelectHotspot={setSelectedHotspot}
-                    filterType={activeTab}
-                    selectedSpecies={selectedSpecies}
-                    hideSidebar={true}
-                  />
-                </div>
-              ) : (
-                <div className="h-full bg-white border border-gray-200 p-6 pt-20 rounded-3xl shadow-md space-y-4 overflow-y-auto">
-                  <div className="flex flex-col sm:flex-row sm:items-center justify-between border-b border-gray-100 pb-3 gap-2">
-                    <div>
-                      <h3 className="text-sm font-display font-black text-slate-900 uppercase tracking-wide">
-                        Active Hotspot Coordinates
-                      </h3>
-                      <p className="text-[10px] text-gray-400 font-semibold mt-0.5">
-                        Showing {filteredHotspots.length} highly localized municipal marine grids.
-                      </p>
-                    </div>
-
-                    <div className="flex items-center gap-1.5 flex-wrap">
-                      <span className="text-[9px] font-black text-gray-400 uppercase tracking-wider mr-1">SORT:</span>
-                      <button
-                        type="button"
-                        onClick={() => setSortBy('distance')}
-                        className={`px-2.5 py-1 rounded-full text-[10px] font-black uppercase transition cursor-pointer ${
-                          sortBy === 'distance'
-                            ? 'bg-[#00B074] text-white'
-                            : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
-                        }`}
-                      >
-                        NEAREST (HAVERSINE)
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => setSortBy('probability')}
-                        className={`px-2.5 py-1 rounded-full text-[10px] font-black uppercase transition cursor-pointer ${
-                          sortBy === 'probability'
-                            ? 'bg-[#00B074] text-white'
-                            : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
-                        }`}
-                      >
-                        CATCH PROB %
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => setSortBy('ratio')}
-                        className={`px-2.5 py-1 rounded-full text-[10px] font-black uppercase transition cursor-pointer ${
-                          sortBy === 'ratio'
-                            ? 'bg-[#00B074] text-white'
-                            : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
-                        }`}
-                      >
-                        EFFICIENCY (%/KM)
-                      </button>
-                    </div>
-                  </div>
-
-                  {filteredHotspots.length === 0 ? (
-                    <div className="text-center py-16 space-y-2">
-                      <AlertTriangle className="w-8 h-8 text-amber-500 mx-auto" />
-                      <h4 className="font-display font-black uppercase text-xs text-slate-800">
-                        No Hotspots Match Filters
-                      </h4>
-                      <p className="text-[10px] text-gray-400 max-w-sm mx-auto font-medium">
-                        Try enabling General categories or clearing active species filters.
-                      </p>
-                    </div>
-                  ) : (
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                      {filteredHotspots.map((spot: any) => {
-                        const itemColor = getHotspotDisplayColor(spot.type || "pelagic", selectedSpecies, spot.species || [], spot.catchProbability);
-                        return (
-                          <div
-                            key={spot.id}
-                            className={`bg-white p-4 rounded-2xl border transition-all flex flex-col justify-between shadow-sm relative ${isSafetyHoldActive
-                              ? "hover:border-rose-300 border-gray-200"
-                              : "hover:border-slate-300 border-gray-200"
-                              }`}
-                            style={{ borderLeftWidth: "4px", borderLeftColor: itemColor }}
-                          >
-                            <div className="space-y-1.5">
-                              <div className="flex items-center gap-1.5 justify-between">
-                                <div className="flex items-center gap-1.5">
-                                  <span className="text-lg leading-none">
-                                    {(spot as any).icon || "🐟"}
-                                  </span>
-                                  <span className="text-xs font-black text-slate-800 uppercase tracking-tight">
-                                    {spot.name}
-                                  </span>
-                                </div>
-                                {spot.catchProbPercent !== undefined && (
-                                  <span className="text-[10px] font-black text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded-full border border-emerald-100">
-                                    {spot.catchProbPercent}% PROB
-                                  </span>
-                                )}
-                              </div>
-                              <div className="flex flex-wrap items-center gap-1.5 pt-0.5">
-                                <span className="inline-block text-[9px] font-black text-[#00B074] bg-emerald-50 px-2 py-0.5 rounded uppercase border border-emerald-100 tracking-wider">
-                                  DEPTH: {spot.depth}M
-                                </span>
-                                {spot.efficiencyRatio !== undefined && (
-                                  <span className="inline-block text-[9px] font-black text-amber-700 bg-amber-50 px-2 py-0.5 rounded uppercase border border-amber-200 tracking-wider">
-                                    RATIO: {spot.efficiencyRatio} %/km
-                                  </span>
-                                )}
-                                {spot.catchProbability !== undefined && (
-                                  <span
-                                    className="inline-block text-[9px] font-black px-2 py-0.5 rounded uppercase border tracking-wider"
-                                    style={{
-                                      backgroundColor: `${itemColor}15`,
-                                      borderColor: `${itemColor}50`,
-                                      color: itemColor
-                                    }}
-                                  >
-                                    ⚡ {(spot.catchProbability * (spot.catchProbability <= 1 ? 100 : 1)).toFixed(0)}% Catch Prob
-                                  </span>
-                                )}
-                              </div>
-                              <p className="text-[11px] text-gray-500 font-medium leading-relaxed pt-1">
-                                {(spot as any).desc || `Target species group: ${(spot.species || []).join(", ")}`}
-                              </p>
-                            </div>
-
-                            <div className="flex items-center justify-between border-t border-gray-100 pt-2.5 mt-3 text-[10px] font-bold">
-                              <span className="text-gray-400">BEARING: {spot.bearing}</span>
-                              <span
-                                className={`font-black ${isSafetyHoldActive ? "text-rose-500" : "text-[#00B074]"}`}
-                              >
-                                {spot.distance}
-                              </span>
-                            </div>
-
-                            <div className="absolute top-4 right-4">
-                              <span
-                                className="w-3 h-3 rounded-full block shadow-xs ring-2 ring-white"
-                                style={{ backgroundColor: isSafetyHoldActive ? "#F43F5E" : itemColor }}
-                                title={`Catch Probability Color: ${itemColor}`}
-                              />
-                            </div>
-                          </div>
-                        );
-                      })}
-                    </div>
-                  )}
-                </div>
-              )}
-            </div>
           </div>
 
           {/* ================= RIGHT COLUMN: MUNICIPAL ADVISOR PANEL ================= */}

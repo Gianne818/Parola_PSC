@@ -33,7 +33,8 @@ except Exception:
     s3 = None
 
 # Environment Variables & Configurations
-BUCKET_NAME = os.environ.get('MODEL_BUCKET_NAME', 'parola-data-bucket-715991411553-us-east-1')
+# Note: never hardcode account IDs, passwords, or DATABASE_URL defaults here.
+BUCKET_NAME = os.environ.get('MODEL_BUCKET_NAME', '')
 MODEL_KEY = os.environ.get('MODEL_KEY', 'models/parola_pelagic_model_v2.txt')
 MODEL_LOCAL_PATH = '/tmp/parola_pelagic_model_v2.txt'
 
@@ -106,11 +107,16 @@ def http_get_json(url, params=None):
 def fetch_open_meteo_marine_and_wind(lat=10.3157, lon=123.8854):
     """
     Fetches Open-Meteo Marine wave height and wind forecast.
+    Each source is flagged independently: a failed fetch leaves the values
+    at their defaults and marks the source NOT ok, so downstream safety
+    evaluation reports UNKNOWN instead of a fail-open NORMAL.
     """
     weather_info = {
         'max_wave_height_m': 0.0,
         'max_wind_speed_knots': 0.0,
-        'wind_direction_deg': 0.0
+        'wind_direction_deg': 0.0,
+        'marine_ok': False,
+        'wind_ok': False,
     }
     
     # 1. Fetch Wave Height
@@ -127,6 +133,7 @@ def fetch_open_meteo_marine_and_wind(lat=10.3157, lon=123.8854):
             valid_waves = [w for w in waves if w is not None]
             if valid_waves:
                 weather_info['max_wave_height_m'] = round(float(max(valid_waves[:24])), 2)
+                weather_info['marine_ok'] = True
     except Exception as e:
         logger.warning(f"Error fetching Open-Meteo wave height: {e}")
 
@@ -147,6 +154,7 @@ def fetch_open_meteo_marine_and_wind(lat=10.3157, lon=123.8854):
                 max_kmh = float(max(valid_winds[:24]))
                 # Convert km/h to knots (1 knot = 1.852 km/h)
                 weather_info['max_wind_speed_knots'] = round(max_kmh / 1.852, 2)
+                weather_info['wind_ok'] = True
             if dirs and dirs[0] is not None:
                 weather_info['wind_direction_deg'] = float(dirs[0])
     except Exception as e:
@@ -157,16 +165,22 @@ def fetch_open_meteo_marine_and_wind(lat=10.3157, lon=123.8854):
 def fetch_pagasa_bulletins():
     """
     Fetches active PAGASA Tropical Cyclone warnings.
+    source_ok is True only when the bulletin API answered with parseable
+    data (even if there are zero active bulletins, which is a definitive
+    negative). A network error leaves source_ok False so safety evaluation
+    reports UNKNOWN instead of assuming "No active bulletin".
     """
     pagasa_info = {
         'storm_name': 'No active bulletin',
         'danger_level': 0,
         'maritime_safety_status': 'No bulletin',
-        'has_active_bulletin': False
+        'has_active_bulletin': False,
+        'source_ok': False,
     }
     try:
         data = http_get_json(PAGASA_BULLETIN_URL)
         if data:
+            pagasa_info['source_ok'] = True
             bulletins = data.get('bulletins', [])
             if bulletins and len(bulletins) > 0:
                 first = bulletins[0]
@@ -185,14 +199,44 @@ def evaluate_safety_override(weather_info, pagasa_info):
     - wave_height >= 3.0m -> high wave height
     - wind_speed >= 20.0 knots -> strong wind
     - PAGASA bulletin active -> PAGASA warning
+    Fail closed: if ANY upstream source failed, safety_status is UNKNOWN
+    (never NORMAL on 0.0 defaults) and the missing sources are named in
+    override_reason. is_hazardous stays False because a hazard cannot be
+    asserted from missing data — callers must treat UNKNOWN as "do not
+    assume safe".
     """
+    gaps = []
+    if not weather_info.get('marine_ok', False):
+        gaps.append('wave data unavailable')
+    if not weather_info.get('wind_ok', False):
+        gaps.append('wind data unavailable')
+    if not pagasa_info.get('source_ok', False):
+        gaps.append('PAGASA bulletin unavailable')
+
+    max_wave = weather_info.get('max_wave_height_m', 0.0)
+    max_wind = weather_info.get('max_wind_speed_knots', 0.0)
+
+    if gaps:
+        logger.warning(f"Safety evaluation degraded: {'; '.join(gaps)}")
+        return {
+            'is_hazardous': False,
+            'safety_status': 'UNKNOWN',
+            'override_reason': f"Safety unknown: {'; '.join(gaps)}",
+            'severity': 'unknown',
+            'data_ok': False,
+            'max_wave_height_m': max_wave,
+            'max_wind_speed_knots': max_wind,
+            'pagasa_signal_level': pagasa_info.get('danger_level', 0),
+            'pagasa_storm_name': pagasa_info.get('storm_name', 'Unknown')
+        }
+
     reasons = []
-    if weather_info['max_wave_height_m'] >= WAVE_THRESHOLD_METERS:
-        reasons.append(f"high wave height ({weather_info['max_wave_height_m']}m)")
-    if weather_info['max_wind_speed_knots'] >= WIND_THRESHOLD_KNOTS:
-        reasons.append(f"strong wind ({weather_info['max_wind_speed_knots']} kts)")
-    if pagasa_info['has_active_bulletin']:
-        reasons.append(f"PAGASA bulletin ({pagasa_info['storm_name']})")
+    if max_wave >= WAVE_THRESHOLD_METERS:
+        reasons.append(f"high wave height ({max_wave}m)")
+    if max_wind >= WIND_THRESHOLD_KNOTS:
+        reasons.append(f"strong wind ({max_wind} kts)")
+    if pagasa_info.get('has_active_bulletin'):
+        reasons.append(f"PAGASA bulletin ({pagasa_info.get('storm_name')})")
 
     is_hazardous = len(reasons) > 0
     override_reason = ", ".join(reasons) if is_hazardous else "No override"
@@ -203,10 +247,11 @@ def evaluate_safety_override(weather_info, pagasa_info):
         'safety_status': safety_status,
         'override_reason': override_reason,
         'severity': 'high' if is_hazardous else 'normal',
-        'max_wave_height_m': weather_info['max_wave_height_m'],
-        'max_wind_speed_knots': weather_info['max_wind_speed_knots'],
-        'pagasa_signal_level': pagasa_info['danger_level'],
-        'pagasa_storm_name': pagasa_info['storm_name']
+        'data_ok': True,
+        'max_wave_height_m': max_wave,
+        'max_wind_speed_knots': max_wind,
+        'pagasa_signal_level': pagasa_info.get('danger_level', 0),
+        'pagasa_storm_name': pagasa_info.get('storm_name', 'No active bulletin')
     }
 
 # ============================================================================

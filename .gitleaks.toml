@@ -1,0 +1,31 @@
+# Parola PSC gitleaks config (gitleaks v8).
+#
+# Default rules apply. The [allowlist] below suppresses KNOWN-BENIGN matches
+# (example placeholders, test fixtures) so `gitleaks protect` stays green.
+#
+# Historical findings (pre-existing commits that committed `.env` / `.next/`
+# build output) are deliberately NOT allowlisted: those secrets must be
+# rotated in their dashboards and purged from history (e.g. git filter-repo),
+# not blessed. This config guards new changes; history remediation is a
+# separate owner action.
+
+[allowlist]
+description = "Example placeholders and test fixtures — never real credentials"
+regexTarget = "secret"
+paths = [
+  '''\.env\.example$''',
+  '''\.env\..*\.example$''',
+  '''(^|/)\.githooks/''',
+  '''\.test\.ts$''',
+  '''(^|/)tests/run_all_tests\.js$''',
+]
+regexes = [
+  # UPPER_SNAKE placeholders: YOUR_SUPABASE_ANON_KEY_HERE, YOUR_IPROG_API_KEY_HERE, ...
+  '''YOUR_[A-Z0-9_]+_HERE''',
+  # lower_snake placeholders: your_semaphore_api_key_here, ...
+  '''your_[a-z0-9_]+_here''',
+  # Dummy credentials used only in automated tests (low-entropy, non-secret).
+  '''correct-admin-key-123''',
+  '''test-webhook-secret''',
+  '''(?i)^(example|sample|placeholder|dummy|changeme)[-_a-z0-9]*$''',
+]

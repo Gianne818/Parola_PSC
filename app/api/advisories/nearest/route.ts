@@ -1,26 +1,14 @@
 import { NextResponse } from 'next/server';
 import { calculateDistance } from '../../../../utils/spatial';
-// @ts-ignore
-import { Pool } from 'pg';
+import { getDbPool } from '@/lib/db';
+import { RATE_LIMITS, checkRateLimit, rateLimitExceededResponse } from '@/lib/rate-limit';
+import type { Pool } from 'pg';
 
-// Server-side PostgreSQL pool for direct database queries
-// Uses DATABASE_URL from .env to connect to Supabase PostGIS
-let pool: Pool | null = null;
-
-function getPool(): Pool | null {
-  if (pool) return pool;
-  const dbUrl = process.env.DATABASE_URL;
-  if (!dbUrl) return null;
-
-  pool = new Pool({
-    connectionString: dbUrl.replace('?pgbouncer=true', ''),
-    max: 3,
-    idleTimeoutMillis: 30000,
-    connectionTimeoutMillis: 10000,
-    ssl: { rejectUnauthorized: false },
-  });
-  return pool;
-}
+const DEFAULT_LAT = 14.0122;
+const DEFAULT_LON = 123.0114;
+const DEFAULT_LIMIT = 100;
+const MAX_LIMIT = 1000; // Demo: allow maximum visuals; re-clamp to 200 post-demo
+const MAX_SPECIES_CHARS = 100;
 
 interface SpeciesBounds {
   temp_min: number;
@@ -31,14 +19,30 @@ interface SpeciesBounds {
   depth_max?: number;
 }
 
+interface PredictionRow {
+  id: number;
+  catch_probability: string | number;
+  model_type?: string | null;
+  sst?: string | number | null;
+  chl_a?: string | number | null;
+  dbscan_cluster_id?: number | null;
+  created_at?: string | null;
+  centroid_wkt?: string | null;
+}
+
+/** Escape LIKE wildcards so user input can't force full-table wildcard scans. */
+function escapeLike(value: string): string {
+  return value.replace(/[\\%_]/g, (ch) => `\\${ch}`);
+}
+
 /**
- * Query public.pelagic_species or public.demersal_species using PostgreSQL pool to get species bounds
+ * Query public.pelagic_species or public.demersal_species to get species bounds.
+ * Table names are hardcoded (never user input); values stay parameterized.
  */
 async function getSpeciesBounds(db: Pool, speciesName: string): Promise<SpeciesBounds | null> {
-  if (!speciesName) return null;
-
-  const cleanedName = speciesName.split(/[\/\(\),]/)[0].trim();
-  const searchPattern = `%${cleanedName}%`;
+  const cleanedName = speciesName.split(/[\/\(\),]/)[0].trim().slice(0, MAX_SPECIES_CHARS);
+  if (!cleanedName) return null;
+  const searchPattern = `%${escapeLike(cleanedName)}%`;
 
   const tables = ['public.demersal_species', 'public.pelagic_species'];
   for (const table of tables) {
@@ -46,11 +50,11 @@ async function getSpeciesBounds(db: Pool, speciesName: string): Promise<SpeciesB
       const res = await db.query(
         `SELECT temp_min, temp_opt_low, temp_opt_high, temp_max, depth_min, depth_max
          FROM ${table}
-         WHERE common_name ILIKE $1 
-            OR species_name ILIKE $1 
-            OR family ILIKE $1 
-            OR local_name ILIKE $1
-            OR name ILIKE $1
+         WHERE common_name ILIKE $1 ESCAPE '\\'
+            OR species_name ILIKE $1 ESCAPE '\\'
+            OR family ILIKE $1 ESCAPE '\\'
+            OR local_name ILIKE $1 ESCAPE '\\'
+            OR name ILIKE $1 ESCAPE '\\'
             OR $2 ILIKE '%' || common_name || '%'
          LIMIT 1`,
         [searchPattern, cleanedName]
@@ -73,8 +77,8 @@ async function getSpeciesBounds(db: Pool, speciesName: string): Promise<SpeciesB
           };
         }
       }
-    } catch (err) {
-      console.warn(`Error querying bounds in ${table}:`, err);
+    } catch {
+      console.error(`[Nearest API] bounds query failed for ${table}`);
     }
   }
 
@@ -123,18 +127,49 @@ function calculateSDepth(depth: number, depthMin?: number, depthMax?: number): n
   return 0.1;
 }
 
+function parseCoordinate(raw: string | null, min: number, max: number, fallback: number): number | null {
+  if (raw === null) return fallback;
+  const value = Number(raw);
+  if (!Number.isFinite(value) || value < min || value > max) return null;
+  return value;
+}
+
 export async function GET(request: Request) {
   try {
+    const rateLimit = await checkRateLimit(request, RATE_LIMITS.nearest);
+    if (!rateLimit.allowed) {
+      return rateLimitExceededResponse(RATE_LIMITS.nearest, rateLimit, 'nearest');
+    }
     const { searchParams } = new URL(request.url);
-    const lat = parseFloat(searchParams.get('lat') || '14.0122');
-    const lon = parseFloat(searchParams.get('lon') || '123.0114');
-    const limit = parseInt(searchParams.get('limit') || '1000');
-    const species = searchParams.get('species');
+    const lat = parseCoordinate(searchParams.get('lat'), -90, 90, DEFAULT_LAT);
+    const lon = parseCoordinate(searchParams.get('lon'), -180, 180, DEFAULT_LON);
+    if (lat === null) {
+      return NextResponse.json({ error: 'lat must be between -90 and 90.', hotspots: [] }, { status: 400 });
+    }
+    if (lon === null) {
+      return NextResponse.json({ error: 'lon must be between -180 and 180.', hotspots: [] }, { status: 400 });
+    }
 
-    const db = getPool();
+    const limitRaw = searchParams.get('limit');
+    let limit = DEFAULT_LIMIT;
+    if (limitRaw !== null) {
+      const parsed = Number(limitRaw);
+      if (!Number.isFinite(parsed)) {
+        return NextResponse.json({ error: 'limit must be a number.', hotspots: [] }, { status: 400 });
+      }
+      limit = Math.min(Math.max(Math.floor(parsed), 1), MAX_LIMIT);
+    }
+
+    const speciesRaw = searchParams.get('species');
+    if (speciesRaw !== null && speciesRaw.length > MAX_SPECIES_CHARS) {
+      return NextResponse.json({ error: 'species is too long.', hotspots: [] }, { status: 400 });
+    }
+    const species = speciesRaw?.trim() ? speciesRaw.trim() : null;
+
+    const db = getDbPool(3);
     if (!db) {
       return NextResponse.json({
-        error: 'DATABASE_URL not configured',
+        error: 'Advisory service unavailable.',
         hotspots: [],
       }, { status: 503 });
     }
@@ -174,7 +209,7 @@ export async function GET(request: Request) {
       });
     }
 
-    const hotspots = result.rows.map((row: any) => {
+    const hotspots = (result.rows as PredictionRow[]).map((row) => {
       let itemLat = 0, itemLng = 0;
       if (row.centroid_wkt) {
         const match = row.centroid_wkt.match(/POINT\(([-\d.]+)\s+([-\d.]+)\)/);
@@ -184,13 +219,13 @@ export async function GET(request: Request) {
         }
       }
 
-      let catchProb = parseFloat(row.catch_probability);
-      const sstVal = row.sst !== null && row.sst !== undefined ? parseFloat(row.sst) : null;
+      let catchProb = Number(row.catch_probability);
+      const sstVal = row.sst !== null && row.sst !== undefined ? Number(row.sst) : null;
       const spotType = row.model_type || 'pelagic';
       const cellDepth = spotType === 'demersal' ? 45 : 250; // Estimated bathymetry depth
 
       if (speciesBounds) {
-        if (sstVal !== null && !isNaN(sstVal)) {
+        if (sstVal !== null && Number.isFinite(sstVal)) {
           const sTemp = calculateSTemp(sstVal, speciesBounds);
           catchProb = catchProb * sTemp;
         }
@@ -213,24 +248,26 @@ export async function GET(request: Request) {
         efficiency_ratio: efficiencyRatio,
         model_type: row.model_type || 'pelagic',
         sst: sstVal,
-        chl_a: row.chl_a ? parseFloat(row.chl_a) : null,
+        chl_a: row.chl_a ? Number(row.chl_a) : null,
         dbscan_cluster_id: row.dbscan_cluster_id,
         created_at: row.created_at,
       };
     });
 
+    return NextResponse.json(
+      {
+        hotspots,
+        source: 'postgres_direct',
+        count: hotspots.length,
+        ...(speciesBounds ? { species_hsi_applied: species, species_bounds: speciesBounds } : {}),
+      },
+      { headers: { 'Cache-Control': 'public, s-maxage=300, stale-while-revalidate=60' } }
+    );
+  } catch {
+    console.error('[Nearest API] request failed');
     return NextResponse.json({
-      hotspots,
-      source: 'postgres_direct',
-      count: hotspots.length,
-      ...(speciesBounds ? { species_hsi_applied: species, species_bounds: speciesBounds } : {}),
-    });
-  } catch (err: any) {
-    console.error('Error in /api/advisories/nearest:', err);
-    return NextResponse.json({
-      error: err.message || 'Internal server error',
+      error: 'Internal server error',
       hotspots: [],
     }, { status: 500 });
   }
 }
-

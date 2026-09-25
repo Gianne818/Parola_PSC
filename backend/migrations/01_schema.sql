@@ -14,6 +14,7 @@ CREATE TABLE IF NOT EXISTS public.users (
     home_port_geom GEOMETRY(Point, 4326) NOT NULL, -- WGS84 Lat/Lon point
     preferred_advisory_time TIME NOT NULL DEFAULT '05:00:00', -- User input from Frontend
     coop_id UUID,
+    password_hash TEXT,
     is_active BOOLEAN DEFAULT TRUE,
     created_at TIMESTAMPTZ DEFAULT NOW(),
     updated_at TIMESTAMPTZ DEFAULT NOW()
@@ -166,3 +167,37 @@ BEGIN
     LIMIT 1;
 END;
 $$;
+
+-- ============================================================================
+-- 8. ROW LEVEL SECURITY (least privilege)
+-- Requires Supabase Auth (auth.uid()). The service_role key and table owners
+-- bypass RLS, so backend/service writes keep working; anon and authenticated
+-- clients get only the minimum below. No anon policies: fail closed.
+-- ============================================================================
+
+ALTER TABLE public.users ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.daily_advisories ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.catch_feedbacks ENABLE ROW LEVEL SECURITY;
+
+-- users: account owners can read and update only their own row.
+-- Registration/profile writes go through the backend API (service_role).
+DROP POLICY IF EXISTS users_select_own ON public.users;
+CREATE POLICY users_select_own ON public.users
+  FOR SELECT TO authenticated USING (auth.uid() = id);
+DROP POLICY IF EXISTS users_update_own ON public.users;
+CREATE POLICY users_update_own ON public.users
+  FOR UPDATE TO authenticated USING (auth.uid() = id) WITH CHECK (auth.uid() = id);
+
+-- daily_advisories: owners can read only their own advisories.
+-- Dispatch writes go through the backend API (service_role).
+DROP POLICY IF EXISTS advisories_select_own ON public.daily_advisories;
+CREATE POLICY advisories_select_own ON public.daily_advisories
+  FOR SELECT TO authenticated USING (auth.uid() = user_id);
+
+-- catch_feedbacks: owners can read their own feedback and submit their own.
+DROP POLICY IF EXISTS feedbacks_select_own ON public.catch_feedbacks;
+CREATE POLICY feedbacks_select_own ON public.catch_feedbacks
+  FOR SELECT TO authenticated USING (auth.uid() = user_id);
+DROP POLICY IF EXISTS feedbacks_insert_own ON public.catch_feedbacks;
+CREATE POLICY feedbacks_insert_own ON public.catch_feedbacks
+  FOR INSERT TO authenticated WITH CHECK (auth.uid() = user_id);

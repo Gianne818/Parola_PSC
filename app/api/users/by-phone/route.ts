@@ -1,37 +1,31 @@
 import { NextResponse } from 'next/server';
-// @ts-ignore
-import { Pool } from 'pg';
-
-let pool: Pool | null = null;
-
-function getPool(): Pool | null {
-  if (pool) return pool;
-  const dbUrl = process.env.DATABASE_URL || process.env.DIRECT_URL;
-  if (!dbUrl) return null;
-
-  pool = new Pool({
-    connectionString: dbUrl.replace('?pgbouncer=true', ''),
-    max: 3,
-    idleTimeoutMillis: 30000,
-    connectionTimeoutMillis: 10000,
-    ssl: { rejectUnauthorized: false },
-  });
-  return pool;
-}
+import { getDbPool } from '@/lib/db';
+import { requireOwnerOrAdmin } from '@/lib/route-auth';
+import { RATE_LIMITS, checkRateLimit, rateLimitExceededResponse } from '@/lib/rate-limit';
 
 export async function GET(request: Request) {
   try {
+    const limit = await checkRateLimit(request, RATE_LIMITS.byPhone);
+    if (!limit.allowed) {
+      return rateLimitExceededResponse(RATE_LIMITS.byPhone, limit, 'by-phone');
+    }
     const { searchParams } = new URL(request.url);
     const phone_number = searchParams.get('phone_number');
 
-    if (!phone_number) {
+    if (!phone_number || !phone_number.trim()) {
       return NextResponse.json({ error: 'phone_number parameter is required' }, { status: 400 });
     }
 
     const cleanedPhone = phone_number.trim();
+    if (cleanedPhone.length > 32) {
+      return NextResponse.json({ error: 'phone_number is too long.' }, { status: 400 });
+    }
+
+    const denied = await requireOwnerOrAdmin(request, cleanedPhone);
+    if (denied) return denied;
 
     // 1. Direct query to Supabase PostgreSQL database
-    const db = getPool();
+    const db = getDbPool(3);
     if (db) {
       try {
         const query = `
@@ -44,32 +38,37 @@ export async function GET(request: Request) {
         if (res.rows && res.rows.length > 0) {
           return NextResponse.json(res.rows[0]);
         }
-      } catch (dbErr: any) {
-        console.warn('[By-Phone API] PostgreSQL query warning:', dbErr.message);
+      } catch {
+        console.error('[By-Phone API] PostgreSQL query failed');
       }
     }
 
     // 2. Fallback to external backend server if configured
     const apiUrl = process.env.PAROLA_API_URL || 'http://localhost:8000';
     try {
+      const controller = new AbortController();
+      const timeout = setTimeout(() => controller.abort(), 8000);
+      const backendApiKey = process.env.PAROLA_API_KEY || '';
       const response = await fetch(`${apiUrl}/api/users/by-phone?phone_number=${encodeURIComponent(cleanedPhone)}`, {
         method: 'GET',
-        headers: { 'Content-Type': 'application/json' },
-      });
+        headers: {
+          'Content-Type': 'application/json',
+          ...(backendApiKey ? { 'X-API-Key': backendApiKey } : {}),
+        },
+        signal: controller.signal,
+      }).finally(() => clearTimeout(timeout));
 
       if (response.ok) {
         const data = await response.json();
         return NextResponse.json(data);
       }
-    } catch (apiErr) {
-      console.warn('[By-Phone API] External API unreachable:', apiErr);
+    } catch {
+      console.error('[By-Phone API] External API unreachable');
     }
 
     return NextResponse.json({ error: 'User not found' }, { status: 404 });
-  } catch (err: any) {
-    return NextResponse.json(
-      { error: 'Backend server error', details: err.message },
-      { status: 500 }
-    );
+  } catch {
+    console.error('[By-Phone API] server error');
+    return NextResponse.json({ error: 'Backend server error' }, { status: 500 });
   }
 }

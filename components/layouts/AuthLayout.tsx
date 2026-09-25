@@ -7,7 +7,6 @@ import {
   LayoutDashboard,
   ShieldAlert,
   Bell,
-  User,
   Settings,
   Map,
   ChevronLeft,
@@ -73,7 +72,6 @@ export const AuthLayout: React.FC<AuthLayoutProps> = ({ children, fluid = false 
     { href: "/dashboard", icon: LayoutDashboard, label: t("dashboard") },
     { href: "/alerts", icon: ShieldAlert, label: t("alerts") },
     { href: "/notifications", icon: Bell, label: t("notifications"), badge: true },
-    { href: "/profile", icon: User, label: t("profile") },
     { href: "/settings", icon: Settings, label: t("settings") },
   ];
 

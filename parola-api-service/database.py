@@ -26,8 +26,12 @@ if DATABASE_URL and ":[" in DATABASE_URL and "]@" in DATABASE_URL:
         DATABASE_URL = DATABASE_URL[:start+1] + pwd + DATABASE_URL[end+1:]
 
 if not DATABASE_URL:
-    logger.warning("DATABASE_URL environment variable is missing. Using default placeholder.")
-    DATABASE_URL = "postgresql+psycopg://postgres:password@localhost:5432/postgres"
+    raise RuntimeError(
+        "DATABASE_URL environment variable is missing. "
+        "Set it to your PostgreSQL/Supabase connection string "
+        "(e.g. in parola-api-service/.env). Refusing to fall back "
+        "to a default localhost database."
+    )
 
 engine = create_engine(DATABASE_URL, pool_pre_ping=True)
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)

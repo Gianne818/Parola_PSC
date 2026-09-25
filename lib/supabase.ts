@@ -3,13 +3,32 @@ import { createClient } from '@supabase/supabase-js';
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || '';
 const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || '';
 
-// A dummy client that returns a chainable proxy to prevent errors but logs warnings
+// A dummy client used only when Supabase env vars are missing.
+// In production it throws on any use (fail closed); in development it
+// returns error-shaped results so the UI can still render.
+const isProduction = process.env.NODE_ENV === 'production';
+
+function missingConfigError(): Error {
+  return new Error(
+    'Supabase is not configured: set NEXT_PUBLIC_SUPABASE_URL and NEXT_PUBLIC_SUPABASE_ANON_KEY.'
+  );
+}
+
+let warnedOnce = false;
+function warnMissingConfig(): void {
+  if (warnedOnce) return;
+  warnedOnce = true;
+  console.warn(
+    '[Supabase] NEXT_PUBLIC_SUPABASE_URL / NEXT_PUBLIC_SUPABASE_ANON_KEY are missing or invalid. ' +
+      'Using a dummy client for development only.'
+  );
+}
+
 const createDummyClient = () => {
-  if (typeof window !== 'undefined') {
-    // Supabase credentials missing or invalid.
-  }
   const handler: ProxyHandler<any> = {
     get(target: any, prop: string): any {
+      if (isProduction) throw missingConfigError();
+      warnMissingConfig();
       if (prop === 'auth') {
         return {
           onAuthStateChange: () => ({ data: { subscription: { unsubscribe: () => {} } } }),
@@ -32,6 +51,8 @@ const createDummyClient = () => {
       return new Proxy(dummyFunc, handler);
     },
     apply() {
+      if (isProduction) throw missingConfigError();
+      warnMissingConfig();
       const dummyFunc = () => new Proxy(dummyFunc, handler);
       return new Proxy(dummyFunc, handler);
     }

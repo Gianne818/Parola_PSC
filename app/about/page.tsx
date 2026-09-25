@@ -1,20 +1,19 @@
-"use client";
-
-import React from "react";
+import type { Metadata } from "next";
 import Link from "next/link";
 import {
   Radio,
-  ShieldCheck,
   Ship,
   Compass,
-  ArrowRight,
-  Fish,
   Waves,
-  Building2,
-  CheckCircle2,
-  Sparkles
+  CheckCircle2
 } from "lucide-react";
 import { ParolaLogo } from "@/components/ui/ParolaLogo";
+
+export const metadata: Metadata = {
+  title: "About | Parola",
+  description:
+    "Parola mission and SMS-first operational architecture for Philippine municipal fisherfolk safety.",
+};
 
 export default function AboutPage() {
   return (

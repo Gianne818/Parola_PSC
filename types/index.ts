@@ -70,6 +70,34 @@ export interface Hotspot {
   distanceKm?: number;
   bearingDegrees?: number;
   compassBearing?: string;
+  // Alternate/legacy payload shapes (Supabase rows, API responses) — optional
+  position?: [number, number]; // [lat, lng] tuple form
+  group?: string; // legacy type discriminator ('pelagic' | 'demersal')
+  family?: string; // legacy single-species label
+  label?: string; // legacy display name
+  desc?: string; // legacy species description
+  icon?: string; // map marker emoji override
+  isUnsafe?: boolean; // per-hotspot safety flag
+}
+
+/** Hotspot enriched with client-side distance/catch computations (dashboard). */
+export interface ProcessedHotspot extends Hotspot {
+  distance: string;
+  bearing: string;
+  distValue: number;
+  catchProbPercent: number;
+  efficiencyRatio: number;
+}
+
+/** SMS gateway dispatch result (alerts page). */
+export interface SmsDispatchResult {
+  mode?: string;
+  messageId?: string;
+  recipientFormatted?: string;
+  dualMode?: boolean;
+  pelagicResult?: SmsDispatchResult;
+  error?: string;
+  [key: string]: unknown;
 }
 
 export interface WeatherTelemetry {

@@ -20,6 +20,10 @@ export default function GalunggongMascot({
 }: GalunggongMascotProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const hasSentMouseOverRef = useRef<boolean>(false);
+  // Tracks whether the mascot canvas is currently visible in the viewport.
+  // All rive.startRendering() calls are gated on this so the render loop
+  // never spins while the mascot is offscreen.
+  const isVisibleRef = useRef<boolean>(true);
 
   const { rive, RiveComponent } = useRive({
     src: '/animations/galunggong.riv',
@@ -40,10 +44,36 @@ export default function GalunggongMascot({
 
   // Ensure state machine is playing and rendering once loaded
   useEffect(() => {
-    if (rive) {
+    if (rive && isVisibleRef.current) {
       rive.play();
       rive.startRendering();
     }
+  }, [rive]);
+
+  // Pause the Rive render loop while the mascot is offscreen and resume
+  // when it scrolls back into view. The mascot is decorative and hidden
+  // below the lg breakpoint, so this avoids burning frames on mobile.
+  useEffect(() => {
+    const container = containerRef.current;
+    if (!container || typeof IntersectionObserver === 'undefined') return;
+
+    const observer = new IntersectionObserver(
+      ([entry]) => {
+        isVisibleRef.current = entry.isIntersecting;
+        if (!rive) return;
+        if (entry.isIntersecting) {
+          rive.play();
+          rive.startRendering();
+        } else {
+          rive.pause();
+          rive.stopRendering();
+        }
+      },
+      { threshold: 0 }
+    );
+
+    observer.observe(container);
+    return () => observer.disconnect();
   }, [rive]);
 
   // Smooth, responsive cursor tracking that works across the entire screen
@@ -98,8 +128,9 @@ export default function GalunggongMascot({
         })
       );
 
-      // 3. Wake up Rive's rendering loop immediately so the frame renders with the new eye position
-      if (rive) {
+      // 3. Wake up Rive's rendering loop immediately so the frame renders with the new eye position.
+      // Skipped while offscreen: the observer restarts rendering on re-entry.
+      if (rive && isVisibleRef.current) {
         rive.startRendering();
       }
 
@@ -134,28 +165,28 @@ export default function GalunggongMascot({
   useEffect(() => {
     if (isTypingEmailInput) {
       isTypingEmailInput.value = isTypingEmail;
-      if (rive) rive.startRendering();
+      if (rive && isVisibleRef.current) rive.startRendering();
     }
   }, [isTypingEmail, isTypingEmailInput, rive]);
 
   useEffect(() => {
     if (isTypingPasswordInput) {
       isTypingPasswordInput.value = isTypingPassword;
-      if (rive) rive.startRendering();
+      if (rive && isVisibleRef.current) rive.startRendering();
     }
   }, [isTypingPassword, isTypingPasswordInput, rive]);
 
   useEffect(() => {
     if (triggerSuccess && triggerSuccessInput) {
       triggerSuccessInput.fire();
-      if (rive) rive.startRendering();
+      if (rive && isVisibleRef.current) rive.startRendering();
     }
   }, [triggerSuccess, triggerSuccessInput, rive]);
 
   useEffect(() => {
     if (triggerFailure && triggerFailureInput) {
       triggerFailureInput.fire();
-      if (rive) rive.startRendering();
+      if (rive && isVisibleRef.current) rive.startRendering();
     }
   }, [triggerFailure, triggerFailureInput, rive]);
 

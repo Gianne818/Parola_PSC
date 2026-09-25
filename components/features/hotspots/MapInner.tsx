@@ -1,10 +1,10 @@
 "use client";
 
-import React, { useEffect } from "react";
-import { MapContainer, TileLayer, Marker, Popup, useMap, useMapEvents, Circle, Rectangle } from "react-leaflet";
+import React, { useEffect, useMemo } from "react";
+import { MapContainer, TileLayer, Marker, Popup, useMap, useMapEvents, Circle, Rectangle, ZoomControl } from "react-leaflet";
 import "leaflet/dist/leaflet.css";
 import L from "leaflet";
-import { Hotspot } from "../../../types";
+import { Hotspot, UserProfile } from "../../../types";
 import { isWithinPhilippineGeofence } from "../../../utils/spatial";
 import { getSpeciesColor, getSpeciesConfig, getHotspotDisplayColor, GENERAL_PELAGIC_COLOR, GENERAL_DEMERSAL_COLOR } from "../../../utils/speciesColors";
 
@@ -81,7 +81,7 @@ interface MapInnerProps {
   onSelectHotspot: (hotspot: Hotspot | null) => void;
   filterType: "pelagic" | "demersal" | "both";
   selectedSpecies: string[];
-  userProfile: any;
+  userProfile: UserProfile;
   customWaypoint: { lat: number; lng: number } | null;
   setCustomWaypoint: (waypoint: { lat: number; lng: number } | null) => void;
   showToast: (msg: string, type: "success" | "error" | "info") => void;
@@ -218,21 +218,21 @@ export default function MapInner({
   // Bounded map view to Philippines
   const maxBounds: L.LatLngBoundsLiteral = [[4.5, 116.0], [21.5, 127.0]];
 
-  // Sanitize and filter hotspots
-  const filteredHotspots = (hotspots || []).filter((spot) => {
-    const lat = spot.lat ?? (spot as any).position?.[0];
-    const lng = spot.lng ?? (spot as any).position?.[1];
+  // Sanitize and filter hotspots (memoized: was re-filtered on every parent render)
+  const filteredHotspots = useMemo(() => (hotspots || []).filter((spot) => {
+    const lat = spot.lat ?? spot.position?.[0];
+    const lng = spot.lng ?? spot.position?.[1];
     
     if (!isValidLatLng(lat, lng)) return false;
 
     // Type Filter
-    const type = spot.type || ((spot as any).group === "pelagic" ? "pelagic" : "demersal");
+    const type = spot.type || (spot.group === "pelagic" ? "pelagic" : "demersal");
     if (filterType && filterType !== "both" && type !== filterType) {
       return false;
     }
 
     // Species Filter
-    const species = spot.species || [(spot as any).family || ""];
+    const species = spot.species || [spot.family || ""];
     if (selectedSpecies && selectedSpecies.length > 0) {
       const matchesSpecies = species.some((s: string) => {
         return selectedSpecies.some((sel: string) => {
@@ -251,13 +251,14 @@ export default function MapInner({
     }
 
     return true;
-  });
+  }), [hotspots, filterType, selectedSpecies]);
 
   return (
     <div className="w-full h-full min-h-[400px] absolute inset-0 z-0">
       <MapContainer
         center={mapCenter}
         zoom={10}
+        zoomControl={false}
         scrollWheelZoom={true}
         className="w-full h-full"
         maxBounds={maxBounds}
@@ -265,6 +266,7 @@ export default function MapInner({
         minZoom={5}
         id="leaflet-map-element"
       >
+        <ZoomControl position="bottomright" />
         <MapController center={mapCenter} />
         <MapEventsHandler 
           onMapClick={onMapClick} 
@@ -386,41 +388,16 @@ export default function MapInner({
           </Marker>
         )}
 
-        {/* 9 km Prediction Radius Circles: auto-scale with zoom since Leaflet Circle uses real-world meters */}
-        {showPredictionRadius && filteredHotspots.map((spot) => {
-          const lat = spot.lat ?? (spot as any).position?.[0];
-          const lng = spot.lng ?? (spot as any).position?.[1];
-          const type = spot.type || ((spot as any).group === "pelagic" ? "pelagic" : "demersal");
-          const speciesColor = getHotspotDisplayColor(type, selectedSpecies, spot.species || [], spot.catchProbability);
-          const isSelected = selectedHotspot?.id === spot.id;
-          if (!isValidLatLng(lat, lng)) return null;
-          return (
-            <Circle
-              key={`radius-${spot.id}`}
-              center={[lat, lng]}
-              radius={PREDICTION_RADIUS_METERS}
-              pathOptions={{
-                color: speciesColor,
-                fillColor: speciesColor,
-                fillOpacity: isSelected ? 0.08 : 0.04,
-                weight: isSelected ? 1.5 : 1,
-                opacity: isSelected ? 0.55 : 0.30,
-                dashArray: "4, 5",
-              }}
-            />
-          );
-        })}
-
-        {/* Active Hotspot Pin Markers */}
+        {/* Active Hotspot Pin Markers (single 9 km prediction circle per hotspot) */}
         {filteredHotspots.map((spot) => {
-          const lat = spot.lat ?? (spot as any).position?.[0];
-          const lng = spot.lng ?? (spot as any).position?.[1];
-          const type = spot.type || ((spot as any).group === "pelagic" ? "pelagic" : "demersal");
-          const name = spot.name || (spot as any).label || "Unknown Spot";
-          const species = spot.species || [(spot as any).family || ""];
+          const lat = spot.lat ?? spot.position?.[0];
+          const lng = spot.lng ?? spot.position?.[1];
+          const type = spot.type || (spot.group === "pelagic" ? "pelagic" : "demersal");
+          const name = spot.name || spot.label || "Unknown Spot";
+          const species = spot.species || [spot.family || ""];
           const depth = spot.depth || 50;
 
-          const isUnsafe = manualOverrideHold || (spot as any).isUnsafe;
+          const isUnsafe = manualOverrideHold || spot.isUnsafe;
           const isSelected = selectedHotspot?.id === spot.id;
 
           // Resolve display color using catch probability gradient shade
@@ -441,10 +418,11 @@ export default function MapInner({
 
           return (
             <React.Fragment key={`${spot.id}-${speciesColor}-${isSelected ? "sel" : "nor"}`}>
-              {/* 9 km (9000m) Prediction Area Radius Circle */}
+              {/* Single 9 km prediction radius circle (was double-drawn). Leaflet Circle uses real-world meters so it auto-scales with zoom. */}
+              {showPredictionRadius && (
               <Circle
                 center={[lat, lng]}
-                radius={9000}
+                radius={PREDICTION_RADIUS_METERS}
                 pathOptions={{
                   color: speciesColor,
                   fillColor: speciesColor,
@@ -453,6 +431,7 @@ export default function MapInner({
                   dashArray: isSelected ? "4, 4" : "2, 4",
                 }}
               />
+              )}
               <Marker
                 position={[lat, lng]}
                 icon={markerIcon}
@@ -466,7 +445,7 @@ export default function MapInner({
                 <Popup>
                   <div className="font-sans text-brand-black p-1 space-y-1.5 max-w-[210px]">
                     <div className="flex items-center gap-1.5 font-black text-sm">
-                      <span className="text-base">{(spot as any).icon || "🐟"}</span>
+                      <span className="text-base">{spot.icon || "🐟"}</span>
                       <span>{name}</span>
                     </div>
                     <div className="flex items-center gap-1 flex-wrap">

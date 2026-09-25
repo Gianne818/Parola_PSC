@@ -1,6 +1,7 @@
 "use client";
 
 import React from "react";
+import Image from "next/image";
 
 interface ParolaLogoProps {
   className?: string;
@@ -15,10 +16,11 @@ export const ParolaLogo: React.FC<ParolaLogoProps> = ({
 }) => {
   return (
     <div className="flex items-center gap-2.5 select-none">
-      {/* eslint-disable-next-line @next/next/no-img-element */}
-      <img
+      <Image
         src="/images/parola-logo.jpeg"
         alt="Parola Logo"
+        width={64}
+        height={64}
         className={`${className} rounded-lg object-cover shrink-0`}
       />
       {!iconOnly && (

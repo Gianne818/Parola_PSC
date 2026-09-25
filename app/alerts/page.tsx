@@ -1,11 +1,13 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect, useMemo } from "react";
 import { AuthLayout } from "../../components/layouts/AuthLayout";
 import { useApp } from "../../context/AppContext";
 import { useTranslation } from "../../hooks/use-translation";
 import { analyzeHotspots, formatConciseSmsAdvisory } from "../../utils/hotspotCalculator";
+import { authHeaders } from "../../utils/auth-fetch";
 import { calculateSmsSegments } from "../../services/iprogSmsService";
+import { SmsDispatchResult } from "../../types";
 import {
   Bell,
   Target,
@@ -29,6 +31,8 @@ import {
   Info
 } from "lucide-react";
 
+type AlertSectionId = "status" | "limits" | "channels" | "sms-preview";
+
 export default function AlertsPage() {
   const {
     userProfile,
@@ -43,7 +47,7 @@ export default function AlertsPage() {
   const { t } = useTranslation(language);
 
   // Active section for sticky jumper navigation
-  const [activeSection, setActiveSection] = useState<"status" | "limits" | "channels" | "sms-preview">("status");
+  const [activeSection, setActiveSection] = useState<AlertSectionId>("status");
 
   // Progressive disclosure toggle for technical ML metrics
   const [showTechnicalDetails, setShowTechnicalDetails] = useState(false);
@@ -64,48 +68,65 @@ export default function AlertsPage() {
 
   // SMS Simulation State
   const [smsSending, setSmsSending] = useState(false);
-  const [lastSmsResult, setLastSmsResult] = useState<any>(null);
+  const [lastSmsResult, setLastSmsResult] = useState<SmsDispatchResult | null>(null);
 
   // Compute Hotspot Metrics dynamically using Haversine & Catch Efficiency Ratio
+  // Memoized: was 3x analyzeHotspots (each O(n log n) with double sort) on every render
   const currentLat = userProfile?.lat || 14.0122;
   const currentLng = userProfile?.lng || 123.0114;
 
   // Always compute both pelagic & demersal independently
-  const pelagicAnalysis = analyzeHotspots(currentLat, currentLng, hotspots, "pelagic");
-  const demersalAnalysis = analyzeHotspots(currentLat, currentLng, hotspots, "demersal");
+  const pelagicAnalysis = useMemo(
+    () => analyzeHotspots(currentLat, currentLng, hotspots, "pelagic"),
+    [currentLat, currentLng, hotspots]
+  );
+  const demersalAnalysis = useMemo(
+    () => analyzeHotspots(currentLat, currentLng, hotspots, "demersal"),
+    [currentLat, currentLng, hotspots]
+  );
   // For single-model views, use the selected filter
-  const singleAnalysis = analyzeHotspots(currentLat, currentLng, hotspots, modelFilter);
+  const singleAnalysis = useMemo(
+    () => analyzeHotspots(currentLat, currentLng, hotspots, modelFilter),
+    [currentLat, currentLng, hotspots, modelFilter]
+  );
 
-  const nearestSpot = singleAnalysis.nearestHotspot;
-  const topEfficiencySpot = singleAnalysis.highestEfficiencyHotspot;
-  const targetHotspot = nearestSpot || topEfficiencySpot;
-
-  // Generate concise SMS message(s)
+  // Generate concise SMS message(s) (memoized: derives from memoized analyses)
   const waveVal = weather?.waveHeight ?? 1.2;
   const windVal = weather?.windSpeed ?? 14.5;
   const vessel = userProfile?.vesselName || "Ka-Isda";
   const portName = userProfile?.port || "Brgy Pasil";
 
-  const noHotspotFallback = `Parola Advisory:\nNo active hotspots detected.\nWaves: ${waveVal}m, Wind: ${windVal}kph`;
+  const { pelagicSmsText, demersalSmsText, generatedSmsText } = useMemo(() => {
+    const noFallback = `Parola Advisory:\nNo active hotspots detected.\nWaves: ${waveVal}m, Wind: ${windVal}kph`;
+    const pTarget = pelagicAnalysis.nearestHotspot || pelagicAnalysis.highestEfficiencyHotspot;
+    const dTarget = demersalAnalysis.nearestHotspot || demersalAnalysis.highestEfficiencyHotspot;
+    const sTarget = singleAnalysis.nearestHotspot || singleAnalysis.highestEfficiencyHotspot;
+    const pText = pTarget
+      ? `[PELAGIC]\n` + formatConciseSmsAdvisory(vessel, portName, pTarget, waveVal, windVal)
+      : `[PELAGIC]\n` + noFallback;
+    const dText = dTarget
+      ? `[DEMERSAL]\n` + formatConciseSmsAdvisory(vessel, portName, dTarget, waveVal, windVal)
+      : `[DEMERSAL]\n` + noFallback;
+    const gen = modelFilter === "both"
+      ? pText
+      : sTarget
+        ? formatConciseSmsAdvisory(vessel, portName, sTarget, waveVal, windVal)
+        : noFallback;
+    return { pelagicSmsText: pText, demersalSmsText: dText, generatedSmsText: gen };
+  }, [pelagicAnalysis, demersalAnalysis, singleAnalysis, modelFilter, vessel, portName, waveVal, windVal]);
+
+  const nearestSpot = singleAnalysis.nearestHotspot;
+  const topEfficiencySpot = singleAnalysis.highestEfficiencyHotspot;
+  const targetHotspot = nearestSpot || topEfficiencySpot;
 
   // When 'both', generate two separate SMS messages (pelagic + demersal)
   const pelagicTarget = pelagicAnalysis.nearestHotspot || pelagicAnalysis.highestEfficiencyHotspot;
   const demersalTarget = demersalAnalysis.nearestHotspot || demersalAnalysis.highestEfficiencyHotspot;
 
-  const pelagicSmsText = pelagicTarget
-    ? `[PELAGIC]\n` + formatConciseSmsAdvisory(vessel, portName, pelagicTarget, waveVal, windVal)
-    : `[PELAGIC]\n` + noHotspotFallback;
-  const demersalSmsText = demersalTarget
-    ? `[DEMERSAL]\n` + formatConciseSmsAdvisory(vessel, portName, demersalTarget, waveVal, windVal)
-    : `[DEMERSAL]\n` + noHotspotFallback;
-
-  const generatedSmsText = modelFilter === "both"
-    ? pelagicSmsText
-    : targetHotspot
-      ? formatConciseSmsAdvisory(vessel, portName, targetHotspot, waveVal, windVal)
-      : noHotspotFallback;
-
-  const smsSegmentDetails = calculateSmsSegments(generatedSmsText);
+  const smsSegmentDetails = useMemo(
+    () => calculateSmsSegments(generatedSmsText),
+    [generatedSmsText]
+  );
 
   const handleApplyVariables = async () => {
     try {
@@ -119,7 +140,7 @@ export default function AlertsPage() {
       });
 
       showToast("Alert preferences and safety thresholds updated.", "success");
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.warn("Failed to apply alert settings:", err);
       showToast("Failed to apply settings.", "error");
     }
@@ -128,16 +149,16 @@ export default function AlertsPage() {
   const sendSms = async (recipientPhone: string, message: string) => {
     const response = await fetch("/api/sms/send", {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: await authHeaders({ "Content-Type": "application/json" }),
       body: JSON.stringify({ recipient: recipientPhone, message, category: "weather" })
     });
-    let data: any;
+    let data: SmsDispatchResult;
     try {
       data = await response.json();
     } catch {
       throw new Error("API returned invalid JSON response.");
     }
-    if (!response.ok || data?.error) throw new Error(data?.error || "Failed to dispatch SMS");
+    if (!response.ok || data?.error) throw new Error(typeof data?.error === "string" ? data.error : "Failed to dispatch SMS");
     return data;
   };
 
@@ -164,8 +185,8 @@ export default function AlertsPage() {
           "success"
         );
       }
-    } catch (err: any) {
-      showToast(err?.message || "Failed to send SMS advisory", "error");
+    } catch (err: unknown) {
+      showToast(err instanceof Error ? err.message : "Failed to send SMS advisory", "error");
     } finally {
       setSmsSending(false);
     }
@@ -174,11 +195,52 @@ export default function AlertsPage() {
   const isDangerous = weather.waveHeight >= waveThreshold || weather.stormSignal > 0;
 
   const jumperItems = [
-    { id: "status", label: "Status", icon: Radio },
-    { id: "limits", label: "Limits", icon: Sliders },
-    { id: "channels", label: "Channels", icon: Target },
-    { id: "sms-preview", label: "SMS Preview", icon: Smartphone }
+    {
+      id: "status",
+      label: "Safety Status",
+      subtitle: "Live telemetry and broadcasts",
+      icon: Radio
+    },
+    {
+      id: "limits",
+      label: "Marine Limits",
+      subtitle: "Wave and wind thresholds",
+      icon: Sliders
+    },
+    {
+      id: "channels",
+      label: "Alert Channels",
+      subtitle: "Species targeting and hazard",
+      icon: Target
+    },
+    {
+      id: "sms-preview",
+      label: "SMS Dispatch",
+      subtitle: "Hotspot advisory preview",
+      icon: Smartphone
+    }
   ] as const;
+
+  // Sync active section with scroll position
+  useEffect(() => {
+    const sectionIds: AlertSectionId[] = ["status", "limits", "channels", "sms-preview"];
+    const handleScroll = () => {
+      const scrollPosition = window.scrollY + 160;
+      for (const id of sectionIds) {
+        const el = document.getElementById(id);
+        if (el) {
+          const top = el.offsetTop;
+          const height = el.offsetHeight;
+          if (scrollPosition >= top && scrollPosition < top + height) {
+            setActiveSection(id);
+            break;
+          }
+        }
+      }
+    };
+    window.addEventListener("scroll", handleScroll, { passive: true });
+    return () => window.removeEventListener("scroll", handleScroll);
+  }, []);
 
   const scrollToSection = (id: typeof activeSection) => {
     setActiveSection(id);
@@ -203,7 +265,7 @@ export default function AlertsPage() {
         <div className="absolute top-[35%] right-[-80px] w-[450px] h-[450px] bg-[#C57E2C]/5 blur-[110px] rounded-full" />
       </div>
 
-      <div className="space-y-6 pb-20 pt-2 max-w-5xl mx-auto selection:bg-[#00B37E]/20 selection:text-[#12211E]">
+      <div className="space-y-6 pb-20 pt-2 max-w-7xl mx-auto px-4 sm:px-6 selection:bg-[#00B37E]/20 selection:text-[#12211E]">
 
         {/* Top Header Block */}
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 pb-2 border-b border-[#DAE5E0]">
@@ -256,9 +318,9 @@ export default function AlertsPage() {
           </div>
         </div>
 
-        {/* Sticky Section Jumper Bar */}
-        <div className="sticky top-0 z-20 bg-[#F2F6F4]/90 backdrop-blur-md py-2.5 -mx-2 px-2">
-          <nav className="flex items-center gap-1.5 sm:gap-2 p-1.5 bg-white border border-[#DAE5E0] rounded-full shadow-2xs max-w-xl mx-auto md:mx-0">
+        {/* Sticky Mobile Section Jumper Bar (Visible < lg only) */}
+        <div className="sticky top-0 z-20 bg-[#F2F6F4]/90 backdrop-blur-md py-2.5 -mx-4 px-4 lg:hidden">
+          <nav className="flex items-center gap-1.5 sm:gap-2 p-1.5 bg-white border border-[#DAE5E0] rounded-full shadow-2xs max-w-xl mx-auto overflow-x-auto scrollbar-none">
             {jumperItems.map((item) => {
               const Icon = item.icon;
               const isActive = activeSection === item.id;
@@ -266,7 +328,7 @@ export default function AlertsPage() {
                 <button
                   key={item.id}
                   onClick={() => scrollToSection(item.id)}
-                  className={`flex-1 flex items-center justify-center gap-1.5 py-1.5 px-3 rounded-full text-xs font-bold transition-all text-center cursor-pointer ${
+                  className={`flex-1 flex items-center justify-center gap-1.5 py-1.5 px-3 rounded-full text-xs font-bold transition-all text-center cursor-pointer whitespace-nowrap ${
                     isActive
                       ? "bg-[#00B37E] text-white shadow-2xs"
                       : "text-[#12211E]/70 hover:text-[#12211E] hover:bg-[#EAF1ED]"
@@ -279,6 +341,101 @@ export default function AlertsPage() {
             })}
           </nav>
         </div>
+
+        {/* Desktop Two-Column Master-Detail Grid */}
+        <div className="lg:grid lg:grid-cols-12 lg:gap-8 items-start">
+
+          {/* Left Column: Sticky Sub-Nav & Live Context Widget */}
+          <aside className="hidden lg:block lg:col-span-4 lg:sticky lg:top-6 space-y-4">
+            {/* Master Sub-Nav Card */}
+            <div className="bg-white border border-[#DAE5E0] rounded-3xl p-4 shadow-sm space-y-1">
+              <div className="px-3 pt-2 pb-2">
+                <span className="text-[10px] font-bold uppercase tracking-wider text-[#12211E]/50">
+                  Safety Hub Sections
+                </span>
+              </div>
+              {jumperItems.map((item) => {
+                const Icon = item.icon;
+                const isActive = activeSection === item.id;
+                return (
+                  <button
+                    key={item.id}
+                    type="button"
+                    onClick={() => scrollToSection(item.id)}
+                    className={`w-full flex items-center gap-3 p-3 rounded-2xl text-left transition cursor-pointer ${
+                      isActive
+                        ? "bg-[#00B37E] text-white shadow-2xs font-bold"
+                        : "text-[#12211E] hover:bg-[#EAF1ED]"
+                    }`}
+                  >
+                    <div className={`p-2 rounded-xl shrink-0 transition-colors ${
+                      isActive ? "bg-white/20 text-white" : "bg-[#F2F6F4] text-[#00B37E]"
+                    }`}>
+                      <Icon className="w-4 h-4" />
+                    </div>
+                    <div className="min-w-0 flex-1">
+                      <div className="text-xs font-bold tracking-tight truncate">
+                        {item.label}
+                      </div>
+                      <div className={`text-[10px] truncate ${isActive ? "text-white/80" : "text-[#12211E]/60"}`}>
+                        {item.subtitle}
+                      </div>
+                    </div>
+                  </button>
+                );
+              })}
+            </div>
+
+            {/* Live Sea Telemetry Quick Context Widget */}
+            <div className="bg-white border border-[#DAE5E0] rounded-3xl p-5 shadow-sm space-y-3.5">
+              <div className="flex items-center justify-between border-b border-[#DAE5E0]/70 pb-3">
+                <span className="text-[10px] font-bold uppercase tracking-wider text-[#12211E]/60">
+                  Live Port Conditions
+                </span>
+                <span className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider border ${
+                  isDangerous ? "bg-rose-50 text-rose-700 border-rose-200" : "bg-emerald-50 text-[#00B37E] border-emerald-200"
+                }`}>
+                  <span className={`w-1.5 h-1.5 rounded-full ${isDangerous ? "bg-rose-600 animate-pulse" : "bg-[#00B37E]"}`} />
+                  {isDangerous ? "Hold Sailing" : "Safe to Sail"}
+                </span>
+              </div>
+
+              <div className="space-y-1">
+                <div className="text-xs font-bold text-[#12211E] truncate">
+                  {vessel}
+                </div>
+                <div className="text-[11px] text-[#12211E]/70 flex items-center gap-1">
+                  <MapPin className="w-3 h-3 text-[#00B37E]" />
+                  <span className="truncate">{portName}</span>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-2 pt-1 text-xs">
+                <div className="bg-[#F2F6F4]/70 p-2.5 rounded-xl border border-[#DAE5E0]">
+                  <span className="text-[10px] text-[#12211E]/60 uppercase block">Wave Height</span>
+                  <span className="text-xs font-black text-[#12211E]">{weather.waveHeight.toFixed(1)}m</span>
+                  <span className="text-[9px] text-[#12211E]/60 block mt-0.5">Limit: {waveThreshold.toFixed(1)}m</span>
+                </div>
+                <div className="bg-[#F2F6F4]/70 p-2.5 rounded-xl border border-[#DAE5E0]">
+                  <span className="text-[10px] text-[#12211E]/60 uppercase block">Wind Velocity</span>
+                  <span className="text-xs font-black text-[#12211E]">{weather.windSpeed} km/h</span>
+                  <span className="text-[9px] text-[#12211E]/60 block mt-0.5">Limit: {windThreshold} kts</span>
+                </div>
+              </div>
+
+              <button
+                type="button"
+                onClick={handleApplyVariables}
+                className="w-full py-2.5 px-4 rounded-full bg-[#00B37E] hover:bg-[#00B37E]/90 text-white font-bold text-xs uppercase tracking-wider transition shadow-2xs hover:shadow active:scale-[0.98] cursor-pointer flex items-center justify-center gap-1.5"
+              >
+                <Check className="w-3.5 h-3.5 stroke-[2.5]" />
+                <span>Save Safety Limits</span>
+              </button>
+            </div>
+          </aside>
+
+          {/* Right Column: Detail Content Sections */}
+          <main className="lg:col-span-8 space-y-6">
 
         {/* ============================================================ */}
         {/* SECTION 1: SAFETY STATUS & PAGASA BROADCAST */}
@@ -377,7 +534,7 @@ export default function AlertsPage() {
               try {
                 await fetch("/api/sms/send", {
                   method: "POST",
-                  headers: { "Content-Type": "application/json" },
+                  headers: await authHeaders({ "Content-Type": "application/json" }),
                   body: JSON.stringify({
                     recipient: userProfile?.phone || "09171234567",
                     message: msg,
@@ -931,6 +1088,9 @@ export default function AlertsPage() {
             </div>
           )}
         </section>
+
+          </main>
+        </div>
 
       </div>
     </AuthLayout>

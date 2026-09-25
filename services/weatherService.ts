@@ -1,4 +1,5 @@
 import { WeatherTelemetry } from "../types";
+import { fetchWithTimeout } from "../utils/fetchWithTimeout";
 
 export async function fetchLiveWeather(lat: number, lng: number): Promise<WeatherTelemetry> {
   const defaultTelemetry: WeatherTelemetry = {
@@ -14,11 +15,25 @@ export async function fetchLiveWeather(lat: number, lng: number): Promise<Weathe
     // We try to pull real data from Open-Meteo Marine API
     // and Open-Meteo Weather API
     const weatherUrl = `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lng}&current=temperature_2m,wind_speed_10m,wind_direction_10m&timezone=Asia/Manila`;
-    
-    // We fetch weather data
-    const weatherRes = await fetch(weatherUrl);
-    if (!weatherRes.ok) throw new Error("Weather API failed");
-    const weatherData = await weatherRes.ok ? await weatherRes.json() : null;
+    const marineUrl = `https://marine-api.open-meteo.com/v1/marine?latitude=${lat}&longitude=${lng}&current=wave_height&timezone=Asia/Manila`;
+
+    // Fetch weather + marine APIs in parallel (previously sequential double-fetch).
+    // Each leg has an 8s AbortController timeout + 1 retry; failures fall
+    // through to the deterministic offline simulation below.
+    const weatherFetch = fetchWithTimeout(weatherUrl, { timeoutMs: 8000, retries: 1 }).then(
+      async (weatherRes) => {
+        if (!weatherRes.ok) throw new Error("Weather API failed");
+        return weatherRes.json();
+      }
+    );
+    const marineFetch = fetchWithTimeout(marineUrl, { timeoutMs: 8000, retries: 1 }).then(
+      async (marineRes) => {
+        if (!marineRes.ok) return null;
+        return marineRes.json();
+      }
+    );
+
+    const [weatherData, marineData] = await Promise.all([weatherFetch, marineFetch]);
 
     let temp = defaultTelemetry.temp;
     let windSpeed = defaultTelemetry.windSpeed;
@@ -34,15 +49,10 @@ export async function fetchLiveWeather(lat: number, lng: number): Promise<Weathe
       windDirection = compassDirections[dirIndex];
     }
 
-    // Try fetching marine wave height
-    const marineUrl = `https://marine-api.open-meteo.com/v1/marine?latitude=${lat}&longitude=${lng}&current=wave_height&timezone=Asia/Manila`;
-    const marineRes = await fetch(marineUrl);
+    // Marine wave height already fetched in parallel above
     let waveHeight = defaultTelemetry.waveHeight;
-    if (marineRes.ok) {
-      const marineData = await marineRes.json();
-      if (marineData?.current?.wave_height !== undefined) {
-        waveHeight = parseFloat(marineData.current.wave_height);
-      }
+    if (marineData?.current?.wave_height !== undefined) {
+      waveHeight = parseFloat(marineData.current.wave_height);
     }
 
     // Determine tide and storm signals based on coordinates & random but stable hashes

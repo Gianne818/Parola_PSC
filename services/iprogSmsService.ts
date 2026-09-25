@@ -124,13 +124,24 @@ export class IProgSmsService {
     }
 
     try {
-      let response = await fetch(this.config.endpoint, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(payload),
-      });
+      const doPost = async (payloadBody: Record<string, any>) => {
+        const controller = new AbortController();
+        const timeout = setTimeout(() => controller.abort(), 10000);
+        try {
+          return await fetch(this.config.endpoint, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify(payloadBody),
+            signal: controller.signal,
+          });
+        } finally {
+          clearTimeout(timeout);
+        }
+      };
+
+      let response = await doPost(payload);
 
       let errText = '';
       let resData: any = {};
@@ -156,13 +167,7 @@ export class IProgSmsService {
         console.warn('Smart/TNT sender name restriction encountered. Retrying iPROG dispatch without sender_name parameter...');
         delete payload.sender_name;
 
-        response = await fetch(this.config.endpoint, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify(payload),
-        });
+        response = await doPost(payload);
 
         if (!response.ok) {
           errText = await response.text();

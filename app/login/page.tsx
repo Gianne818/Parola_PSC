@@ -18,11 +18,15 @@ import {
 } from "lucide-react";
 import { useApp } from "../../context/AppContext";
 import { ParolaLogo } from "../../components/ui/ParolaLogo";
+import Image from "next/image";
 
 import dynamic from "next/dynamic";
 
 const GalunggongMascot = dynamic(() => import("../../components/ui/GalunggongMascot"), {
   ssr: false,
+  loading: () => (
+    <div className="w-full h-full rounded-3xl bg-white/10 animate-pulse" aria-label="Loading mascot" />
+  ),
 });
 
 interface Ripple {
@@ -61,6 +65,20 @@ export default function LoginPage() {
   // Background ripples state
   const [ripples, setRipples] = useState<Ripple[]>([]);
 
+  // Tracked timeouts so pending callbacks never fire after unmount
+  const timeoutsRef = useRef<number[]>([]);
+  const later = (fn: () => void, ms: number) => {
+    const id = window.setTimeout(fn, ms);
+    timeoutsRef.current.push(id);
+  };
+  useEffect(() => {
+    const pending = timeoutsRef.current;
+    return () => {
+      pending.forEach((id) => clearTimeout(id));
+      timeoutsRef.current = [];
+    };
+  }, []);
+
   // Show "already signed in" overlay instead of blindly redirecting
   const [showAlreadyIn, setShowAlreadyIn] = useState(false);
 
@@ -95,7 +113,7 @@ export default function LoginPage() {
       y
     };
     setRipples(prev => [...prev, newRipple]);
-    setTimeout(() => {
+    later(() => {
       setRipples(prev => prev.filter(r => r.id !== newRipple.id));
     }, 800);
   };
@@ -110,14 +128,14 @@ export default function LoginPage() {
     if (!cleaned || digitsOnly.length < 10) {
       setTriggerFailure(true);
       setFormError('Please enter a valid mobile phone number (e.g. +63 912 345 6789).');
-      setTimeout(() => setTriggerFailure(false), 1500);
+      later(() => setTriggerFailure(false), 1500);
       return;
     }
 
     if (!password) {
       setTriggerFailure(true);
       setFormError('Please enter your password.');
-      setTimeout(() => setTriggerFailure(false), 1500);
+      later(() => setTriggerFailure(false), 1500);
       return;
     }
 
@@ -127,13 +145,13 @@ export default function LoginPage() {
 
     if (result.ok) {
       setTriggerSuccess(true);
-      setTimeout(() => {
+      later(() => {
         router.push("/dashboard");
       }, 700);
     } else {
       setTriggerFailure(true);
       setFormError(result.error || "Sign in failed. Please check your credentials.");
-      setTimeout(() => setTriggerFailure(false), 1500);
+      later(() => setTriggerFailure(false), 1500);
     }
   };
 
@@ -184,10 +202,12 @@ export default function LoginPage() {
       className="min-h-screen relative flex flex-col justify-center items-center p-4 sm:p-6 md:p-10 overflow-hidden font-sans antialiased select-none cursor-default"
     >
       {/* 1. Full-Bleed Panoramic Background Image */}
-      {/* eslint-disable-next-line @next/next/no-img-element */}
-      <img
+      <Image
         src="/images/auth-bg.jpeg"
         alt="Parola Lighthouse Coastline"
+        fill
+        priority
+        sizes="100vw"
         className="absolute inset-0 w-full h-full object-cover object-left md:object-center pointer-events-none select-none z-0"
       />
 

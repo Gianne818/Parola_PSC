@@ -1,18 +1,18 @@
-"use client";
-
-import React from "react";
+import type { Metadata } from "next";
 import Link from "next/link";
 import {
   CheckCircle2,
   Ship,
   HelpCircle,
-  ArrowRight,
-  ShieldCheck,
-  Radio,
-  FileText,
-  Sparkles
+  ArrowRight
 } from "lucide-react";
 import { ParolaLogo } from "@/components/ui/ParolaLogo";
+
+export const metadata: Metadata = {
+  title: "Pricing | Parola",
+  description:
+    "Predictable marine advisory pricing tiered by Philippine vessel gross tonnage classification.",
+};
 
 export default function PricingPage() {
   const tiers = [

@@ -1,32 +1,65 @@
 import { NextResponse } from 'next/server';
 import { smsService } from '@/services/smsServiceInstance';
+import { requireAdmin } from '@/lib/route-auth';
 
-export async function GET() {
+export async function GET(request: Request) {
+  const denied = requireAdmin(request);
+  if (denied) return denied;
+
   const currentConfig = smsService.getConfig();
-  // Mask API key for security
-  const maskedApiKey = currentConfig.apiKey
-    ? currentConfig.apiKey.substring(0, 4) + '...' + currentConfig.apiKey.slice(-4)
-    : 'NOT_SET';
 
   return NextResponse.json({
     endpoint: currentConfig.endpoint,
     senderName: currentConfig.senderName,
     mockMode: currentConfig.mockMode,
-    apiKeyMasked: maskedApiKey,
+    apiKeyConfigured: Boolean(currentConfig.apiKey),
     remainingFreeQuota: currentConfig.mockMode ? 5 : 'LIVE_QUOTA',
   });
 }
 
+const ALLOWED_ENDPOINT_PREFIX = 'https://sms.iprogtech.com/';
+
 export async function POST(request: Request) {
+  const denied = requireAdmin(request);
+  if (denied) return denied;
+
   try {
-    const body = await request.json();
-    const { mockMode, apiKey, senderName, endpoint } = body;
+    const body = await request.json().catch(() => null);
+    if (!body || typeof body !== 'object') {
+      return NextResponse.json({ error: 'Invalid JSON body.' }, { status: 400 });
+    }
+    const { mockMode, apiKey, senderName, endpoint } = body as {
+      mockMode?: unknown;
+      apiKey?: unknown;
+      senderName?: unknown;
+      endpoint?: unknown;
+    };
+
+    if (endpoint !== undefined) {
+      if (typeof endpoint !== 'string' || !endpoint.startsWith(ALLOWED_ENDPOINT_PREFIX)) {
+        return NextResponse.json(
+          { error: 'endpoint must be an https://sms.iprogtech.com/ URL.' },
+          { status: 400 }
+        );
+      }
+    }
+    if (senderName !== undefined) {
+      if (typeof senderName !== 'string' || senderName.length === 0 || senderName.length > 32) {
+        return NextResponse.json(
+          { error: 'senderName must be 1-32 characters.' },
+          { status: 400 }
+        );
+      }
+    }
+    if (apiKey !== undefined && typeof apiKey !== 'string') {
+      return NextResponse.json({ error: 'apiKey must be a string.' }, { status: 400 });
+    }
 
     smsService.updateConfig({
       ...(typeof mockMode === 'boolean' ? { mockMode } : {}),
-      ...(apiKey ? { apiKey } : {}),
-      ...(senderName ? { senderName } : {}),
-      ...(endpoint ? { endpoint } : {}),
+      ...(typeof apiKey === 'string' && apiKey ? { apiKey } : {}),
+      ...(typeof senderName === 'string' && senderName ? { senderName } : {}),
+      ...(typeof endpoint === 'string' && endpoint ? { endpoint } : {}),
     });
 
     const updated = smsService.getConfig();
@@ -37,10 +70,11 @@ export async function POST(request: Request) {
         endpoint: updated.endpoint,
         senderName: updated.senderName,
         mockMode: updated.mockMode,
-        apiKeyMasked: updated.apiKey ? updated.apiKey.substring(0, 4) + '...' : 'NOT_SET',
+        apiKeyConfigured: Boolean(updated.apiKey),
       },
     });
-  } catch (err: any) {
-    return NextResponse.json({ error: err.message }, { status: 500 });
+  } catch {
+    console.error('[SMS Config API] update failed');
+    return NextResponse.json({ error: 'Configuration update failed.' }, { status: 500 });
   }
 }

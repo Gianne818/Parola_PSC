@@ -1,0 +1,49 @@
+name: CI
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  ci:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Typecheck
+        run: npx tsc --noEmit
+
+      # Scoped to the API/security surface: repo-wide `npm run lint` currently
+      # reports pre-existing react-hooks violations in page/mascot UI files
+      # (new eslint-config-next 16 rules vs. older code). Those are grandfathered
+      # until a dedicated UI lint cleanup; CI gates the paths this project hardens.
+      - name: Lint (API + lib surface)
+        run: npx eslint app/api lib tests vitest.config.mjs
+
+      - name: Unit tests
+        run: npm test
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Compile backend services
+        run: python -m py_compile parola-api-service/*.py
+        shell: bash
+
+      # Deterministic worktree scan (stdlib only, no history dependency).
+      # Local commits are additionally guarded by the gitleaks pre-commit hook.
+      - name: Secret scan (tracked files)
+        run: python scripts/secret-scan.py --tracked
+        shell: bash

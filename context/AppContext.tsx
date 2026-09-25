@@ -1,12 +1,14 @@
 "use client";
 
-import React, { createContext, useContext, useState, useEffect } from "react";
+import React, { createContext, useContext, useState, useEffect, useCallback } from "react";
 import { UserProfile, AlertNotification, WeatherTelemetry, Hotspot, FuelPool } from "../types";
 import { storageService } from "../services/storageService";
 import { fetchLiveWeather } from "../services/weatherService";
 import { fetchHotspots } from "../services/supabaseHotspotService";
 import { fetchWeatherSafetyOverrides, fetchSupabaseWeatherData } from "../services/supabaseWeatherService";
 import { createUserProfile } from "../services/profileService";
+import { authHeaders } from "../utils/auth-fetch";
+import { fetchWithTimeout } from "../utils/fetchWithTimeout";
 
 // Default pre-configured Philippine hotspots
 export const DEFAULT_HOTSPOTS: Hotspot[] = [
@@ -248,6 +250,19 @@ const DEFAULT_WEATHER: WeatherTelemetry = {
   stormSignal: 0,
 };
 
+// TTL cache + in-flight dedupe for telemetry/hotspot loads (fixes sequential waterfall)
+const TELEMETRY_TTL_MS = 60_000;
+interface TelemetryCacheEntry {
+  timestamp: number;
+  weather: WeatherTelemetry;
+  hotspots: Hotspot[];
+  hasActiveOverride: boolean;
+}
+const telemetryCache = new Map<string, TelemetryCacheEntry>();
+const telemetryInflight = new Map<string, Promise<TelemetryCacheEntry>>();
+const telemetryCacheKey = (lat: number, lng: number) =>
+  `${lat.toFixed(3)},${lng.toFixed(3)}`;
+
 export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [isInitialized, setIsInitialized] = useState<boolean>(false);
   const [isAuthenticated, setIsAuthenticated] = useState<boolean>(false);
@@ -287,66 +302,112 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     }
   }, []);
 
-  // Load weather, overrides and hotspots whenever user coordinates change
+  // Toast helpers defined before effects that reference them (avoids use-before-declaration).
+  // Stable via useCallback so effects can depend on showToast without ref-sync during render.
+  const showToast = useCallback((message: string, type: "success" | "error" | "info") => {
+    setToast({ message, type });
+  }, []);
+
+  const hideToast = () => setToast(null);
+
+  // Load weather, overrides and hotspots whenever user coordinates change.
+  // Parallelized with Promise.all + TTL cache + in-flight dedupe (was sequential waterfall).
   useEffect(() => {
+    let cancelled = false;
+    const lat = userProfile.lat;
+    const lng = userProfile.lng;
+    if (!lat || !lng) return;
+    const key = telemetryCacheKey(lat, lng);
+
     const loadTelemetryAndHotspots = async () => {
-      if (!userProfile.lat || !userProfile.lng) return;
+      // Serve fresh TTL cache instantly
+      const cached = telemetryCache.get(key);
+      if (cached && Date.now() - cached.timestamp < TELEMETRY_TTL_MS) {
+        setWeather(cached.weather);
+        setHotspots(cached.hotspots.length > 0 ? cached.hotspots : DEFAULT_HOTSPOTS);
+        if (cached.hasActiveOverride) setManualOverrideHold(true);
+        return;
+      }
+
+      // Dedupe concurrent loads for the same coordinates
+      let inflight = telemetryInflight.get(key);
+      if (!inflight) {
+        inflight = (async (): Promise<TelemetryCacheEntry> => {
+          const [liveRes, sbWeatherRes, overridesRes, hotspotsRes] = await Promise.all([
+            fetchLiveWeather(lat, lng).catch((weatherErr) => {
+              console.warn("Could not fetch live weather, fallback to default weather:", weatherErr);
+              return DEFAULT_WEATHER;
+            }),
+            fetchSupabaseWeatherData(lat, lng).catch((e) => {
+              console.warn("Could not load Supabase weather telemetry:", e);
+              return null;
+            }),
+            fetchWeatherSafetyOverrides().catch((e) => {
+              console.warn("Could not load weather safety overrides:", e);
+              return [];
+            }),
+            fetchHotspots(lat, lng).catch((e) => {
+              console.warn("Could not load fishing hotspots:", e);
+              return [] as Hotspot[];
+            }),
+          ]);
+
+          // Merge Supabase weather overlay onto live telemetry
+          const live: WeatherTelemetry = { ...liveRes };
+          const sbWeather = sbWeatherRes as any;
+          if (sbWeather) {
+            live.temp = sbWeather.temperature ?? sbWeather.temp ?? live.temp;
+            live.windSpeed = sbWeather.wind_speed ?? sbWeather.windSpeed ?? live.windSpeed;
+            live.waveHeight = sbWeather.wave_height ?? sbWeather.waveHeight ?? live.waveHeight;
+            live.stormSignal = sbWeather.storm_signal ?? sbWeather.stormSignal ?? live.stormSignal;
+          }
+
+          const overrides = (overridesRes ?? []) as { isActive: boolean; reason: string }[];
+          const hasActiveOverride = overrides.some((o) => o.isActive);
+
+          let mapped: Hotspot[];
+          const sbHotspots = (hotspotsRes ?? []) as Hotspot[];
+          if (sbHotspots.length > 0) {
+            mapped = sbHotspots.map((h) => ({
+              ...h,
+              type: (h.type === 'pelagic' || h.type === 'demersal' || h.type === 'both') ? h.type : 'both',
+            })) as Hotspot[];
+          } else {
+            mapped = DEFAULT_HOTSPOTS;
+          }
+
+          const entry: TelemetryCacheEntry = {
+            timestamp: Date.now(),
+            weather: live,
+            hotspots: mapped,
+            hasActiveOverride,
+          };
+          telemetryCache.set(key, entry);
+          return entry;
+        })();
+        telemetryInflight.set(key, inflight);
+        try {
+          await inflight;
+        } finally {
+          telemetryInflight.delete(key);
+        }
+      }
 
       try {
-        // 1. Fetch live weather from Open-Meteo
-        let live: WeatherTelemetry;
-        try {
-          live = await fetchLiveWeather(userProfile.lat, userProfile.lng);
-        } catch (weatherErr) {
-          console.warn("Could not fetch live weather, fallback to default weather:", weatherErr);
-          live = DEFAULT_WEATHER;
-        }
-
-        try {
-          // 2. Fetch latest weather data from Supabase
-          const sbWeather = await fetchSupabaseWeatherData(userProfile.lat, userProfile.lng);
-          if (sbWeather) {
-            live.temp = sbWeather.temperature ?? live.temp;
-            live.windSpeed = sbWeather.wind_speed ?? live.windSpeed;
-            live.waveHeight = sbWeather.wave_height ?? live.waveHeight;
-            live.stormSignal = sbWeather.storm_signal ?? live.stormSignal;
-          }
-        } catch (e) {
-          console.warn("Could not load Supabase weather telemetry:", e);
-        }
-
-        setWeather(live);
-
-        try {
-          // 3. Fetch safety overrides from Supabase
-          const overrides = await fetchWeatherSafetyOverrides();
-          const hasActiveOverride = overrides.some(o => o.isActive);
-          if (hasActiveOverride) {
-            setManualOverrideHold(true);
-            const activeOverride = overrides.find(o => o.isActive);
-            if (activeOverride) {
-              showToast(`⚠️ Safety Override: ${activeOverride.reason}`, "error");
-            }
-          }
-        } catch (e) {
-          console.warn("Could not load weather safety overrides:", e);
-        }
-
-        try {
-          // 4. Fetch hotspots from Supabase/API
-          const sbHotspots = await fetchHotspots(userProfile.lat, userProfile.lng);
-          if (sbHotspots && sbHotspots.length > 0) {
-            const mapped = sbHotspots.map(h => ({
-              ...h,
-              type: (h.type === 'pelagic' || h.type === 'demersal' || h.type === 'both') ? h.type : 'both'
-            })) as Hotspot[];
-            setHotspots(mapped);
-          } else {
-            setHotspots(DEFAULT_HOTSPOTS);
-          }
-        } catch (e) {
-          console.warn("Could not load fishing hotspots:", e);
-          setHotspots(DEFAULT_HOTSPOTS);
+        const entry = await inflight;
+        if (cancelled) return;
+        setWeather(entry.weather);
+        setHotspots(entry.hotspots);
+        if (entry.hasActiveOverride) {
+          setManualOverrideHold(true);
+          // Toast once per fresh load; overrides list already fetched above
+          fetchWeatherSafetyOverrides()
+            .then((overrides) => {
+              if (cancelled) return;
+              const active = overrides.find((o) => o.isActive);
+              if (active) showToast(`⚠️ Safety Override: ${active.reason}`, "error");
+            })
+            .catch(() => {});
         }
       } catch (err) {
         console.warn("Error loading telemetry and hotspots:", err);
@@ -356,7 +417,10 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     loadTelemetryAndHotspots().catch((err) => {
       console.warn("Unhandled rejection in loadTelemetryAndHotspots:", err);
     });
-  }, [userProfile.port, userProfile.lat, userProfile.lng]);
+    return () => {
+      cancelled = true;
+    };
+  }, [userProfile.port, userProfile.lat, userProfile.lng, showToast]);
 
   useEffect(() => {
     const handleUnhandledRejection = (event: PromiseRejectionEvent) => {
@@ -393,12 +457,6 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     }
   }, []);
 
-  const showToast = (message: string, type: "success" | "error" | "info") => {
-    setToast({ message, type });
-  };
-
-  const hideToast = () => setToast(null);
-
   const login = async (phone: string, pin: string): Promise<{ ok: boolean; error?: string }> => {
     if (!phone || !pin) {
       const error = "Please enter both phone number and password.";
@@ -413,13 +471,17 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     let errData: any = {};
 
     try {
-      res = await fetch('/api/users/login', {
+      // 8s AbortController timeout + 1 retry; AbortError falls through to the
+      // local offline credential check below, preserving offline login.
+      res = await fetchWithTimeout('/api/users/login', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           phone_number: cleanedPhone,
           password: pin,
         }),
+        timeoutMs: 8000,
+        retries: 1,
       });
 
       if (res.ok) {
@@ -491,9 +553,9 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const updateUserWithBackend = async (prof: UserProfile) => {
     try {
       if (!prof.phone) return;
-      await fetch('/api/users/profile', {
+      await fetchWithTimeout('/api/users/profile', {
         method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
+        headers: await authHeaders({ 'Content-Type': 'application/json' }),
         body: JSON.stringify({
           phone_number: prof.phone,
           full_name: prof.vesselName || 'Captain',
@@ -502,6 +564,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
           longitude: prof.lng || 123.0114,
           preferred_advisory_time: '05:00:00',
         }),
+        timeoutMs: 8000,
+        retries: 1,
       });
     } catch (err) {
       console.warn('Profile update sync deferred:', err);
@@ -520,22 +584,10 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     const compactPhone = cleanedPhone.replace(/\s+/g, '');
     const userFullName = (updated.vesselName && updated.vesselName !== "F/V Parola I") ? updated.vesselName : cleanedPhone;
 
-    // 1. Direct client write to Supabase database (users table)
     try {
-      await createUserProfile({
-        phoneNumber: cleanedPhone,
-        fullName: userFullName,
-        homePortName: updated.port || 'Mercedes Fish Port',
-        homePortLat: updated.lat || 14.0122,
-        homePortLng: updated.lng || 123.0114,
-        preferredAdvisoryTime: '05:00:00',
-      });
-    } catch (sbErr) {
-      console.warn('Direct Supabase user profile creation warning:', sbErr);
-    }
-
-    try {
-      const res = await fetch('/api/users/register', {
+      // 8s timeout + 1 retry; network/timeout errors fall through to local
+      // offline registration below, preserving offline sign-up.
+      const res = await fetchWithTimeout('/api/users/register', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -547,19 +599,22 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
           preferred_advisory_time: '05:00:00',
           password: password || undefined,
         }),
+        timeoutMs: 8000,
+        retries: 1,
       });
 
       if (!res.ok) {
         const errData = await res.json().catch(() => ({}));
 
-        // If backend returned error response (other than offline 503)
-        if (res.status !== 503 && !errData.offline) {
-          const errMsg = errData.error || (res.status === 400 || res.status === 409
-            ? "An account with this phone number already exists. Please sign in instead."
-            : "Registration failed. Please try again.");
+        // Explicit 400 or 409: duplicate phone number or invalid client data
+        if (res.status === 400 || res.status === 409) {
+          const errMsg = errData.error || "An account with this phone number already exists. Please sign in instead.";
           showToast(errMsg, "error");
           return { ok: false, error: errMsg };
         }
+
+        // For upstream server/database connectivity issues, log and allow local offline registration
+        console.warn('Backend server registration fallback to local store:', errData);
       }
     } catch (err) {
       console.warn('Registration network error, falling back to local registration:', err);
@@ -772,6 +827,15 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     try {
       const live = await fetchLiveWeather(userProfile.lat, userProfile.lng);
       setWeather(live);
+      // Keep TTL cache coherent so the next effect load doesn't serve stale weather
+      const key = telemetryCacheKey(userProfile.lat, userProfile.lng);
+      const prev = telemetryCache.get(key);
+      telemetryCache.set(key, {
+        timestamp: Date.now(),
+        weather: live,
+        hotspots: prev?.hotspots ?? [],
+        hasActiveOverride: prev?.hasActiveOverride ?? false,
+      });
       showToast("Live PAGASA weather metrics refreshed.", "success");
     } catch (err) {
       console.warn("Failed to refresh weather metrics:", err);

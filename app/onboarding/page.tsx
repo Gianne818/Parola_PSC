@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState, useEffect, Suspense } from 'react';
+import dynamic from 'next/dynamic';
 import { useRouter, useSearchParams } from 'next/navigation';
 import {
   MapPin,
@@ -16,9 +17,27 @@ import {
   Map as MapIcon
 } from 'lucide-react';
 import { useApp } from '../../context/AppContext';
-import { MapComponent } from '../../components/features/hotspots/MapComponent';
 import { ParolaLogo } from '../../components/ui/ParolaLogo';
 import { reverseGeocode, searchLocations, GeocodingResult } from '../../services/geocodingService';
+
+// Leaflet pulls in a large client-only bundle, so defer it until the
+// onboarding map is actually rendered. MapComponent already code-splits
+// its inner Leaflet canvas; this keeps leaflet/react-leaflet out of the
+// initial onboarding chunk entirely.
+const MapComponent = dynamic(
+  () => import('../../components/features/hotspots/MapComponent').then((mod) => mod.MapComponent),
+  {
+    ssr: false,
+    loading: () => (
+      <div className="w-full h-full min-h-[450px] flex flex-col items-center justify-center space-y-4 bg-brand-offwhite">
+        <MapIcon className="w-12 h-12 text-brand-green animate-spin [animation-duration:3s]" />
+        <span className="text-xs font-black uppercase tracking-widest text-gray-400">
+          Loading port map...
+        </span>
+      </div>
+    ),
+  }
+);
 
 const PORT_PRESETS = [
   { name: 'Mercedes Fish Port', lat: 14.0122, lng: 123.0114, province: 'Camarines Norte' },
