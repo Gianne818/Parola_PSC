@@ -1,0 +1,18 @@
+/* In-app embedding of the public landing pages (/guide, /pricing, /about).
+   The exact same components render, so the design stays pixel-identical.
+   Only the landing chrome (sticky site header + site footer) is hidden,
+   because AuthLayout already provides the sidebar, top bar, and bottom nav.
+   Selector is scoped to direct children of the embedded page root, so the
+   app shell's own header/nav outside .embed is never affected. */
+.embed > div > header,
+.embed > div > footer {
+  display: none;
+}
+
+/* Compact density for inside the app shell: uniformly scale the landing
+   design down (fonts, cards, spacing stay proportional). min-height is
+   released so the embed sizes to its content inside the app scroll area. */
+.embed > div {
+  zoom: 0.85;
+  min-height: auto;
+}

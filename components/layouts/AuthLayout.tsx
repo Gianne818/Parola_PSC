@@ -167,11 +167,13 @@ export const AuthLayout: React.FC<AuthLayoutProps> = ({ children, fluid = false 
                 </div>
               )}
               {[
-                { href: "/guide", icon: BookOpen, label: "System Guide" },
-                { href: "/pricing", icon: Ship, label: "Tonnage Pricing" },
-                { href: "/about", icon: Sparkles, label: "About Parola" },
+                { href: "/resources/guide", icon: BookOpen, label: "System Guide" },
+                { href: "/resources/pricing", icon: Ship, label: "Tonnage Pricing" },
+                { href: "/resources/about", icon: Sparkles, label: "About Parola" },
               ].map((res) => {
-                const isActive = pathname === res.href;
+                const isActive =
+                  pathname === res.href ||
+                  (pathname === "/resources" && res.href === "/resources/guide");
                 const Icon = res.icon;
                 return (
                   <Link
