@@ -18,7 +18,9 @@ import {
   Check,
   Smartphone,
   ChevronRight,
-  ExternalLink
+  ExternalLink,
+  Maximize2,
+  X
 } from "lucide-react";
 import { motion, AnimatePresence } from "motion/react";
 import { ParolaLogo } from "@/components/ui/ParolaLogo";
@@ -34,6 +36,9 @@ interface StepGuide {
   actionLabel: string;
   instructions: string[];
   operationalTip: string;
+  image: string;
+  imageAlt: string;
+  imageCaption: string;
 }
 
 const STEPS: StepGuide[] = [
@@ -52,7 +57,10 @@ const STEPS: StepGuide[] = [
       "Select your role as Municipal Fisher, Cooperative Leader, or Maritime Safety Officer.",
       "Set your secure password or confirm via SMS verification passcode to initialize your account."
     ],
-    operationalTip: "Basic keypad feature phones are 100% supported. You do not need smartphone data to activate your profile."
+    operationalTip: "Basic keypad feature phones are 100% supported. You do not need smartphone data to activate your profile.",
+    image: "/images/parola-login-guide.png",
+    imageAlt: "Parola Account Registration page showing mobile number and password fields",
+    imageCaption: "Registration portal with Philippine mobile number input (+63) and 2G SMS connectivity support for municipal fishers."
   },
   {
     id: "complete-onboarding",
@@ -69,7 +77,10 @@ const STEPS: StepGuide[] = [
       "Select your hull type (motorized banca, wooden hull, or steel hull) and enter gross tonnage (GT).",
       "Choose your primary gear (handline, gillnet, ring net, or longline) so hotspot telemetry matches your target fish species."
     ],
-    operationalTip: "Small bancas under 3.0 GT qualify for municipal exemptions, while 3.1 to 20.0 GT vessels belong to the Small-Scale commercial tier."
+    operationalTip: "Small bancas under 3.0 GT qualify for municipal exemptions, while 3.1 to 20.0 GT vessels belong to the Small-Scale commercial tier.",
+    image: "/images/guide-vessel-profile.png",
+    imageAlt: "Parola Captain & Vessel Profile specifications screen",
+    imageCaption: "Vessel and captain profile showing registered vessel F/B Sto. Niño, gross tonnage (GT), hull type, and SMS verification status."
   },
   {
     id: "find-vessel",
@@ -86,7 +97,10 @@ const STEPS: StepGuide[] = [
       "Click on your vessel pin to open the live telemetry card showing home port distance and current sea state.",
       "Toggle between satellite SST layer and navigation map view to inspect surrounding conditions."
     ],
-    operationalTip: "If your boat is offshore, your last reported GPS anchor coordinates sync automatically whenever an SMS advisory is triggered."
+    operationalTip: "If your boat is offshore, your last reported GPS anchor coordinates sync automatically whenever an SMS advisory is triggered.",
+    image: "/images/guide-fleet-map.png",
+    imageAlt: "Parola Fleet Map on Dashboard showing registered vessel and home anchorage",
+    imageCaption: "Interactive Fleet Map with vessel search, live coordinates, 9 km prediction radius, and registered harbor anchorage."
   },
   {
     id: "register-home-port",
@@ -103,7 +117,10 @@ const STEPS: StepGuide[] = [
       "Alternatively, tap directly on the map to set a custom GPS coordinate pin for remote barangay coves.",
       "Confirm your primary emergency VHF radio channel (Channel 16 default) for port muster broadcasts."
     ],
-    operationalTip: "Local harbor thresholds calibrate your automated departure holds. When local waves exceed 1.5m, your home port triggers a safety hold."
+    operationalTip: "Local harbor thresholds calibrate your automated departure holds. When local waves exceed 1.5m, your home port triggers a safety hold.",
+    image: "/images/parola-onboarding-guide.png",
+    imageAlt: "Parola Port Selection Onboarding map interface with reference anchor",
+    imageCaption: "Port Selection map allowing fishers to search or drop an anchor pin at their municipal landing port (e.g. Brgy. Mactan, Lapu-Lapu)."
   },
   {
     id: "read-sms-advisory",
@@ -120,7 +137,10 @@ const STEPS: StepGuide[] = [
       "Read key telemetry values: significant wave height (e.g. 0.8m), wind speed (e.g. 9 kts), and active fishing zone.",
       "Reply with 'ADVISORY' anytime while offshore to request an updated weather bulletin without internet data."
     ],
-    operationalTip: "Query keywords include ADVISORY for sea conditions, HOTSPOT for coordinates, and STATUS for your active departure clearance."
+    operationalTip: "Query keywords include ADVISORY for sea conditions, HOTSPOT for coordinates, and STATUS for your active departure clearance.",
+    image: "/images/guide-sms-advisory.png",
+    imageAlt: "Parola SMS Advisory Dispatch and GSM payload preview",
+    imageCaption: "Pre-departure SMS advisory preview detailing safe-to-sail status, wave heights, nearest fishing hotspot bearing, and SMS dispatch button."
   },
   {
     id: "check-fish-probability",
@@ -137,7 +157,10 @@ const STEPS: StepGuide[] = [
       "Look for probability scores above 70%, which indicate active thermal upwelling fronts and chlorophyll feeding zones.",
       "Note the recommended navigation heading and distance offshore (e.g., Zone 3, 12km East-Northeast)."
     ],
-    operationalTip: "Thermal boundary zones with 27.5°C to 28.5°C SST fronts concentrate schooling baitfish, reducing fuel scouting time by up to 35%."
+    operationalTip: "Thermal boundary zones with 27.5°C to 28.5°C SST fronts concentrate schooling baitfish, reducing fuel scouting time by up to 35%.",
+    image: "/images/guide-fish-probability.png",
+    imageAlt: "Parola Dashboard Hotspot Coordinates list with catch probabilities",
+    imageCaption: "Species hotspot list view ranking optimal fishing zones with catch probabilities (94%, 86%, 75%), depth, distance, and heading."
   },
   {
     id: "submit-catch-feedback",
@@ -154,7 +177,10 @@ const STEPS: StepGuide[] = [
       "Optionally log fuel liters consumed or hours spent at sea to calculate trip efficiency.",
       "Receive instant confirmation that your anonymized catch data has updated the municipal fisheries model."
     ],
-    operationalTip: "Exact GPS marks are kept confidential and aggregated into 5-kilometer grid cells to prevent crowding secret family fishing grounds."
+    operationalTip: "Exact GPS marks are kept confidential and aggregated into 5-kilometer grid cells to prevent crowding secret family fishing grounds.",
+    image: "/images/guide-catch-feedback.png",
+    imageAlt: "Cooperative Model Calibration catch feedback rating interface",
+    imageCaption: "Municipal Advisor catch feedback calibration module allowing fishers to rate AI prediction accuracy (High, Medium, Low) after landing."
   },
   {
     id: "respond-safety-hold",
@@ -171,13 +197,38 @@ const STEPS: StepGuide[] = [
       "Confirm receipt by replying 'ACK' to the SMS notification or tapping Acknowledge on the Alerts screen.",
       "Check the Coast Guard VHF Channel 16 muster status and wait for the official all-clear dispatch before untying lines."
     ],
-    operationalTip: "Safety holds automatically lift once significant wave height drops back below 1.2m and PAGASA cancels coastal gale advisories."
+    operationalTip: "Safety holds automatically lift once significant wave height drops back below 1.2m and PAGASA cancels coastal gale advisories.",
+    image: "/images/guide-safety-hold.png",
+    imageAlt: "Critical Safety Hold and PAGASA Gale Warning advisory screen",
+    imageCaption: "Active safety hold screen showing hazardous sea state (wave swells > 1.5m), prohibited departure status, and Gale Warning SMS trigger."
+  },
+  {
+    id: "municipal-advisor",
+    stepNumber: 9,
+    category: "Advisories & At Sea",
+    title: "How to navigate the Municipal Advisor (Fish Finder & Weather Broadcast)",
+    duration: "3 min",
+    shortDesc: "Navigate the Municipal Advisor panel to toggle pelagic and demersal fish finders, review the real-time Sea & Weather Metrics Grid, and trigger PAGASA Weather Broadcast SMS alerts.",
+    actionUrl: "/dashboard",
+    actionLabel: "Open Municipal Advisor",
+    instructions: [
+      "Open the Municipal Advisor panel on the right side of the Dashboard (it can also be expanded or collapsed using the panel toggle).",
+      "In the Fish & Species Finder section, filter by Surface Water (Pelagic), Bottom & Reef (Demersal), or All Predictions.",
+      "Expand the species list (e.g. Tamban, Tulingan, or Lapu-lapu) to view live machine-learning catch probabilities and toggle heatmap overlays on the map.",
+      "Inspect the Sea & Weather Metrics Grid for live wind speed, wave height, storm signal warnings, sea surface temperature (SST), and tide level.",
+      "Under PAGASA Weather Broadcast, check the safety indicator (Favorable vs. Dangerous) and tap the broadcast button to send live weather bulletins to your registered phone."
+    ],
+    operationalTip: "When waves exceed 2.0m or PAGASA issues a storm signal, the broadcast card shifts to a red alert state, prompting safety officers and fishers to dispatch a Gale Warning SMS preventing departures.",
+    image: "/images/parola-dashboard-guide.png",
+    imageAlt: "Parola Dashboard showing Municipal Advisor with Fish Finder, Sea & Weather Metrics Grid, and PAGASA Weather Broadcast",
+    imageCaption: "Municipal Advisor console featuring target fish species selection (pelagic/demersal), real-time Sea & Weather Metrics Grid, and the instant PAGASA Weather Broadcast dispatch."
   }
 ];
 
 export default function GuidePage() {
   const [activeStepId, setActiveStepId] = useState<string>("create-account");
   const [completedSteps, setCompletedSteps] = useState<string[]>([]);
+  const [zoomImage, setZoomImage] = useState<{ src: string; title: string; caption: string } | null>(null);
 
   useEffect(() => {
     const saved = localStorage.getItem("parola_completed_guide_steps");
@@ -281,7 +332,7 @@ export default function GuidePage() {
             Learn Parola, one practical task at a time.
           </h1>
           <p className="text-sm sm:text-base text-[#12211E]/75 leading-relaxed font-normal">
-            Eight step-by-step guides that take you from registering your vessel to receiving SMS advisories, tracking fish hotspots, and responding to safety alerts. Go through them in order or jump to the one you need, and tick each off as you go.
+            Nine step-by-step guides that take you from registering your vessel to receiving SMS advisories, tracking fish hotspots, navigating the municipal advisor, and responding to safety alerts. Go through them in order or jump to the one you need, and tick each off as you go.
           </p>
         </div>
 
@@ -395,163 +446,71 @@ export default function GuidePage() {
               </p>
             </div>
 
-            {/* Interactive Preview Container (Simulated UI specific to step) */}
-            <div className="bg-[#F2F6F4] border border-[#DAE5E0] rounded-2xl p-5 md:p-6 space-y-4">
+            {/* Interface Screenshot Visual Reference (Replaced Live Simulation) */}
+            <div className="bg-[#F2F6F4] border border-[#DAE5E0] rounded-2xl p-4 sm:p-6 space-y-4">
               <div className="flex items-center justify-between text-xs pb-3 border-b border-[#DAE5E0]">
                 <div className="flex items-center gap-2">
                   <div className="w-2.5 h-2.5 rounded-full bg-[#00B37E]" />
                   <span className="font-bold text-[#12211E] uppercase tracking-wide">
-                    Live Interface Simulation
+                    Interface Screenshot Reference
                   </span>
                 </div>
-                <span className="text-[11px] text-[#12211E]/60 font-mono">
-                  Step {currentStep.stepNumber} / 8
-                </span>
+                <div className="flex items-center gap-3">
+                  <span className="text-[11px] text-[#12211E]/60 font-mono">
+                    Step {currentStep.stepNumber} of {STEPS.length}
+                  </span>
+                  <button
+                    onClick={() =>
+                      setZoomImage({
+                        src: currentStep.image,
+                        title: currentStep.title,
+                        caption: currentStep.imageCaption
+                      })
+                    }
+                    className="text-[11px] font-bold text-[#00B37E] hover:text-[#00B37E]/80 flex items-center gap-1 transition-colors cursor-pointer"
+                    title="Zoom in screenshot"
+                  >
+                    <Maximize2 className="w-3 h-3" />
+                    <span>Zoom In</span>
+                  </button>
+                </div>
               </div>
 
-              {/* Dynamic UI Demonstration per Step */}
-              {currentStep.id === "create-account" && (
-                <div className="space-y-3 bg-white p-4 rounded-xl border border-[#DAE5E0] shadow-2xs">
-                  <div className="text-xs font-bold text-[#12211E]">Mobile Account Setup</div>
-                  <div className="flex items-center gap-2 bg-[#F2F6F4] border border-[#DAE5E0] rounded-xl px-3 py-2 text-xs font-mono text-[#12211E]">
-                    <Smartphone className="w-4 h-4 text-[#00B37E]" />
-                    <span>+63 917 555 0192</span>
-                    <span className="ml-auto text-[10px] text-[#00B37E] font-bold bg-[#00B37E]/10 px-2 py-0.5 rounded-full">
-                      Verified
-                    </span>
-                  </div>
-                  <div className="grid grid-cols-2 gap-2 text-xs pt-1">
-                    <div className="bg-[#F2F6F4] p-2.5 rounded-lg border border-[#DAE5E0]">
-                      <div className="text-[10px] text-gray-500 font-bold">Role Selected</div>
-                      <div className="font-bold text-[#12211E]">Municipal Fisher</div>
-                    </div>
-                    <div className="bg-[#F2F6F4] p-2.5 rounded-lg border border-[#DAE5E0]">
-                      <div className="text-[10px] text-gray-500 font-bold">SMS Channel</div>
-                      <div className="font-bold text-[#00B37E]">2G GSM Enabled</div>
-                    </div>
-                  </div>
-                </div>
-              )}
-
-              {currentStep.id === "complete-onboarding" && (
-                <div className="space-y-3 bg-white p-4 rounded-xl border border-[#DAE5E0] shadow-2xs">
-                  <div className="text-xs font-bold text-[#12211E]">Vessel Specifications</div>
-                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 text-xs">
-                    <div className="bg-[#F2F6F4] p-2 rounded-lg border border-[#DAE5E0]">
-                      <div className="text-[10px] text-gray-500">Boat Name</div>
-                      <div className="font-bold text-[#12211E] truncate">F/B Sto. Niño</div>
-                    </div>
-                    <div className="bg-[#F2F6F4] p-2 rounded-lg border border-[#DAE5E0]">
-                      <div className="text-[10px] text-gray-500">Gross Tonnage</div>
-                      <div className="font-bold text-[#12211E]">4.8 GT</div>
-                    </div>
-                    <div className="bg-[#F2F6F4] p-2 rounded-lg border border-[#DAE5E0]">
-                      <div className="text-[10px] text-gray-500">Hull Type</div>
-                      <div className="font-bold text-[#12211E]">Motorized Banca</div>
-                    </div>
-                    <div className="bg-[#F2F6F4] p-2 rounded-lg border border-[#DAE5E0]">
-                      <div className="text-[10px] text-gray-500">Primary Gear</div>
-                      <div className="font-bold text-[#12211E]">Handline / Kawil</div>
-                    </div>
-                  </div>
-                </div>
-              )}
-
-              {currentStep.id === "find-vessel" && (
-                <div className="space-y-3 bg-white p-4 rounded-xl border border-[#DAE5E0] shadow-2xs">
-                  <div className="flex items-center justify-between text-xs">
-                    <span className="font-bold text-[#12211E]">Fleet Map Radar View</span>
-                    <span className="text-[10px] font-bold text-[#00B37E]">1 Craft Tracked</span>
-                  </div>
-                  <div className="bg-[#12211E] text-white p-3 rounded-lg text-xs font-mono space-y-1">
-                    <div className="text-gray-400">&gt; VESSEL: F/B Sto. Niño [ID: PH-CN-2026-081]</div>
-                    <div className="text-[#00B37E]">&gt; COORDS: 14.0122°N, 123.0114°E (Mercedes Anchor)</div>
-                    <div className="text-gray-300">&gt; STATUS: Moored · Sea state calm (0.8m)</div>
-                  </div>
-                </div>
-              )}
-
-              {currentStep.id === "register-home-port" && (
-                <div className="space-y-3 bg-white p-4 rounded-xl border border-[#DAE5E0] shadow-2xs">
-                  <div className="text-xs font-bold text-[#12211E]">Selected Municipal Home Port</div>
-                  <div className="flex items-center justify-between bg-[#F2F6F4] p-3 rounded-xl border border-[#DAE5E0]">
-                    <div className="flex items-center gap-2.5">
-                      <Anchor className="w-5 h-5 text-[#00B37E]" />
-                      <div>
-                        <div className="text-xs font-bold text-[#12211E]">Mercedes Fish Port</div>
-                        <div className="text-[11px] text-[#12211E]/60">Camarines Norte · 14.0122°N, 123.0114°E</div>
-                      </div>
-                    </div>
-                    <span className="text-[10px] font-bold text-[#9A5B18] bg-[#C57E2C]/10 px-2.5 py-1 rounded-full border border-[#C57E2C]/25">
-                      VHF Ch 16
+              {/* Clickable Image Preview Container */}
+              <div
+                onClick={() =>
+                  setZoomImage({
+                    src: currentStep.image,
+                    title: currentStep.title,
+                    caption: currentStep.imageCaption
+                  })
+                }
+                className="group relative rounded-xl overflow-hidden border border-[#DAE5E0] bg-white shadow-xs cursor-pointer"
+              >
+                <div className="relative aspect-[16/10] sm:aspect-[16/9] w-full overflow-hidden bg-[#E2EBE6]">
+                  <img
+                    src={currentStep.image}
+                    alt={currentStep.imageAlt}
+                    className="w-full h-full object-contain sm:object-cover object-top transition-transform duration-300 group-hover:scale-[1.01]"
+                    loading="eager"
+                  />
+                  {/* Subtle hover overlay with zoom prompt */}
+                  <div className="absolute inset-0 bg-black/0 group-hover:bg-black/15 transition-all flex items-center justify-center">
+                    <span className="opacity-0 group-hover:opacity-100 transition-opacity bg-[#12211E]/80 backdrop-blur-sm text-white px-3 py-1.5 rounded-full text-xs font-bold flex items-center gap-1.5 shadow-md">
+                      <Maximize2 className="w-3.5 h-3.5" />
+                      <span>Click to enlarge screenshot</span>
                     </span>
                   </div>
                 </div>
-              )}
+              </div>
 
-              {currentStep.id === "read-sms-advisory" && (
-                <div className="space-y-3 bg-[#12211E] text-white p-4 rounded-xl shadow-inner font-mono text-xs">
-                  <div className="flex items-center justify-between text-[10px] text-gray-400 border-b border-white/10 pb-1.5">
-                    <span>SMS FROM: +63 PAROLA</span>
-                    <span className="text-[#00B37E]">04:30 PHT TODAY</span>
-                  </div>
-                  <p className="leading-relaxed text-gray-200">
-                    PAROLA (Mercedes): Safe to sail. Waves 0.8m, wind 9kts ENE. Zone 3 active for Tamban. Return harbor by 17:00 PHT. Reply ADVISORY for updates.
-                  </p>
-                </div>
-              )}
-
-              {currentStep.id === "check-fish-probability" && (
-                <div className="space-y-3 bg-white p-4 rounded-xl border border-[#DAE5E0] shadow-2xs">
-                  <div className="text-xs font-bold text-[#12211E]">Species Probability & Thermal Fronts</div>
-                  <div className="grid grid-cols-3 gap-2">
-                    <div className="bg-[#F2F6F4] p-2.5 rounded-lg border border-[#DAE5E0] text-center">
-                      <div className="text-[10px] text-gray-500">Tamban</div>
-                      <div className="text-base font-display font-black text-[#00B37E]">84%</div>
-                      <div className="text-[9px] text-gray-400">High Feeding</div>
-                    </div>
-                    <div className="bg-[#F2F6F4] p-2.5 rounded-lg border border-[#DAE5E0] text-center">
-                      <div className="text-[10px] text-gray-500">Galunggong</div>
-                      <div className="text-base font-display font-black text-[#12211E]">72%</div>
-                      <div className="text-[9px] text-gray-400">Moderate Run</div>
-                    </div>
-                    <div className="bg-[#F2F6F4] p-2.5 rounded-lg border border-[#DAE5E0] text-center">
-                      <div className="text-[10px] text-gray-500">Tuna Front</div>
-                      <div className="text-base font-display font-black text-[#C57E2C]">61%</div>
-                      <div className="text-[9px] text-gray-400">12km Offshore</div>
-                    </div>
-                  </div>
-                </div>
-              )}
-
-              {currentStep.id === "submit-catch-feedback" && (
-                <div className="space-y-3 bg-[#12211E] text-white p-4 rounded-xl shadow-inner font-mono text-xs">
-                  <div className="text-[10px] text-gray-400 border-b border-white/10 pb-1.5">
-                    TWO-WAY SMS HARVEST REPORT
-                  </div>
-                  <div className="text-[#00B37E]">&gt; YOU: CATCH 180KG TAMBAN ZONE 3 22L</div>
-                  <div className="text-gray-300">
-                    &lt; PAROLA: Maraming salamat! Harvest recorded. Zone 3 calibrated. Total fleet haul today: 1.4 tons.
-                  </div>
-                </div>
-              )}
-
-              {currentStep.id === "respond-safety-hold" && (
-                <div className="space-y-3 bg-rose-50 border border-rose-200 p-4 rounded-xl text-xs">
-                  <div className="flex items-center justify-between text-rose-700 font-bold">
-                    <span className="flex items-center gap-1.5">
-                      <ShieldAlert className="w-4 h-4 text-rose-600" />
-                      CRITICAL SAFETY HOLD (Hs &gt; 1.5m)
-                    </span>
-                    <span className="bg-rose-200 text-rose-800 text-[10px] px-2 py-0.5 rounded-full">
-                      Departure Denied
-                    </span>
-                  </div>
-                  <p className="text-rose-900 leading-relaxed font-sans">
-                    PAGASA Gale Warning active across Camarines Norte coast. Significant wave heights exceed 1.8 meters. Remain moored at Mercedes Fish Port until advisory clears.
-                  </p>
-                </div>
-              )}
+              {/* Caption Reference Note */}
+              <div className="flex items-start gap-2.5 px-1 text-xs text-[#12211E]/75">
+                <div className="w-1.5 h-1.5 rounded-full bg-[#00B37E] mt-1.5 shrink-0" />
+                <p className="leading-relaxed">
+                  <strong className="text-[#12211E] font-semibold">Visual Guide:</strong> {currentStep.imageCaption}
+                </p>
+              </div>
             </div>
 
             {/* Step-by-Step Instructions */}
@@ -668,6 +627,73 @@ export default function GuidePage() {
           </div>
         </div>
       </footer>
+
+      {/* Lightbox / Zoom Modal for Full Image Inspection */}
+      <AnimatePresence>
+        {zoomImage && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            onClick={() => setZoomImage(null)}
+            className="fixed inset-0 z-50 bg-[#12211E]/80 backdrop-blur-sm p-4 sm:p-8 flex items-center justify-center cursor-zoom-out"
+          >
+            <motion.div
+              initial={{ scale: 0.95, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.95, opacity: 0 }}
+              onClick={(e) => e.stopPropagation()}
+              className="bg-white rounded-2xl max-w-5xl w-full max-h-[90vh] flex flex-col overflow-hidden shadow-2xl border border-white/20 cursor-default"
+            >
+              {/* Modal Header */}
+              <div className="flex items-center justify-between px-5 py-3.5 border-b border-[#DAE5E0] bg-[#F2F6F4]">
+                <div className="min-w-0 pr-4">
+                  <div className="text-xs font-bold uppercase tracking-wider text-[#00B37E]">
+                    Interface Visual Reference
+                  </div>
+                  <div className="text-sm font-bold text-[#12211E] truncate">
+                    {zoomImage.title}
+                  </div>
+                </div>
+                <div className="flex items-center gap-2">
+                  <a
+                    href={zoomImage.src}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="p-1.5 text-[#12211E]/70 hover:text-[#00B37E] transition-colors rounded-lg hover:bg-white flex items-center gap-1 text-xs font-bold"
+                    title="Open raw image in new tab"
+                  >
+                    <span>Full Tab</span>
+                    <ExternalLink className="w-3.5 h-3.5" />
+                  </a>
+                  <button
+                    onClick={() => setZoomImage(null)}
+                    className="p-1.5 text-[#12211E]/70 hover:text-[#12211E] transition-colors rounded-lg hover:bg-white cursor-pointer"
+                    title="Close"
+                  >
+                    <X className="w-5 h-5" />
+                  </button>
+                </div>
+              </div>
+
+              {/* Modal Image Body */}
+              <div className="overflow-auto p-2 sm:p-4 bg-slate-900/5 flex items-center justify-center">
+                <img
+                  src={zoomImage.src}
+                  alt={zoomImage.title}
+                  className="max-h-[68vh] w-auto max-w-full rounded-lg object-contain shadow-sm"
+                />
+              </div>
+
+              {/* Modal Footer Caption */}
+              <div className="px-5 py-3 border-t border-[#DAE5E0] bg-white text-xs text-[#12211E]/75 flex items-start gap-2">
+                <span className="font-bold text-[#12211E] shrink-0">Note:</span>
+                <span>{zoomImage.caption}</span>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   );
 }
