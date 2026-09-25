@@ -61,11 +61,13 @@ ehthumbs.db
 *.temp
 *~
 
-# AI Agent Customizations & Skills
+# AI Agent Customizations & Assistant files
 .agents/
 SKILL.md
+CLAUDE.md
+.claude/
 
-# Environment files — NEVER commit real secrets
+# Environment files - NEVER commit real secrets
 .env
 .env.local
 .env.*

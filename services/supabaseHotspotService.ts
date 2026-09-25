@@ -30,12 +30,11 @@ const DEMERSAL_SPECIES_SETS = [
  */
 export async function fetchHotspotsFromSupabase(userLat: number, userLng: number, selectedSpecies?: string[]): Promise<SupabaseHotspot[]> {
   try {
-    const today = new Date().toISOString().split('T')[0];
     const { data, error } = await supabase
       .from('daily_grid_predictions')
       .select('id, prediction_date, model_type, catch_probability, dbscan_cluster_id, sst, chl_a, created_at, centroid_geom')
-      .eq('prediction_date', today)
       .gte('catch_probability', 0.60)
+      .order('prediction_date', { ascending: false })
       .order('catch_probability', { ascending: false })
       .limit(1000);
 

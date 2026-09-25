@@ -156,7 +156,10 @@ export async function GET(request: Request) {
         created_at,
         ST_AsText(centroid_geom) as centroid_wkt
       FROM public.daily_grid_predictions
-      WHERE prediction_date >= (CURRENT_DATE - INTERVAL '2 days')
+      WHERE (
+        prediction_date >= (CURRENT_DATE - INTERVAL '2 days')
+        OR prediction_date = (SELECT MAX(prediction_date) FROM public.daily_grid_predictions)
+      )
         AND catch_probability >= 0.60
       ORDER BY prediction_date DESC, catch_probability DESC
       LIMIT $1`,

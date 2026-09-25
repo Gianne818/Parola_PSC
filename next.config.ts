@@ -3,9 +3,7 @@ import type {NextConfig} from 'next';
 const nextConfig: NextConfig = {
   devIndicators: false,
   reactStrictMode: true,
-  eslint: {
-    ignoreDuringBuilds: true,
-  },
+  turbopack: {},
   typescript: {
     ignoreBuildErrors: false,
   },

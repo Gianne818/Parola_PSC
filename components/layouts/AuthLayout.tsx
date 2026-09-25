@@ -80,7 +80,7 @@ export const AuthLayout: React.FC<AuthLayoutProps> = ({ children, fluid = false 
   const unreadCount = notifications.filter((n) => !n.read).length;
 
   return (
-    <div className={`min-h-screen flex flex-col bg-white text-gray-800 dark:text-[#F7FAF9] ${getFontScaleClass(fontScale)} transition-colors duration-300`}>
+    <div className={`min-h-screen flex flex-col bg-[#F2F6F4] text-[#12211E] ${getFontScaleClass(fontScale)} transition-colors duration-300`}>
       
       {/* Mobile Top Header */}
       <header className="md:hidden sticky top-0 left-0 right-0 h-14 bg-brand-black border-b border-teal-950 flex items-center justify-between px-4 z-40 shadow-md">
@@ -108,7 +108,7 @@ export const AuthLayout: React.FC<AuthLayoutProps> = ({ children, fluid = false 
         
         {/* Desktop Left Sidebar */}
         <aside
-          className={`hidden md:flex flex-col border-r border-gray-200 bg-white relative transition-all duration-300 z-35 ${
+          className={`hidden md:flex flex-col border-r border-[#DAE5E0] bg-white relative transition-all duration-300 z-35 ${
             isCollapsed ? "w-20" : "w-64"
           }`}
         >
@@ -210,8 +210,8 @@ export const AuthLayout: React.FC<AuthLayoutProps> = ({ children, fluid = false 
           </div>
         </aside>
 
-        <main className={`flex-1 flex flex-col min-w-0 pb-16 md:pb-0 ${fluid ? "h-screen overflow-hidden bg-white" : "bg-white"}`}>
-          <div className={fluid ? "flex-1 animate-fade-in flex flex-col h-full min-h-0 bg-white" : "flex-1 overflow-y-auto p-4 md:p-8 w-full animate-fade-in bg-white"}>
+        <main className={`flex-1 flex flex-col min-w-0 pb-16 md:pb-0 ${fluid ? "h-screen overflow-hidden bg-[#F2F6F4]" : "bg-[#F2F6F4]"}`}>
+          <div className={fluid ? "flex-1 animate-fade-in flex flex-col h-full min-h-0 bg-[#F2F6F4]" : "flex-1 overflow-y-auto p-4 md:p-8 w-full animate-fade-in bg-[#F2F6F4]"}>
             {children}
           </div>
         </main>
