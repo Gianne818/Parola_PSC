@@ -8,6 +8,13 @@
 # rotated in their dashboards and purged from history (e.g. git filter-repo),
 # not blessed. This config guards new changes; history remediation is a
 # separate owner action.
+#
+# IMPORTANT (gitleaks v8): any --config file (including this one, which
+# gitleaks auto-loads from the repo root) REPLACES the embedded default
+# rules. Without [extend] useDefault below, gitleaks would run with zero
+# rules and silently pass everything.
+[extend]
+useDefault = true
 
 [allowlist]
 description = "Example placeholders and test fixtures — never real credentials"

@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState } from "react";
 import { useRouter } from "next/navigation";
 import { AuthLayout } from "../../components/layouts/AuthLayout";
 import { useApp } from "../../context/AppContext";
@@ -42,6 +42,8 @@ interface SeaReadabilityPreferences {
   largeTouchTargets: boolean;
 }
 
+type SettingsSection = "vessel" | "advisories" | "readability" | "preferences";
+
 export default function SettingsPage() {
   const router = useRouter();
   const {
@@ -58,8 +60,23 @@ export default function SettingsPage() {
 
   const { t } = useTranslation(language);
 
-  // Active section for sticky jumper navigation
-  const [activeSection, setActiveSection] = useState<"profile" | "port" | "advisories" | "readability" | "preferences">("profile");
+  // Active tab — single card visible at a time (no vertical scroll stack).
+  // Initial tab derived lazily from URL hash (supports legacy #profile / #port).
+  const [activeSection, setActiveSection] = useState<SettingsSection>(() => {
+    if (typeof window !== "undefined") {
+      const raw = window.location.hash.replace("#", "");
+      const legacyMap: Record<string, SettingsSection> = {
+        profile: "vessel",
+        port: "vessel",
+        vessel: "vessel",
+        advisories: "advisories",
+        readability: "readability",
+        preferences: "preferences"
+      };
+      return legacyMap[raw] ?? "vessel";
+    }
+    return "vessel";
+  });
 
   // Progressive disclosure for GPS coordinates
   const [showCoordinateDetails, setShowCoordinateDetails] = useState(false);
@@ -85,19 +102,7 @@ export default function SettingsPage() {
   // Local theme state synced with context
   const [currentTheme, setCurrentTheme] = useState<"light" | "dark">(theme || "light");
 
-  // Handle URL hash navigation on mount
-  useEffect(() => {
-    if (typeof window !== "undefined") {
-      const hash = window.location.hash.replace("#", "") as typeof activeSection;
-      if (["profile", "port", "advisories", "readability", "preferences"].includes(hash)) {
-        setActiveSection(hash);
-        const el = document.getElementById(hash);
-        if (el) {
-          setTimeout(() => el.scrollIntoView({ behavior: "smooth", block: "start" }), 150);
-        }
-      }
-    }
-  }, []);
+  // Handle URL hash navigation on mount (supports legacy #profile / #port hashes)
 
   const languages = [
     { code: "en", name: "English", sub: "International", flag: "US" },
@@ -132,39 +137,17 @@ export default function SettingsPage() {
   };
 
   const jumperItems = [
-    { id: "profile", label: "Vessel Profile", subtitle: "Operator & boat registration", icon: User },
-    { id: "port", label: "Home Port", subtitle: "Anchorage & safe zone radius", icon: Anchor },
+    { id: "vessel", label: "Vessel & Port", subtitle: "Operator, boat & anchorage", icon: Ship },
     { id: "advisories", label: "SMS Dispatch", subtitle: "Daily schedule & dialect", icon: Clock },
     { id: "readability", label: "At-Sea Display", subtitle: "Glare contrast & touch sizing", icon: Eye },
     { id: "preferences", label: "Preferences", subtitle: "Theme & interface language", icon: Sliders }
   ] as const;
 
-  // Sync active section with scroll position
-  useEffect(() => {
-    const sectionIds = ["profile", "port", "advisories", "readability", "preferences"];
-    const handleScroll = () => {
-      const scrollPosition = window.scrollY + 160;
-      for (const id of sectionIds) {
-        const el = document.getElementById(id);
-        if (el) {
-          const top = el.offsetTop;
-          const height = el.offsetHeight;
-          if (scrollPosition >= top && scrollPosition < top + height) {
-            setActiveSection(id as any);
-            break;
-          }
-        }
-      }
-    };
-    window.addEventListener("scroll", handleScroll, { passive: true });
-    return () => window.removeEventListener("scroll", handleScroll);
-  }, []);
-
-  const scrollToSection = (id: typeof activeSection) => {
+  // Single-card tab switch — no scroll sync needed
+  const scrollToSection = (id: SettingsSection) => {
     setActiveSection(id);
-    const element = document.getElementById(id);
-    if (element) {
-      element.scrollIntoView({ behavior: "smooth", block: "start" });
+    if (typeof window !== "undefined") {
+      window.history.replaceState(null, "", `/settings#${id}`);
     }
   };
 
@@ -328,15 +311,16 @@ export default function SettingsPage() {
             </div>
           </aside>
 
-          {/* Right Column: Detail Content Sections */}
-          <main className="lg:col-span-8 space-y-6">
+          {/* Right Column: Single Active Card (no vertical scroll stack) */}
+          <main className="lg:col-span-8">
 
         {/* ============================================================ */}
-        {/* SECTION 1: VESSEL & OPERATOR PROFILE */}
+        {/* CARD 1: VESSEL PROFILE + HOME PORT (merged) */}
         {/* ============================================================ */}
+        {activeSection === "vessel" && (
         <section
-          id="profile"
-          className="scroll-mt-20 bg-white border border-[#DAE5E0] rounded-3xl p-6 sm:p-8 shadow-sm space-y-6"
+          id="vessel"
+          className="bg-white border border-[#DAE5E0] rounded-3xl p-6 sm:p-8 shadow-sm space-y-6 animate-fade-in"
         >
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-[#DAE5E0]/70 pb-5">
             <div className="flex items-start gap-3.5">
@@ -410,15 +394,9 @@ export default function SettingsPage() {
               </span>
             </div>
           </div>
-        </section>
 
-        {/* ============================================================ */}
-        {/* SECTION 2: HOME PORT & MARINE ANCHORAGE */}
-        {/* ============================================================ */}
-        <section
-          id="port"
-          className="scroll-mt-20 bg-white border border-[#DAE5E0] rounded-3xl p-6 sm:p-8 shadow-sm space-y-6"
-        >
+          {/* Merged divider: Home Port & Anchorage (same card — no separate scroll section) */}
+          <div className="pt-6 mt-2 border-t border-[#DAE5E0]/70 space-y-6">
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-[#DAE5E0]/70 pb-5">
             <div className="flex items-start gap-3">
               <div className="p-2.5 bg-emerald-50 rounded-2xl text-[#00B37E] shrink-0 border border-emerald-100">
@@ -495,14 +473,17 @@ export default function SettingsPage() {
               </div>
             )}
           </div>
+          </div>
         </section>
+        )}
 
         {/* ============================================================ */}
-        {/* SECTION 3: DAILY SMS ADVISORY DISPATCH (NEW SETTING A) */}
+        {/* CARD 2: DAILY SMS ADVISORY DISPATCH */}
         {/* ============================================================ */}
+        {activeSection === "advisories" && (
         <section
           id="advisories"
-          className="scroll-mt-20 bg-white border border-[#DAE5E0] rounded-3xl p-6 sm:p-8 shadow-sm space-y-6"
+          className="bg-white border border-[#DAE5E0] rounded-3xl p-6 sm:p-8 shadow-sm space-y-6 animate-fade-in"
         >
           <div className="flex items-start gap-3 border-b border-[#DAE5E0]/70 pb-5">
             <div className="p-2.5 bg-emerald-50 rounded-2xl text-[#00B37E] shrink-0 border border-emerald-100">
@@ -619,13 +600,15 @@ export default function SettingsPage() {
             )}
           </div>
         </section>
+        )}
 
         {/* ============================================================ */}
-        {/* SECTION 4: AT-SEA SUNLIGHT READABILITY (NEW SETTING B) */}
+        {/* CARD 3: AT-SEA SUNLIGHT READABILITY */}
         {/* ============================================================ */}
+        {activeSection === "readability" && (
         <section
           id="readability"
-          className="scroll-mt-20 bg-white border border-[#DAE5E0] rounded-3xl p-6 sm:p-8 shadow-sm space-y-6"
+          className="bg-white border border-[#DAE5E0] rounded-3xl p-6 sm:p-8 shadow-sm space-y-6 animate-fade-in"
         >
           <div className="flex items-start gap-3 border-b border-[#DAE5E0]/70 pb-5">
             <div className="p-2.5 bg-emerald-50 rounded-2xl text-[#00B37E] shrink-0 border border-emerald-100">
@@ -724,13 +707,15 @@ export default function SettingsPage() {
             </div>
           </div>
         </section>
+        )}
 
         {/* ============================================================ */}
-        {/* SECTION 5: APPEARANCE & APPLICATION LANGUAGE */}
+        {/* CARD 4: APPEARANCE & APPLICATION LANGUAGE */}
         {/* ============================================================ */}
+        {activeSection === "preferences" && (
         <section
           id="preferences"
-          className="scroll-mt-20 bg-white border border-[#DAE5E0] rounded-3xl p-6 sm:p-8 shadow-sm space-y-6"
+          className="bg-white border border-[#DAE5E0] rounded-3xl p-6 sm:p-8 shadow-sm space-y-6 animate-fade-in"
         >
           <div className="flex items-start gap-3 border-b border-[#DAE5E0]/70 pb-5">
             <div className="p-2.5 bg-emerald-50 rounded-2xl text-[#00B37E] shrink-0 border border-emerald-100">
@@ -826,6 +811,7 @@ export default function SettingsPage() {
             </div>
           </div>
         </section>
+        )}
 
           </main>
         </div>

@@ -687,7 +687,7 @@ export default function LandingPage() {
         className="py-20 px-6 max-w-7xl mx-auto w-full border-b border-[#DAE5E0]"
       >
         <div className="max-w-3xl mb-12">
-          <div className="text-[10px] font-bold uppercase tracking-wider text-[#00B37E] bg-[#00B37E]/10 border border-[#00B37E]/20 px-3 py-0.5 rounded-full inline-block mb-2">
+          <div className="text-[10px] font-bold uppercase tracking-wider text-[#9A5B18] bg-[#C57E2C]/10 border border-[#C57E2C]/25 px-3 py-0.5 rounded-full inline-block mb-2">
             Sustainable Economic Architecture
           </div>
           <h2 className="text-2xl md:text-4xl font-display font-black text-[#12211E] tracking-tight leading-tight">

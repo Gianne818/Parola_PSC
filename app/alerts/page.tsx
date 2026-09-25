@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect, useMemo } from "react";
+import React, { useState, useMemo } from "react";
 import { AuthLayout } from "../../components/layouts/AuthLayout";
 import { useApp } from "../../context/AppContext";
 import { useTranslation } from "../../hooks/use-translation";
@@ -46,7 +46,7 @@ export default function AlertsPage() {
 
   const { t } = useTranslation(language);
 
-  // Active section for sticky jumper navigation
+  // Active tab — single card visible at a time (no vertical scroll stack)
   const [activeSection, setActiveSection] = useState<AlertSectionId>("status");
 
   // Progressive disclosure toggle for technical ML metrics
@@ -221,33 +221,9 @@ export default function AlertsPage() {
     }
   ] as const;
 
-  // Sync active section with scroll position
-  useEffect(() => {
-    const sectionIds: AlertSectionId[] = ["status", "limits", "channels", "sms-preview"];
-    const handleScroll = () => {
-      const scrollPosition = window.scrollY + 160;
-      for (const id of sectionIds) {
-        const el = document.getElementById(id);
-        if (el) {
-          const top = el.offsetTop;
-          const height = el.offsetHeight;
-          if (scrollPosition >= top && scrollPosition < top + height) {
-            setActiveSection(id);
-            break;
-          }
-        }
-      }
-    };
-    window.addEventListener("scroll", handleScroll, { passive: true });
-    return () => window.removeEventListener("scroll", handleScroll);
-  }, []);
-
-  const scrollToSection = (id: typeof activeSection) => {
+  // Single-card tab switch — no scroll sync needed
+  const scrollToSection = (id: AlertSectionId) => {
     setActiveSection(id);
-    const element = document.getElementById(id);
-    if (element) {
-      element.scrollIntoView({ behavior: "smooth", block: "start" });
-    }
   };
 
   return (
@@ -434,15 +410,16 @@ export default function AlertsPage() {
             </div>
           </aside>
 
-          {/* Right Column: Detail Content Sections */}
-          <main className="lg:col-span-8 space-y-6">
+          {/* Right Column: Single Active Card (no vertical scroll stack) */}
+          <main className="lg:col-span-8">
 
         {/* ============================================================ */}
-        {/* SECTION 1: SAFETY STATUS & PAGASA BROADCAST */}
+        {/* CARD 1: SAFETY STATUS & PAGASA BROADCAST */}
         {/* ============================================================ */}
+        {activeSection === "status" && (
         <section
           id="status"
-          className="scroll-mt-20 bg-white border border-[#DAE5E0] rounded-3xl p-6 sm:p-8 shadow-sm space-y-6"
+          className="bg-white border border-[#DAE5E0] rounded-3xl p-6 sm:p-8 shadow-sm space-y-6 animate-fade-in"
         >
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-[#DAE5E0]/70 pb-5">
             <div className="flex items-start gap-3">
@@ -565,13 +542,15 @@ export default function AlertsPage() {
             </span>
           </button>
         </section>
+        )}
 
         {/* ============================================================ */}
-        {/* SECTION 2: MARINE SAFETY THRESHOLDS */}
+        {/* CARD 2: MARINE SAFETY THRESHOLDS */}
         {/* ============================================================ */}
+        {activeSection === "limits" && (
         <section
           id="limits"
-          className="scroll-mt-20 bg-white border border-[#DAE5E0] rounded-3xl p-6 sm:p-8 shadow-sm space-y-6"
+          className="bg-white border border-[#DAE5E0] rounded-3xl p-6 sm:p-8 shadow-sm space-y-6 animate-fade-in"
         >
           <div className="flex items-start gap-3 border-b border-[#DAE5E0]/70 pb-5">
             <div className="p-2.5 bg-emerald-50 rounded-2xl text-[#00B37E] shrink-0 border border-emerald-100">
@@ -647,13 +626,15 @@ export default function AlertsPage() {
             </div>
           </div>
         </section>
+        )}
 
         {/* ============================================================ */}
-        {/* SECTION 3: ALERT CHANNELS & SPECIES TARGETING */}
+        {/* CARD 3: ALERT CHANNELS & SPECIES TARGETING */}
         {/* ============================================================ */}
+        {activeSection === "channels" && (
         <section
           id="channels"
-          className="scroll-mt-20 bg-white border border-[#DAE5E0] rounded-3xl p-6 sm:p-8 shadow-sm space-y-6"
+          className="bg-white border border-[#DAE5E0] rounded-3xl p-6 sm:p-8 shadow-sm space-y-6 animate-fade-in"
         >
           <div className="flex items-start gap-3 border-b border-[#DAE5E0]/70 pb-5">
             <div className="p-2.5 bg-emerald-50 rounded-2xl text-[#00B37E] shrink-0 border border-emerald-100">
@@ -757,13 +738,15 @@ export default function AlertsPage() {
             </div>
           </div>
         </section>
+        )}
 
         {/* ============================================================ */}
-        {/* SECTION 4: CELLULAR SMS ADVISORY & DISPATCH */}
+        {/* CARD 4: CELLULAR SMS ADVISORY & DISPATCH */}
         {/* ============================================================ */}
+        {activeSection === "sms-preview" && (
         <section
           id="sms-preview"
-          className="scroll-mt-20 bg-white border border-[#DAE5E0] rounded-3xl p-6 sm:p-8 shadow-sm space-y-6"
+          className="bg-white border border-[#DAE5E0] rounded-3xl p-6 sm:p-8 shadow-sm space-y-6 animate-fade-in"
         >
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-[#DAE5E0]/70 pb-5">
             <div className="flex items-start gap-3">
@@ -1088,6 +1071,7 @@ export default function AlertsPage() {
             </div>
           )}
         </section>
+        )}
 
           </main>
         </div>

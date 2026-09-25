@@ -179,40 +179,6 @@ export default function PricingPage() {
           <p className="text-sm sm:text-base text-[#12211E]/75 leading-relaxed max-w-3xl font-normal">
             Predictable recurring SaaS subscriptions, chartplotter Geo-Packs, and compressed satellite sync engineered for Philippine commercial fishing vessels, accompanied by non-intrusive municipal subsidies and B2G spatial intelligence licensing.
           </p>
-
-          {/* Quick Jump Pills for Business Model Pillars */}
-          <div className="flex flex-wrap gap-2 pt-6">
-            <a
-              href="#vessel-subscriptions"
-              className="text-xs font-bold px-3.5 py-1.5 rounded-full bg-white border border-[#DAE5E0] text-[#12211E]/80 hover:border-[#00B37E] hover:text-[#00B37E] transition-all shadow-2xs"
-            >
-              1. Commercial SaaS Tiers
-            </a>
-            <a
-              href="#fleet-enterprise"
-              className="text-xs font-bold px-3.5 py-1.5 rounded-full bg-white border border-[#DAE5E0] text-[#12211E]/80 hover:border-[#00B37E] hover:text-[#00B37E] transition-all shadow-2xs"
-            >
-              2. Fleet Enterprise (5+ Vessels)
-            </a>
-            <a
-              href="#geopack-satellite"
-              className="text-xs font-bold px-3.5 py-1.5 rounded-full bg-white border border-[#DAE5E0] text-[#12211E]/80 hover:border-[#00B37E] hover:text-[#00B37E] transition-all shadow-2xs"
-            >
-              3. Offline Geo-Packs & Sat-Sync
-            </a>
-            <a
-              href="#free-tier-subsidies"
-              className="text-xs font-bold px-3.5 py-1.5 rounded-full bg-white border border-[#DAE5E0] text-[#12211E]/80 hover:border-[#00B37E] hover:text-[#00B37E] transition-all shadow-2xs"
-            >
-              4. Free-Tier Subsidies
-            </a>
-            <a
-              href="#b2g-licensing"
-              className="text-xs font-bold px-3.5 py-1.5 rounded-full bg-white border border-[#DAE5E0] text-[#12211E]/80 hover:border-[#00B37E] hover:text-[#00B37E] transition-all shadow-2xs"
-            >
-              5. B2G Spatial Data Licensing
-            </a>
-          </div>
         </div>
       </section>
 
@@ -220,7 +186,7 @@ export default function PricingPage() {
       <section id="vessel-subscriptions" className="py-14 md:py-20 px-6 max-w-7xl mx-auto w-full border-b border-[#DAE5E0]">
         <div className="flex flex-col md:flex-row md:items-end justify-between mb-12 gap-4">
           <div className="max-w-2xl">
-            <div className="text-[10px] font-bold uppercase tracking-wider text-[#00B37E] bg-[#00B37E]/10 border border-[#00B37E]/20 px-3 py-0.5 rounded-full inline-block mb-2">
+            <div className="text-[10px] font-bold uppercase tracking-wider text-[#9A5B18] bg-[#C57E2C]/10 border border-[#C57E2C]/25 px-3 py-0.5 rounded-full inline-block mb-2">
               Pillar 1 · Single-Vessel Recurring SaaS
             </div>
             <h2 className="text-2xl md:text-4xl font-display font-black text-[#12211E] tracking-tight leading-tight">
@@ -416,7 +382,7 @@ export default function PricingPage() {
       {/* PILLAR 1C & 1D: OFFLINE GEO-PACKS & LOW-BANDWIDTH SATELLITE SYNC */}
       <section id="geopack-satellite" className="py-14 md:py-20 px-6 max-w-7xl mx-auto w-full border-b border-[#DAE5E0]">
         <div className="max-w-3xl mb-12">
-          <div className="text-[10px] font-bold uppercase tracking-wider text-[#00B37E] bg-[#00B37E]/10 border border-[#00B37E]/20 px-3 py-0.5 rounded-full inline-block mb-2">
+          <div className="text-[10px] font-bold uppercase tracking-wider text-[#9A5B18] bg-[#C57E2C]/10 border border-[#C57E2C]/25 px-3 py-0.5 rounded-full inline-block mb-2">
             Pillar 1 · Offline Deliveries & Satellite Architecture
           </div>
           <h2 className="text-2xl md:text-4xl font-display font-black text-[#12211E] tracking-tight leading-tight">
@@ -522,7 +488,7 @@ export default function PricingPage() {
       {/* PILLAR 2: NON-INTRUSIVE FREE-TIER MONETIZATION & SUBSIDIES */}
       <section id="free-tier-subsidies" className="py-14 md:py-20 px-6 max-w-7xl mx-auto w-full border-b border-[#DAE5E0]">
         <div className="max-w-3xl mb-12">
-          <div className="text-[10px] font-bold uppercase tracking-wider text-[#00B37E] bg-[#00B37E]/10 border border-[#00B37E]/20 px-3 py-0.5 rounded-full inline-block mb-2">
+          <div className="text-[10px] font-bold uppercase tracking-wider text-[#9A5B18] bg-[#C57E2C]/10 border border-[#C57E2C]/25 px-3 py-0.5 rounded-full inline-block mb-2">
             Pillar 2 · Non-Intrusive Free-Tier Monetization & Subsidies
           </div>
           <h2 className="text-2xl md:text-4xl font-display font-black text-[#12211E] tracking-tight leading-tight">
@@ -603,7 +569,7 @@ export default function PricingPage() {
       {/* PILLAR 3: B2G & ESG SPATIAL DATA LICENSING */}
       <section id="b2g-licensing" className="py-14 md:py-20 px-6 max-w-7xl mx-auto w-full border-b border-[#DAE5E0]">
         <div className="max-w-3xl mb-12">
-          <div className="text-[10px] font-bold uppercase tracking-wider text-[#00B37E] bg-[#00B37E]/10 border border-[#00B37E]/20 px-3 py-0.5 rounded-full inline-block mb-2">
+          <div className="text-[10px] font-bold uppercase tracking-wider text-[#9A5B18] bg-[#C57E2C]/10 border border-[#C57E2C]/25 px-3 py-0.5 rounded-full inline-block mb-2">
             Pillar 3 · B2G & ESG Spatial Data Licensing
           </div>
           <h2 className="text-2xl md:text-4xl font-display font-black text-[#12211E] tracking-tight leading-tight">
