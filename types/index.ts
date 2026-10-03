@@ -1,3 +1,15 @@
+export interface PhilippineRegion {
+  id: string;
+  code: string;
+  name: string;
+  shortName: string;
+  fmaZone: string;
+  provinces: string[];
+  center: [number, number];
+  bounds: [[number, number], [number, number]];
+  coordinates: [number, number][]; // [lat, lng] array
+}
+
 export interface UserProfile {
   id?: string;
   vesselName: string;
@@ -8,6 +20,11 @@ export interface UserProfile {
   port: string;
   lat: number;
   lng: number;
+  regionId?: string;
+  regionName?: string;
+  province?: string;
+  fmaZone?: string;
+  regionalBounds?: [[number, number], [number, number]];
 }
 
 export interface FuelPool {
@@ -78,6 +95,8 @@ export interface Hotspot {
   desc?: string; // legacy species description
   icon?: string; // map marker emoji override
   isUnsafe?: boolean; // per-hotspot safety flag
+  regionId?: string; // assigned regional fishery boundary id
+  province?: string; // localized province name
 }
 
 /** Hotspot enriched with client-side distance/catch computations (dashboard). */

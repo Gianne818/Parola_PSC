@@ -2,10 +2,10 @@
 
 import React, { useState } from "react";
 import dynamic from "next/dynamic";
-import { Hotspot } from "../../../types";
+import { Hotspot, PhilippineRegion } from "../../../types";
 import { calculateDistance, calculateBearing } from "../../../utils/spatial";
 import { useApp } from "../../../context/AppContext";
-import { Anchor, Compass, Info, Navigation, ShieldCheck } from "lucide-react";
+import { Anchor, Compass, Info, Navigation, ShieldCheck, MapPin } from "lucide-react";
 import { ALL_SPECIES_CONFIGS, GENERAL_PELAGIC_COLOR, GENERAL_DEMERSAL_COLOR, GENERAL_PELAGIC_SHADES, GENERAL_DEMERSAL_SHADES, getSpeciesConfig } from "../../../utils/speciesColors";
 
 /** Prediction radius the ML model was trained on: 9 km */
@@ -37,6 +37,15 @@ interface MapComponentProps {
   // Custom Vite props compatibility
   center?: [number, number];
   onMapClick?: (lat: number, lng: number) => void;
+
+  /** Active Region for boundary line and inverted mask */
+  activeRegion?: PhilippineRegion | null;
+  /** Whether to show regional boundary line and outside masking (default: true) */
+  showRegionBoundary?: boolean;
+  /** Whether to isolate this region: completely hides other parts of the Philippines with opaque mask and locks camera */
+  isolateRegion?: boolean;
+  /** Whether to show vessel, home port, and storm hazard markers (default: true) */
+  showVesselMarkers?: boolean;
 }
 
 export const MapComponent: React.FC<MapComponentProps> = ({
@@ -48,7 +57,11 @@ export const MapComponent: React.FC<MapComponentProps> = ({
   hideSidebar = false,
   hideLegend = hideSidebar,
   center,
-  onMapClick
+  onMapClick,
+  activeRegion,
+  showRegionBoundary = true,
+  isolateRegion = false,
+  showVesselMarkers = true,
 }) => {
   const { userProfile, updateProfile, showToast, manualOverrideHold } = useApp();
   const [customWaypoint, setCustomWaypoint] = useState<{ lat: number; lng: number } | null>(null);
@@ -74,6 +87,10 @@ export const MapComponent: React.FC<MapComponentProps> = ({
           onMapClick={onMapClick}
           onZoomChange={setCurrentZoom}
           showPredictionRadius={true}
+          activeRegion={activeRegion}
+          showRegionBoundary={showRegionBoundary}
+          isolateRegion={isolateRegion}
+          showVesselMarkers={showVesselMarkers}
         />
 
         {/* Map Model & Species Prediction Color Legend Overlay */}

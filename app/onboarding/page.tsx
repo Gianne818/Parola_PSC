@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect, Suspense } from 'react';
+import React, { useState, useEffect, useMemo, Suspense } from 'react';
 import dynamic from 'next/dynamic';
 import { useRouter, useSearchParams } from 'next/navigation';
 import {
@@ -14,11 +14,15 @@ import {
   Info,
   X,
   RefreshCw,
-  Map as MapIcon
+  Map as MapIcon,
+  ShieldCheck,
+  Layers
 } from 'lucide-react';
 import { useApp } from '../../context/AppContext';
 import { ParolaLogo } from '../../components/ui/ParolaLogo';
 import { reverseGeocode, searchLocations, GeocodingResult } from '../../services/geocodingService';
+import { PhilippineRegion } from '../../types';
+import { detectPhilippineRegion, PHILIPPINE_REGIONS } from '../../data/philippineRegions';
 
 // Leaflet pulls in a large client-only bundle, so defer it until the
 // onboarding map is actually rendered. MapComponent already code-splits
@@ -40,6 +44,8 @@ const MapComponent = dynamic(
 );
 
 const PORT_PRESETS = [
+  { name: 'Cebu Port Authority (Pier 1)', lat: 10.2936, lng: 123.9056, province: 'Cebu' },
+  { name: 'Bantayan Daanbantayan Port', lat: 11.2750, lng: 123.6820, province: 'Cebu' },
   { name: 'Mercedes Fish Port', lat: 14.0122, lng: 123.0114, province: 'Camarines Norte' },
   { name: 'Estancia Shoreline Port', lat: 11.4552, lng: 123.1491, province: 'Iloilo' },
   { name: 'Navotas Fish Port Complex', lat: 14.6406, lng: 120.9419, province: 'Metro Manila' },
@@ -89,20 +95,44 @@ function OnboardingContent() {
     }
   }, []);
 
-  const [port, setPort] = useState(userProfile?.port || 'Mercedes Fish Port');
-  const [coordinates, setCoordinates] = useState<[number, number]>([
-    userProfile?.lat || 14.0122,
-    userProfile?.lng || 123.0114
-  ]);
+  // Onboarding coordinates: initially null (plain, waiting for pin) unless editing from profile
+  const [coordinates, setCoordinates] = useState<[number, number] | null>(() => {
+    if (fromProfile && userProfile?.lat && userProfile?.lng) {
+      return [userProfile.lat, userProfile.lng];
+    }
+    return null;
+  });
+
+  const [port, setPort] = useState<string>(() => {
+    if (fromProfile && userProfile?.port) {
+      return userProfile.port;
+    }
+    return '';
+  });
+
+  // Detected Operational Region state: initially null unless editing from profile
+  const [selectedRegion, setSelectedRegion] = useState<PhilippineRegion | null>(() => {
+    if (fromProfile && userProfile?.lat && userProfile?.lng) {
+      return detectPhilippineRegion(
+        userProfile.lat,
+        userProfile.lng,
+        userProfile?.port
+      );
+    }
+    return null;
+  });
 
   const [prevProfile, setPrevProfile] = useState(userProfile);
   if (userProfile !== prevProfile) {
     setPrevProfile(userProfile);
-    if (userProfile?.port) {
-      setPort(userProfile.port);
-    }
-    if (userProfile?.lat && userProfile?.lng) {
-      setCoordinates([userProfile.lat, userProfile.lng]);
+    if (fromProfile) {
+      if (userProfile?.port) {
+        setPort(userProfile.port);
+      }
+      if (userProfile?.lat && userProfile?.lng) {
+        setCoordinates([userProfile.lat, userProfile.lng]);
+        setSelectedRegion(detectPhilippineRegion(userProfile.lat, userProfile.lng, userProfile.port));
+      }
     }
   }
 
@@ -112,8 +142,8 @@ function OnboardingContent() {
   const [dynamicSearchResults, setDynamicSearchResults] = useState<GeocodingResult[]>([]);
   const [isGeocoding, setIsGeocoding] = useState(false);
 
-  // Drawer and Geofence Warning states
-  const [drawerOpen, setDrawerOpen] = useState(true);
+  // Drawer and Geofence Warning states: drawer is closed initially until a pin is placed
+  const [drawerOpen, setDrawerOpen] = useState(Boolean(fromProfile && userProfile?.lat && userProfile?.lng));
   const [warningModalOpen, setWarningModalOpen] = useState(false);
   const [outOfBoundsCoords, setOutOfBoundsCoords] = useState<[number, number] | null>(null);
 
@@ -163,15 +193,21 @@ function OnboardingContent() {
     const realAddress = await reverseGeocode(lat, lng);
     setIsGeocoding(false);
 
+    let resolvedPortName = "";
     if (realAddress) {
+      resolvedPortName = realAddress;
       setPort(realAddress);
       setSearchQuery(realAddress);
     } else {
       const nearest = findNearestPreset(lat, lng);
-      const portName = nearest.distance < 15 ? nearest.name : `Coastal Spot near ${nearest.name} (${nearest.province})`;
-      setPort(portName);
-      setSearchQuery(portName);
+      resolvedPortName = nearest.distance < 15 ? nearest.name : `Coastal Spot near ${nearest.name} (${nearest.province})`;
+      setPort(resolvedPortName);
+      setSearchQuery(resolvedPortName);
     }
+
+    // Automatically detect regional boundary scope
+    const detected = detectPhilippineRegion(lat, lng, resolvedPortName);
+    setSelectedRegion(detected);
 
     setShowRecommendations(false);
     setDrawerOpen(true);
@@ -186,12 +222,12 @@ function OnboardingContent() {
           handleMapClick(lat, lng);
         },
         (error) => {
-          console.error("Geolocation error, falling back to Mercedes Port:", error);
-          handleMapClick(14.0122, 123.0114);
+          console.error("Geolocation error:", error);
+          showToast("Unable to detect GPS. Please tap anywhere on the map to pin your location.", "info");
         }
       );
     } else {
-      handleMapClick(14.0122, 123.0114);
+      showToast("Geolocation is not supported by your browser. Please tap the map.", "info");
     }
   };
 
@@ -199,16 +235,28 @@ function OnboardingContent() {
     setCoordinates([preset.lat, preset.lng]);
     setPort(preset.name);
     setSearchQuery(preset.name);
+    const detected = detectPhilippineRegion(preset.lat, preset.lng, `${preset.name} ${preset.province}`);
+    setSelectedRegion(detected);
     setShowRecommendations(false);
     setDrawerOpen(true);
   };
 
   const handleConfirmPort = () => {
+    if (!coordinates || !selectedRegion) {
+      showToast("Please tap the map to pin your home port location first", "info");
+      return;
+    }
+
     // Save details to Context User Profile and LocalStorage
     updateProfile({
-      port: port,
+      port: port || `${selectedRegion.shortName} Coastal Anchor`,
       lat: coordinates[0],
       lng: coordinates[1],
+      regionId: selectedRegion.id,
+      regionName: selectedRegion.name,
+      province: selectedRegion.provinces[0] || port || selectedRegion.name,
+      fmaZone: selectedRegion.fmaZone,
+      regionalBounds: selectedRegion.bounds,
       vesselName: userProfile?.vesselName || 'F/V Parola I',
       licenseNo: userProfile?.licenseNo || 'FL-2026-8893',
       phone: userProfile?.phone || '0912 345 6789',
@@ -220,6 +268,11 @@ function OnboardingContent() {
       localStorage.setItem('profile-port', port);
       localStorage.setItem('profile-lat', String(coordinates[0]));
       localStorage.setItem('profile-lng', String(coordinates[1]));
+      localStorage.setItem('profile-regionId', selectedRegion.id);
+      localStorage.setItem('profile-regionName', selectedRegion.name);
+      localStorage.setItem('profile-province', selectedRegion.provinces[0] || port);
+      localStorage.setItem('profile-fmaZone', selectedRegion.fmaZone);
+      localStorage.setItem('profile-regionalBounds', JSON.stringify(selectedRegion.bounds));
 
       // Set other sensible defaults
       if (!localStorage.getItem('profile-boatType')) {
@@ -237,7 +290,7 @@ function OnboardingContent() {
       localStorage.setItem('profile-emergencyPhone', '0917 111 2222');
     }
 
-    showToast("Vessel home port coordinates updated successfully!", "success");
+    showToast(`Operational region set to ${selectedRegion.name}! Fish catch scope active.`, "success");
 
     if (fromProfile) {
       router.push('/profile');
@@ -296,8 +349,12 @@ function OnboardingContent() {
           selectedSpecies={[]}
           hideSidebar={true}
           hideLegend={true}
-          center={coordinates}
+          center={coordinates || undefined}
           onMapClick={handleMapClick}
+          activeRegion={selectedRegion}
+          showRegionBoundary={Boolean(selectedRegion)}
+          showVesselMarkers={false}
+          isolateRegion={false}
         />
 
         {/* Floating Controls Overlay (Current GPS PIN button) */}
@@ -313,20 +370,32 @@ function OnboardingContent() {
 
         {/* Floating Search & Location Recommendations Panel */}
         <div className="absolute top-20 left-4 right-4 md:right-auto md:w-96 z-10 bg-white/95 backdrop-blur-md p-4 rounded-[2rem] shadow-xl border border-gray-150 space-y-3">
-          <div className="flex items-center gap-1.5 text-[10px] font-black uppercase tracking-widest text-brand-black/45">
-            <MapPin className="w-3.5 h-3.5 text-brand-green" />
-            <span>Search Home Reference Port</span>
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-1.5 text-[10px] font-black uppercase tracking-widest text-brand-black/45">
+              <MapPin className="w-3.5 h-3.5 text-brand-green" />
+              <span>Search Reference Port</span>
+            </div>
+            {selectedRegion ? (
+              <span className="text-[9px] font-extrabold uppercase tracking-wider text-brand-green bg-emerald-50 border border-emerald-200 px-2 py-0.5 rounded-full flex items-center gap-1">
+                <ShieldCheck className="w-3 h-3" />
+                {selectedRegion.shortName}
+              </span>
+            ) : (
+              <span className="text-[9px] font-bold text-brand-black/40 bg-gray-100 px-2 py-0.5 rounded-full">
+                Tap map to pin
+              </span>
+            )}
           </div>
 
           <div className="relative">
             <input
               type="text"
-              placeholder="Type port or province name..."
+              placeholder="Type port or province (e.g. Cebu, Mercedes)..."
               value={searchQuery}
               onChange={(e) => {
                 setSearchQuery(e.target.value);
                 setShowRecommendations(true);
-                setPort(e.target.value || 'Mercedes Fish Port');
+                setPort(e.target.value);
               }}
               onFocus={() => setShowRecommendations(true)}
               className="w-full px-4 py-3 bg-brand-offwhite border border-gray-250 hover:border-brand-green/45 focus:border-brand-green focus:ring-1 focus:ring-brand-green rounded-2xl text-xs font-bold text-brand-black shadow-inner outline-none placeholder:text-brand-black/35"
@@ -358,6 +427,8 @@ function OnboardingContent() {
                     setCoordinates([res.lat, res.lng]);
                     setPort(res.name);
                     setSearchQuery(res.name);
+                    const detected = detectPhilippineRegion(res.lat, res.lng, `${res.name} ${res.province || ''}`);
+                    setSelectedRegion(detected);
                     setShowRecommendations(false);
                     setDrawerOpen(true);
                   }}
@@ -414,16 +485,22 @@ function OnboardingContent() {
       </div>
 
       {/* 4. BOTTOM CONFIRMATION DRAWER */}
-      {drawerOpen && (
+      {drawerOpen && selectedRegion && coordinates && (
         <div className="absolute bottom-0 left-0 right-0 z-20 bg-white/95 backdrop-blur-md shadow-2xl border-t border-gray-200/80 px-6 py-5 md:px-12 flex flex-col md:flex-row md:items-center md:justify-between gap-4 animate-in slide-in-from-bottom duration-300">
           <div className="flex items-start gap-3.5">
             <div className="w-11 h-11 rounded-2xl bg-brand-green/10 flex items-center justify-center text-brand-green shrink-0">
               <Compass className="w-6 h-6 animate-spin-slow" />
             </div>
             <div>
-              <span className="text-[9px] font-black text-brand-green uppercase tracking-widest block">
-                Selected Reference Anchor
-              </span>
+              <div className="flex items-center gap-2 flex-wrap mb-0.5">
+                <span className="text-[9px] font-black text-brand-green uppercase tracking-widest block">
+                  Selected Reference Anchor
+                </span>
+                <span className="inline-flex items-center gap-1 text-[9px] font-extrabold bg-emerald-500/10 text-brand-green border border-emerald-500/20 px-2 py-0.5 rounded-full uppercase tracking-wider">
+                  <ShieldCheck className="w-3 h-3" />
+                  {selectedRegion.shortName} Territory
+                </span>
+              </div>
               <h2 className="text-base md:text-lg font-display font-black text-brand-black uppercase leading-tight mt-0.5 flex items-center gap-2">
                 {isGeocoding ? (
                   <span className="flex items-center gap-2 text-brand-green animate-pulse">
@@ -431,21 +508,33 @@ function OnboardingContent() {
                     Locating real address...
                   </span>
                 ) : (
-                  port
+                  port || "Pinned Coastal Location"
                 )}
               </h2>
-              <p className="text-xs text-brand-black/50 font-bold tracking-wide mt-0.5">
-                Latitude {(coordinates?.[0] ?? 14.0122).toFixed(4)}° N, Longitude {(coordinates?.[1] ?? 123.0114).toFixed(4)}° E
-              </p>
+              <div className="flex items-center gap-2 text-xs text-brand-black/60 font-semibold tracking-wide mt-1 flex-wrap">
+                <span>{coordinates[0].toFixed(4)}° N, {coordinates[1].toFixed(4)}° E</span>
+                <span>•</span>
+                <span className="text-brand-green font-bold flex items-center gap-1">
+                  <ShieldCheck className="w-3.5 h-3.5 text-brand-green" /> Regional Boundary Active
+                </span>
+                <span>•</span>
+                <span className="text-brand-black/45 text-[11px] font-medium">{selectedRegion.fmaZone}</span>
+              </div>
             </div>
           </div>
 
           <div className="flex items-center gap-3 w-full md:w-auto">
             <button
-              onClick={handleUseCurrentLocation}
+              onClick={() => {
+                setCoordinates(null);
+                setSelectedRegion(null);
+                setPort('');
+                setSearchQuery('');
+                setDrawerOpen(false);
+              }}
               className="flex-1 md:flex-none px-5 py-3 rounded-2xl border border-gray-200 hover:border-gray-300 text-brand-black/75 hover:text-brand-black font-bold text-xs uppercase tracking-wider transition-all hover:bg-gray-50 text-center cursor-pointer"
             >
-              GPS Reset
+              Clear Pin
             </button>
 
             <button
@@ -458,6 +547,17 @@ function OnboardingContent() {
           </div>
         </div>
       )}
+
+      {/* 5. FLOATING INSTRUCTION PILL (When no location has been pinned yet) */}
+      {!coordinates && (
+        <div className="absolute bottom-8 left-1/2 -translate-x-1/2 z-20 bg-brand-black/90 backdrop-blur-md text-white px-6 py-3.5 rounded-full shadow-2xl border border-white/10 flex items-center gap-3 pointer-events-none max-w-[90vw] text-center animate-pulse">
+          <div className="w-2.5 h-2.5 rounded-full bg-brand-green animate-ping shrink-0" />
+          <span className="text-xs font-bold tracking-wide">
+            Tap anywhere on Philippine coastal waters to drop your pin
+          </span>
+        </div>
+      )}
+
 
       {/* OUT-OF-BOUNDS WARNING GEOMODAL */}
       {warningModalOpen && outOfBoundsCoords && (

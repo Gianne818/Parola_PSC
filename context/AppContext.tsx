@@ -1,7 +1,7 @@
 "use client";
 
 import React, { createContext, useContext, useState, useEffect, useCallback } from "react";
-import { UserProfile, AlertNotification, WeatherTelemetry, Hotspot, FuelPool } from "../types";
+import { UserProfile, AlertNotification, WeatherTelemetry, Hotspot, FuelPool, PhilippineRegion } from "../types";
 import { storageService } from "../services/storageService";
 import { fetchLiveWeather } from "../services/weatherService";
 import { fetchHotspots } from "../services/supabaseHotspotService";
@@ -9,6 +9,7 @@ import { fetchWeatherSafetyOverrides, fetchSupabaseWeatherData } from "../servic
 import { createUserProfile } from "../services/profileService";
 import { authHeaders } from "../utils/auth-fetch";
 import { fetchWithTimeout } from "../utils/fetchWithTimeout";
+import { PHILIPPINE_REGIONS, detectPhilippineRegion, getHotspotsForRegion, isCoordinateInRegion } from "../data/philippineRegions";
 
 // Default pre-configured Philippine hotspots
 export const DEFAULT_HOTSPOTS: Hotspot[] = [
@@ -239,6 +240,11 @@ const DEFAULT_PROFILE: UserProfile = {
   port: "Mercedes Fish Port",
   lat: 14.0122,
   lng: 123.0114,
+  regionId: "reg-5",
+  regionName: "Region V (Bicol Region)",
+  province: "Camarines Norte",
+  fmaZone: "FMA 7 & 8 (San Miguel Bay & Lagonoy Gulf)",
+  regionalBounds: [[11.70, 122.30], [14.65, 124.60]],
 };
 
 const DEFAULT_WEATHER: WeatherTelemetry = {
@@ -286,7 +292,16 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       setLanguage(storageService.getItem("parola-language", "en"));
       setFontScale(storageService.getItem("parola-font-scale", 0));
       setTheme("light");
-      setUserProfile(storageService.getItem("parola-profile", DEFAULT_PROFILE));
+      const storedProfile = storageService.getItem("parola-profile", DEFAULT_PROFILE);
+      if (storedProfile && (!storedProfile.regionId || !storedProfile.regionalBounds)) {
+        const detected = detectPhilippineRegion(storedProfile.lat || 14.0122, storedProfile.lng || 123.0114, storedProfile.port);
+        storedProfile.regionId = detected.id;
+        storedProfile.regionName = detected.name;
+        storedProfile.province = detected.provinces[0] || storedProfile.port;
+        storedProfile.fmaZone = detected.fmaZone;
+        storedProfile.regionalBounds = detected.bounds;
+      }
+      setUserProfile(storedProfile);
       setNotifications(storageService.getItem("parola-notifications-clean", INITIAL_NOTIFICATIONS));
       setFuelPools(storageService.getItem("parola-fuelpools", DEFAULT_POOLS));
       setManualOverrideHold(storageService.getItem("parola-manual-override-hold", false));
@@ -367,13 +382,17 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
           let mapped: Hotspot[];
           const sbHotspots = (hotspotsRes ?? []) as Hotspot[];
+          const activeReg = userProfile.regionId
+            ? PHILIPPINE_REGIONS.find((r) => r.id === userProfile.regionId)
+            : detectPhilippineRegion(lat, lng, userProfile.port);
+
           if (sbHotspots.length > 0) {
             mapped = sbHotspots.map((h) => ({
               ...h,
               type: (h.type === 'pelagic' || h.type === 'demersal' || h.type === 'both') ? h.type : 'both',
             })) as Hotspot[];
           } else {
-            mapped = DEFAULT_HOTSPOTS;
+            mapped = activeReg ? getHotspotsForRegion(activeReg.id, DEFAULT_HOTSPOTS) : DEFAULT_HOTSPOTS;
           }
 
           const entry: TelemetryCacheEntry = {
@@ -420,7 +439,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     return () => {
       cancelled = true;
     };
-  }, [userProfile.port, userProfile.lat, userProfile.lng, showToast]);
+  }, [userProfile.port, userProfile.lat, userProfile.lng, userProfile.regionId, showToast]);
 
   useEffect(() => {
     const handleUnhandledRejection = (event: PromiseRejectionEvent) => {

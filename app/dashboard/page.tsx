@@ -11,8 +11,9 @@ import { calculateDistance, calculateBearing } from "../../utils/spatial";
 import { calculateHotspotMetrics, calculateEfficiencyRatio } from "../../utils/hotspotCalculator";
 import { authHeaders } from "../../utils/auth-fetch";
 import { fetchHotspots } from "../../services/supabaseHotspotService";
-import { Hotspot, ProcessedHotspot } from "../../types";
+import { Hotspot, ProcessedHotspot, PhilippineRegion } from "../../types";
 import { CATEGORIZED_SPECIES, getSpeciesConfig, getSpeciesColor, getHotspotDisplayColor, GENERAL_PELAGIC_COLOR, GENERAL_DEMERSAL_COLOR } from "../../utils/speciesColors";
+import { PHILIPPINE_REGIONS, detectPhilippineRegion, isCoordinateInRegion, getHotspotsForRegion } from "../../data/philippineRegions";
 import {
   AlertTriangle,
   ChevronLeft,
@@ -273,8 +274,21 @@ export default function DashboardPage() {
     }
   };
 
+  // Active operational region based on profile or coordinates
+  const activeRegion: PhilippineRegion = useMemo(() => {
+    if (userProfile.regionId) {
+      const found = PHILIPPINE_REGIONS.find((r) => r.id === userProfile.regionId);
+      if (found) return found;
+    }
+    return detectPhilippineRegion(userProfile.lat || 14.0122, userProfile.lng || 123.0114, userProfile.port);
+  }, [userProfile.regionId, userProfile.lat, userProfile.lng, userProfile.port]);
+
   // Process and sort hotspot distance & catch efficiency data (memoized: was re-mapped/sorted/filtered every render)
-  const rawHotspotData = speciesHotspots || hotspots;
+  const rawHotspotData = useMemo(() => {
+    const base = speciesHotspots || hotspots;
+    return getHotspotsForRegion(activeRegion.id, base);
+  }, [speciesHotspots, hotspots, activeRegion.id]);
+
   const processedHotspots: ProcessedHotspot[] = useMemo(() => rawHotspotData.map((spot) => {
     const lat = spot.lat ?? spot.position?.[0] ?? 0;
     const lng = spot.lng ?? spot.position?.[1] ?? 0;
@@ -313,6 +327,13 @@ export default function DashboardPage() {
   }), [processedHotspots, sortBy]);
 
   const filteredHotspots = useMemo(() => sortedHotspots.filter((spot) => {
+    // 0. Regional Scope Filter: Restrict strictly to active operational region boundary
+    if (activeRegion) {
+      if (!isCoordinateInRegion(spot.lat, spot.lng, activeRegion.id)) {
+        return false;
+      }
+    }
+
     if (searchQuery) {
       const term = searchQuery.toLowerCase();
       const nameMatch = spot.name.toLowerCase().includes(term);
@@ -406,17 +427,32 @@ export default function DashboardPage() {
             </div>
           </div>
 
-          {/* 9 km Prediction Radius Indicator: top-left overlay */}
+          {/* Active Operational Region & 9 km Prediction Radius: top-left overlay */}
           {mapView && (
-            <div className="absolute top-4 left-4 z-[900] bg-white/95 backdrop-blur-md border border-[#DAE5E0] shadow-sm rounded-2xl px-3 py-2 flex items-center gap-2 pointer-events-none">
-              <Globe className="w-3.5 h-3.5 text-[#00B37E] shrink-0" />
-              <div>
-                <span className="text-[10px] font-bold uppercase tracking-wider text-[#00B37E] block leading-tight">
-                  9 km Prediction Radius
-                </span>
-                <span className="text-[8.5px] font-medium text-[#12211E]/60 leading-tight block">
-                  ML-calibrated boundary
-                </span>
+            <div className="absolute top-4 left-4 z-[900] flex flex-col sm:flex-row gap-2 pointer-events-none">
+              <div className="bg-white/95 backdrop-blur-md border border-[#DAE5E0] shadow-sm rounded-2xl px-3 py-2 flex items-center gap-2">
+                <span className="w-2 h-2 rounded-full bg-[#00B37E] animate-pulse shrink-0" />
+                <div>
+                  <span className="text-[10px] font-black uppercase tracking-wider text-[#12211E] flex items-center gap-1 leading-tight">
+                    <ShieldCheck className="w-3 h-3 text-[#00B37E]" />
+                    {activeRegion.shortName} Scope
+                  </span>
+                  <span className="text-[8px] font-extrabold text-[#00B37E] leading-tight block">
+                    Licensed Boundary Active
+                  </span>
+                </div>
+              </div>
+
+              <div className="bg-white/95 backdrop-blur-md border border-[#DAE5E0] shadow-sm rounded-2xl px-3 py-2 flex items-center gap-2 hidden sm:flex">
+                <Globe className="w-3.5 h-3.5 text-[#00B37E] shrink-0" />
+                <div>
+                  <span className="text-[10px] font-bold uppercase tracking-wider text-[#00B37E] block leading-tight">
+                    9 km Prediction Radius
+                  </span>
+                  <span className="text-[8.5px] font-medium text-[#12211E]/60 leading-tight block">
+                    ML-calibrated boundary
+                  </span>
+                </div>
               </div>
             </div>
           )}
@@ -432,6 +468,10 @@ export default function DashboardPage() {
                   filterType={activeTab}
                   selectedSpecies={selectedSpecies}
                   hideSidebar={true}
+                  activeRegion={activeRegion}
+                  showRegionBoundary={true}
+                  isolateRegion={true}
+                  showVesselMarkers={true}
                 />
               </div>
             ) : (
@@ -442,7 +482,7 @@ export default function DashboardPage() {
                       Active Hotspot Coordinates
                     </h3>
                     <p className="text-[11px] text-[#12211E]/65 font-medium mt-0.5">
-                      Showing {filteredHotspots.length} localized municipal marine grids.
+                      Showing {filteredHotspots.length} localized municipal marine grids in {activeRegion.name}.
                     </p>
                   </div>
 

@@ -1,12 +1,13 @@
 "use client";
 
-import React, { useEffect, useMemo } from "react";
-import { MapContainer, TileLayer, Marker, Popup, useMap, useMapEvents, Circle, Rectangle, ZoomControl } from "react-leaflet";
+import React, { useEffect, useMemo, useRef } from "react";
+import { MapContainer, TileLayer, Marker, Popup, useMap, useMapEvents, Circle, Rectangle, ZoomControl, Polygon } from "react-leaflet";
 import "leaflet/dist/leaflet.css";
 import L from "leaflet";
-import { Hotspot, UserProfile } from "../../../types";
+import { Hotspot, UserProfile, PhilippineRegion } from "../../../types";
 import { isWithinPhilippineGeofence } from "../../../utils/spatial";
 import { getSpeciesColor, getSpeciesConfig, getHotspotDisplayColor, GENERAL_PELAGIC_COLOR, GENERAL_DEMERSAL_COLOR } from "../../../utils/speciesColors";
+import { PHILIPPINE_REGIONS, detectPhilippineRegion, isCoordinateInRegion } from "../../../data/philippineRegions";
 
 import { PREDICTION_RADIUS_KM, PREDICTION_RADIUS_METERS } from "./MapComponent";
 
@@ -95,19 +96,60 @@ interface MapInnerProps {
   onZoomChange?: (zoom: number) => void;
   /** Whether to show 9 km prediction radius circles on hotspots */
   showPredictionRadius?: boolean;
+
+  /** Active Region for boundary drawing and outside masking */
+  activeRegion?: PhilippineRegion | null;
+  /** Whether to show regional boundary line and outside masking (default: true) */
+  showRegionBoundary?: boolean;
+  /** Whether to isolate this region: completely hides other parts of the Philippines with opaque mask and locks camera */
+  isolateRegion?: boolean;
+  /** Whether to show vessel, home port, and storm hazard markers (default: true, set false on onboarding) */
+  showVesselMarkers?: boolean;
 }
 
 const isValidLatLng = (lat: number, lng: number): boolean => {
   return typeof lat === "number" && typeof lng === "number" && !isNaN(lat) && !isNaN(lng);
 };
 
+// RegionBoundsController component to dynamically fit bounds to active region and lock viewport
+function RegionBoundsController({ 
+  activeRegion
+}: { 
+  activeRegion?: PhilippineRegion | null;
+  isolateRegion?: boolean;
+}) {
+  const map = useMap();
+  const prevRegionIdRef = useRef<string | null>(null);
+
+  useEffect(() => {
+    if (activeRegion && activeRegion.bounds) {
+      if (prevRegionIdRef.current !== activeRegion.id) {
+        prevRegionIdRef.current = activeRegion.id;
+        try {
+          map.fitBounds(activeRegion.bounds, { padding: [35, 35], maxZoom: 11 });
+          map.setMaxBounds([[4.5, 115.5], [21.5, 127.5]]);
+          map.setMinZoom(6);
+        } catch (e) {
+          console.warn("RegionBoundsController fitBounds warning:", e);
+        }
+      }
+    } else if (!activeRegion) {
+      map.setMaxBounds([[4.5, 115.5], [21.5, 127.5]]);
+      map.setMinZoom(6);
+      prevRegionIdRef.current = null;
+    }
+  }, [activeRegion, map]);
+
+  return null;
+}
+
 // MapController component to dynamically pan/zoom map on center coordinate changes
-function MapController({ center }: { center: [number, number] }) {
+function MapController({ center }: { center?: [number, number] | null }) {
   const map = useMap();
   useEffect(() => {
-    if (isValidLatLng(center[0], center[1])) {
+    if (center && isValidLatLng(center[0], center[1])) {
       try {
-        map.setView(center, map.getZoom());
+        map.setView(center, Math.max(map.getZoom(), 9));
       } catch (e) {
         console.warn("MapController view update warning:", e);
       }
@@ -204,19 +246,67 @@ export default function MapInner({
   onMapClick,
   onZoomChange,
   showPredictionRadius = true,
+  activeRegion,
+  showRegionBoundary = true,
+  isolateRegion = false,
+  showVesselMarkers = true,
 }: MapInnerProps) {
   // Validate and fall back on home port coordinates
   const homeLat = userProfile?.lat ?? 14.0122;
   const homeLng = userProfile?.lng ?? 123.0114;
   
-  const mapCenter: [number, number] = center && isValidLatLng(center[0], center[1])
-    ? center
-    : isValidLatLng(homeLat, homeLng)
-      ? [homeLat, homeLng]
-      : [14.0122, 123.0114];
+  const centerLat = center?.[0];
+  const centerLng = center?.[1];
 
-  // Bounded map view to Philippines
-  const maxBounds: L.LatLngBoundsLiteral = [[4.5, 116.0], [21.5, 127.0]];
+  // Resolve active region (prop takes precedence, then user profile region, then auto-detected from center / home coordinates)
+  const resolvedRegion = useMemo(() => {
+    if (activeRegion !== undefined) return activeRegion;
+    if (userProfile?.regionId) {
+      const found = PHILIPPINE_REGIONS.find((r) => r.id === userProfile.regionId);
+      if (found) return found;
+    }
+    const targetLat = typeof centerLat === "number" && isValidLatLng(centerLat, centerLng as number) ? centerLat : (showVesselMarkers ? homeLat : undefined);
+    const targetLng = typeof centerLng === "number" && isValidLatLng(centerLat as number, centerLng) ? centerLng : (showVesselMarkers ? homeLng : undefined);
+    if (typeof targetLat === "number" && typeof targetLng === "number" && isValidLatLng(targetLat, targetLng)) {
+      return detectPhilippineRegion(targetLat, targetLng, userProfile?.port);
+    }
+    return null;
+  }, [activeRegion, userProfile?.regionId, userProfile?.port, centerLat, centerLng, homeLat, homeLng, showVesselMarkers]);
+
+  // Dynamic initial center and zoom
+  const mapCenter: [number, number] = useMemo(() => {
+    if (center && isValidLatLng(center[0], center[1])) {
+      return center;
+    }
+    if (isolateRegion && resolvedRegion) {
+      return resolvedRegion.center;
+    }
+    if (showVesselMarkers && isValidLatLng(homeLat, homeLng)) {
+      return [homeLat, homeLng];
+    }
+    // Default: Philippines archipelago center overview
+    return [12.8797, 121.7740];
+  }, [center, isolateRegion, resolvedRegion, showVesselMarkers, homeLat, homeLng]);
+
+  const initialZoom = useMemo(() => {
+    if (center && isValidLatLng(center[0], center[1])) {
+      return 10;
+    }
+    if (isolateRegion && resolvedRegion) {
+      return 9;
+    }
+    if (showVesselMarkers && isValidLatLng(homeLat, homeLng)) {
+      return 10;
+    }
+    return 6;
+  }, [center, isolateRegion, resolvedRegion, showVesselMarkers, homeLat, homeLng]);
+
+  // Strict bounds: constrain view to the Philippine archipelago
+  const maxBounds: L.LatLngBoundsLiteral = useMemo(() => {
+    return [[4.5, 115.5], [21.5, 127.5]];
+  }, []);
+
+  const minZoom = 6;
 
   // Sanitize and filter hotspots (memoized: was re-filtered on every parent render)
   const filteredHotspots = useMemo(() => (hotspots || []).filter((spot) => {
@@ -224,6 +314,13 @@ export default function MapInner({
     const lng = spot.lng ?? spot.position?.[1];
     
     if (!isValidLatLng(lat, lng)) return false;
+
+    // Region Filter: Restrict to active region if showRegionBoundary is true
+    if (resolvedRegion && showRegionBoundary) {
+      if (!isCoordinateInRegion(lat, lng, resolvedRegion.id)) {
+        return false;
+      }
+    }
 
     // Type Filter
     const type = spot.type || (spot.group === "pelagic" ? "pelagic" : "demersal");
@@ -251,23 +348,27 @@ export default function MapInner({
     }
 
     return true;
-  }), [hotspots, filterType, selectedSpecies]);
+  }), [hotspots, filterType, selectedSpecies, resolvedRegion, showRegionBoundary]);
 
   return (
     <div className="w-full h-full min-h-[400px] absolute inset-0 z-0">
       <MapContainer
         center={mapCenter}
-        zoom={10}
+        zoom={initialZoom}
         zoomControl={false}
         scrollWheelZoom={true}
         className="w-full h-full"
         maxBounds={maxBounds}
-        maxBoundsViscosity={0.8}
-        minZoom={5}
+        maxBoundsViscosity={1.0}
+        minZoom={minZoom}
         id="leaflet-map-element"
       >
         <ZoomControl position="bottomright" />
-        <MapController center={mapCenter} />
+        <MapController center={center} />
+        <RegionBoundsController 
+          activeRegion={showRegionBoundary ? resolvedRegion : null} 
+          isolateRegion={isolateRegion}
+        />
         <MapEventsHandler 
           onMapClick={onMapClick} 
           setCustomWaypoint={setCustomWaypoint} 
@@ -277,26 +378,68 @@ export default function MapInner({
         <MapResizeHandler />
         <ZoomTracker onZoomChange={onZoomChange} />
         
-        {/* Soft elegant basemap for dark/light dashboard integration */}
+        {/* OpenStreetMap Standard Basemap (Clean, Free, Zero Watermark) */}
         <TileLayer
-          attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
-          url="https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png"
+          attribution='&copy; <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener noreferrer">OpenStreetMap</a> contributors'
+          url="https://tile.openstreetmap.org/{z}/{x}/{y}.png"
+          maxZoom={19}
         />
 
-        {/* Geofence Dashed Borders (border-emerald-600/20) */}
-        <Rectangle
-          bounds={[[4.5, 116.0], [21.5, 127.0]]}
-          pathOptions={{
-            color: "#059669",
-            fill: false,
-            weight: 2,
-            opacity: 0.2,
-            dashArray: "6, 6"
-          }}
-        />
+        {/* REGIONAL SCOPE: INVERTED MASK (When isolateRegion is true, opacity is 1.0 to make other regions NOT visible) */}
+        {resolvedRegion && showRegionBoundary && (
+          <Polygon
+            positions={[
+              // Outer world ring
+              [
+                [85, -180],
+                [85, 180],
+                [-85, 180],
+                [-85, -180]
+              ],
+              // Cutout hole for active region
+              resolvedRegion.coordinates
+            ]}
+            pathOptions={{
+              color: "#051310",
+              fillColor: "#051310",
+              fillOpacity: 0.40,
+              weight: 0,
+              interactive: false
+            }}
+          />
+        )}
+
+        {/* REGIONAL BOUNDARY LINE (Emerald high-tech dashed border outlining licensed territory) */}
+        {resolvedRegion && showRegionBoundary && (
+          <Polygon
+            positions={resolvedRegion.coordinates}
+            pathOptions={{
+              color: "#00B37E",
+              fillColor: "#00B37E",
+              fillOpacity: 0.04,
+              weight: 2.5,
+              dashArray: "6, 6",
+              interactive: false
+            }}
+          />
+        )}
+
+        {/* Geofence Dashed Borders (border-emerald-600/20) - visible when exploring archipelago */}
+        {!isolateRegion && (
+          <Rectangle
+            bounds={[[4.5, 116.0], [21.5, 127.0]]}
+            pathOptions={{
+              color: "#059669",
+              fill: false,
+              weight: 1.5,
+              opacity: 0.15,
+              dashArray: "4, 4"
+            }}
+          />
+        )}
 
         {/* Home Port Anchorage Marker */}
-        {homePortIcon && isValidLatLng(homeLat, homeLng) && (
+        {showVesselMarkers && homePortIcon && isValidLatLng(homeLat, homeLng) && (
           <Marker position={[homeLat, homeLng]} icon={homePortIcon}>
             <Popup>
               <div className="font-sans text-brand-black p-1">
@@ -312,7 +455,7 @@ export default function MapInner({
         )}
 
         {/* Green Vessel Marker with animated radar pulses */}
-        {vesselIcon && isValidLatLng(homeLat, homeLng) && (
+        {showVesselMarkers && vesselIcon && isValidLatLng(homeLat, homeLng) && (
           <Marker position={[homeLat + 0.008, homeLng + 0.006]} icon={vesselIcon}>
             <Popup>
               <div className="font-sans text-brand-black p-1">
@@ -331,7 +474,7 @@ export default function MapInner({
         )}
 
         {/* PAGASA Gale Warning / Extreme Weather Hazard Zone */}
-        {manualOverrideHold && isValidLatLng(homeLat, homeLng) && (
+        {showVesselMarkers && manualOverrideHold && isValidLatLng(homeLat, homeLng) && (
           <Circle
             center={[homeLat + 0.02, homeLng - 0.03]}
             radius={4000}

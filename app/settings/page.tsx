@@ -426,14 +426,18 @@ export default function SettingsPage() {
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
               <div>
                 <span className="text-[10px] font-bold text-[#12211E]/55 uppercase block tracking-wider">
-                  Active Marine Zone
+                  Active Operational Region & Port
                 </span>
                 <span className="text-base font-black text-[#12211E] block mt-0.5">
                   {userProfile.port || "Mercedes Fish Port (Camarines Norte)"}
                 </span>
+                <span className="text-xs font-bold text-[#00B37E] block mt-0.5">
+                  {userProfile.regionName || "Region V (Bicol Region)"}
+                </span>
               </div>
               <span className="inline-flex items-center gap-1 px-3 py-1 rounded-full bg-emerald-50 border border-emerald-200 text-[#00B37E] text-[10px] font-bold uppercase self-start sm:self-auto">
-                Municipal Water Zone 3
+                <ShieldCheck className="w-3 h-3" />
+                {userProfile.regionName ? userProfile.regionName.split(' ')[0] : 'Region'} Licensed Scope
               </span>
             </div>
 
@@ -456,6 +460,14 @@ export default function SettingsPage() {
             {showCoordinateDetails && (
               <div className="p-4 bg-white rounded-xl border border-[#DAE5E0] text-xs space-y-2 font-mono">
                 <div className="flex justify-between items-center text-[#12211E]/80">
+                  <span className="font-sans font-medium text-[#12211E]/60">Operational Territory:</span>
+                  <span className="font-bold text-[#00B37E]">{userProfile.regionName || "Region V (Bicol Region)"}</span>
+                </div>
+                <div className="flex justify-between items-center text-[#12211E]/80">
+                  <span className="font-sans font-medium text-[#12211E]/60">FMA Zone:</span>
+                  <span className="font-bold">{userProfile.fmaZone || "FMA 7 & 8 (San Miguel Bay)"}</span>
+                </div>
+                <div className="flex justify-between items-center text-[#12211E]/80">
                   <span className="font-sans font-medium text-[#12211E]/60">GPS Latitude:</span>
                   <span className="font-bold">{userProfile.lat ? userProfile.lat.toFixed(6) : "14.012200"}° N</span>
                 </div>
@@ -468,7 +480,7 @@ export default function SettingsPage() {
                   <span className="font-bold text-[#00B37E]">15.0 km Coastal Radius</span>
                 </div>
                 <p className="font-sans text-[11px] text-[#12211E]/65 pt-1 border-t border-[#DAE5E0]/60 leading-relaxed">
-                  Vessel telemetry exceeding this boundary during gale warnings prompts automated Coast Guard port holds.
+                  Fish locations, spatial catch predictions, and automated SMS advisories are restricted to your designated operational region.
                 </p>
               </div>
             )}
