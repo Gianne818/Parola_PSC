@@ -60,6 +60,7 @@ ehthumbs.db
 *.tmp
 *.temp
 *~
+fixplan.md
 
 # Local tool binaries (e.g. gitleaks used for secret-scan verification)
 .tools/
@@ -76,6 +77,7 @@ CLAUDE.md
 # Build caches & test runner artifacts
 .turbo/
 .cache/
+.eslintcache
 vitest.config.*.timestamp*
 
 # Environment files - NEVER commit real secrets
