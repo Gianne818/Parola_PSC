@@ -1,6 +1,9 @@
+import type { Metadata } from "next";
 import { AuthLayout } from "../../../components/layouts/AuthLayout";
 import { ResourceEmbed } from "../../../components/resources/ResourceEmbed";
 import PricingPage from "../../pricing/page";
+
+export const metadata: Metadata = { title: "Pricing | Parola" };
 
 export default function InAppPricingPage() {
   return (

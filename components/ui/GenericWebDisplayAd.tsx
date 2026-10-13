@@ -8,16 +8,29 @@ interface GenericWebDisplayAdProps {
   format?: "leaderboard" | "inline-banner" | "sidebar";
   className?: string;
   slotId?: string;
+  sample?: boolean;
 }
 
 export function GenericWebDisplayAd({
   format = "inline-banner",
   className = "",
-  slotId = "ad-slot-default"
+  slotId = "ad-slot-default",
+  sample = false,
 }: GenericWebDisplayAdProps) {
   const [isDismissed, setIsDismissed] = useState(false);
 
   if (isDismissed) return null;
+
+  if (sample) {
+    return (
+      <aside id={slotId} aria-label="Sample sponsor placement" className={`bg-white border border-[#DAE5E0] rounded-xl p-4 ${className}`}>
+        <p className="font-bold text-[#087F5B] mb-2">Sample sponsor placement</p>
+        <h4 className="font-display font-extrabold text-lg text-[#12211E]">Local marine services</h4>
+        <p className="mt-2 text-[#12211E]/75">A brief sponsor acknowledgment could help fund municipal advisories.</p>
+        <p className="mt-3 pt-3 border-t border-[#DAE5E0] text-[#52665E]">Illustrative advertising only. No named sponsor or partnership is represented.</p>
+      </aside>
+    );
+  }
 
   // Curated programmatic ad creative rotation
   const ads = [

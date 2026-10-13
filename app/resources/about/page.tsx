@@ -1,6 +1,9 @@
+import type { Metadata } from "next";
 import { AuthLayout } from "../../../components/layouts/AuthLayout";
 import { ResourceEmbed } from "../../../components/resources/ResourceEmbed";
 import AboutPage from "../../about/page";
+
+export const metadata: Metadata = { title: "About | Parola" };
 
 export default function InAppAboutPage() {
   return (
