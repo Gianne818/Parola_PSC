@@ -9,7 +9,9 @@ import { isWithinPhilippineGeofence } from "../../../utils/spatial";
 import { getSpeciesColor, getSpeciesConfig, getHotspotDisplayColor, GENERAL_PELAGIC_COLOR, GENERAL_DEMERSAL_COLOR } from "../../../utils/speciesColors";
 import { PHILIPPINE_REGIONS, detectPhilippineRegion, isCoordinateInRegion } from "../../../data/philippineRegions";
 
-import { PREDICTION_RADIUS_KM, PREDICTION_RADIUS_METERS } from "./MapComponent";
+import { PREDICTION_RADIUS_KM, PREDICTION_RADIUS_METERS, type MapViewMode } from "./MapComponent";
+
+const PHILIPPINE_NAVIGATION_BOUNDS: L.LatLngBoundsLiteral = [[4.5, 115.5], [21.5, 127.5]];
 
 // Custom marker icon definitions
 const safeHotspotIcon = typeof window !== "undefined" ? L.divIcon({
@@ -77,6 +79,9 @@ const selectedLocationPinIcon = typeof window !== "undefined" ? L.divIcon({
 }) : null;
 
 interface MapInnerProps {
+  presentation?: 'default' | 'dashboard';
+  onTileError?: () => void;
+  labels?: { loading: string; homePort: string; advisoryArea: string };
   hotspots: Hotspot[];
   selectedHotspot: Hotspot | null;
   onSelectHotspot: (hotspot: Hotspot | null) => void;
@@ -105,6 +110,10 @@ interface MapInnerProps {
   isolateRegion?: boolean;
   /** Whether to show vessel, home port, and storm hazard markers (default: true, set false on onboarding) */
   showVesselMarkers?: boolean;
+  viewMode?: MapViewMode;
+  boundaryMaskOpacity?: number;
+  minHeight?: number;
+  constrainToPhilippines?: boolean;
 }
 
 const isValidLatLng = (lat: number, lng: number): boolean => {
@@ -159,6 +168,51 @@ function MapController({ center }: { center?: [number, number] | null }) {
 }
 
 // MapEventsHandler component to handle map click events
+function SelectionViewController({ center, region, viewMode, constrainToPhilippines, nearbyPositions }: {
+  center?: [number, number];
+  region?: PhilippineRegion | null;
+  viewMode: Exclude<MapViewMode, 'auto'>;
+  constrainToPhilippines: boolean;
+  nearbyPositions?: [number, number][];
+}) {
+  const map = useMap();
+  const lat = center?.[0];
+  const lng = center?.[1];
+  useEffect(() => {
+    const frameSelection = () => {
+      const countryBounds = L.latLngBounds(PHILIPPINE_NAVIGATION_BOUNDS);
+      if (constrainToPhilippines) {
+        const size = map.getSize();
+        if (size.x <= 48 || size.y <= 48) return;
+        // Project at zoom zero so a previous minimum cannot clamp the resize calculation.
+        const span = map.project(countryBounds.getSouthEast(), 0)
+          .subtract(map.project(countryBounds.getNorthWest(), 0));
+        const scale = Math.min((size.x - 48) / Math.abs(span.x), (size.y - 48) / Math.abs(span.y));
+        const overviewZoom = Math.floor(map.getScaleZoom(scale, 0) * 4) / 4;
+        // Raising Leaflet's minimum would otherwise start an implicit zoom animation.
+        if (overviewZoom > map.getZoom()) map.setZoom(overviewZoom, { animate: false });
+        map.setMinZoom(overviewZoom);
+      }
+      if (lat === undefined || lng === undefined) {
+        map.fitBounds(constrainToPhilippines ? countryBounds : [[4.5, 116], [21.5, 127]], {
+          padding: [24, 24], maxZoom: constrainToPhilippines ? undefined : 6, animate: false,
+        });
+      } else if (viewMode === 'region' && region) {
+        const bounds = L.latLngBounds(region.bounds).extend([lat, lng]);
+        map.fitBounds(bounds, { padding: [24, 24], maxZoom: 11, animate: false });
+      } else if (nearbyPositions?.length) {
+        map.fitBounds(L.latLngBounds([[lat, lng], ...nearbyPositions]), { padding: [40, 40], maxZoom: 11, animate: false });
+      } else {
+        map.setView([lat, lng], 13, { animate: false });
+      }
+    };
+    frameSelection();
+    map.on('resize', frameSelection);
+    return () => { map.off('resize', frameSelection); };
+  }, [map, lat, lng, region, viewMode, constrainToPhilippines, nearbyPositions]);
+  return null;
+}
+
 function MapEventsHandler({ 
   onMapClick, 
   setCustomWaypoint, 
@@ -231,6 +285,16 @@ function ZoomTracker({ onZoomChange }: { onZoomChange?: (zoom: number) => void }
   return null;
 }
 
+function AreaSelectionController({ selected }: { selected: Hotspot | null }) {
+  const map = useMap();
+  const lat = selected?.lat;
+  const lng = selected?.lng;
+  useEffect(() => {
+    if (typeof lat === 'number' && typeof lng === 'number' && isValidLatLng(lat, lng)) map.panTo([lat, lng], { animate: false });
+  }, [lat, lng, map]);
+  return null;
+}
+
 export default function MapInner({
   hotspots,
   selectedHotspot,
@@ -250,28 +314,38 @@ export default function MapInner({
   showRegionBoundary = true,
   isolateRegion = false,
   showVesselMarkers = true,
+  viewMode = 'auto',
+  boundaryMaskOpacity = 0.4,
+  minHeight = 400,
+  constrainToPhilippines = false,
+  presentation = 'default',
+  onTileError,
+  labels,
 }: MapInnerProps) {
+  const isBriefing = presentation === 'dashboard';
   // Validate and fall back on home port coordinates
   const homeLat = userProfile?.lat ?? 14.0122;
   const homeLng = userProfile?.lng ?? 123.0114;
   
   const centerLat = center?.[0];
   const centerLng = center?.[1];
+  const profileRegionId = userProfile?.regionId;
+  const profilePort = userProfile?.port;
 
   // Resolve active region (prop takes precedence, then user profile region, then auto-detected from center / home coordinates)
   const resolvedRegion = useMemo(() => {
     if (activeRegion !== undefined) return activeRegion;
-    if (userProfile?.regionId) {
-      const found = PHILIPPINE_REGIONS.find((r) => r.id === userProfile.regionId);
+    if (profileRegionId) {
+      const found = PHILIPPINE_REGIONS.find((r) => r.id === profileRegionId);
       if (found) return found;
     }
     const targetLat = typeof centerLat === "number" && isValidLatLng(centerLat, centerLng as number) ? centerLat : (showVesselMarkers ? homeLat : undefined);
     const targetLng = typeof centerLng === "number" && isValidLatLng(centerLat as number, centerLng) ? centerLng : (showVesselMarkers ? homeLng : undefined);
     if (typeof targetLat === "number" && typeof targetLng === "number" && isValidLatLng(targetLat, targetLng)) {
-      return detectPhilippineRegion(targetLat, targetLng, userProfile?.port);
+      return detectPhilippineRegion(targetLat, targetLng, profilePort);
     }
     return null;
-  }, [activeRegion, userProfile?.regionId, userProfile?.port, centerLat, centerLng, homeLat, homeLng, showVesselMarkers]);
+  }, [activeRegion, profileRegionId, profilePort, centerLat, centerLng, homeLat, homeLng, showVesselMarkers]);
 
   // Dynamic initial center and zoom
   const mapCenter: [number, number] = useMemo(() => {
@@ -303,10 +377,10 @@ export default function MapInner({
 
   // Strict bounds: constrain view to the Philippine archipelago
   const maxBounds: L.LatLngBoundsLiteral = useMemo(() => {
-    return [[4.5, 115.5], [21.5, 127.5]];
+    return PHILIPPINE_NAVIGATION_BOUNDS;
   }, []);
 
-  const minZoom = 6;
+  const minZoom = viewMode === 'auto' ? 6 : 4;
 
   // Sanitize and filter hotspots (memoized: was re-filtered on every parent render)
   const filteredHotspots = useMemo(() => (hotspots || []).filter((spot) => {
@@ -350,8 +424,11 @@ export default function MapInner({
     return true;
   }), [hotspots, filterType, selectedSpecies, resolvedRegion, showRegionBoundary]);
 
+  const nearbyPositions = useMemo<[number, number][]>(() => isBriefing
+    ? filteredHotspots.slice(0, 3).map(spot => [spot.lat, spot.lng]) : [], [isBriefing, filteredHotspots]);
+
   return (
-    <div className="w-full h-full min-h-[400px] absolute inset-0 z-0">
+    <div className="w-full h-full absolute inset-0 z-0" style={{ minHeight }}>
       <MapContainer
         center={mapCenter}
         zoom={initialZoom}
@@ -361,28 +438,36 @@ export default function MapInner({
         maxBounds={maxBounds}
         maxBoundsViscosity={1.0}
         minZoom={minZoom}
+        zoomSnap={constrainToPhilippines ? 0.25 : 1}
+        zoomDelta={constrainToPhilippines ? 0.25 : 1}
         id="leaflet-map-element"
       >
         <ZoomControl position="bottomright" />
-        <MapController center={center} />
-        <RegionBoundsController 
-          activeRegion={showRegionBoundary ? resolvedRegion : null} 
-          isolateRegion={isolateRegion}
-        />
-        <MapEventsHandler 
+        {viewMode === 'auto' && !constrainToPhilippines ? (
+          <>
+            <MapController center={center} />
+            <RegionBoundsController activeRegion={showRegionBoundary ? resolvedRegion : null} isolateRegion={isolateRegion} />
+          </>
+        ) : (
+          <SelectionViewController center={center} region={activeRegion} viewMode={viewMode === 'auto' ? 'region' : viewMode} constrainToPhilippines={constrainToPhilippines} nearbyPositions={isBriefing ? nearbyPositions : undefined} />
+        )}
+        {!isBriefing && <MapEventsHandler
           onMapClick={onMapClick} 
           setCustomWaypoint={setCustomWaypoint} 
           onSelectHotspot={onSelectHotspot}
           showToast={showToast}
-        />
+        />}
+        {isBriefing && <AreaSelectionController selected={selectedHotspot} />}
         <MapResizeHandler />
         <ZoomTracker onZoomChange={onZoomChange} />
         
         {/* OpenStreetMap Standard Basemap (Clean, Free, Zero Watermark) */}
         <TileLayer
+          eventHandlers={onTileError ? { tileerror: onTileError } : undefined}
           attribution='&copy; <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener noreferrer">OpenStreetMap</a> contributors'
           url="https://tile.openstreetmap.org/{z}/{x}/{y}.png"
           maxZoom={19}
+          noWrap={constrainToPhilippines}
         />
 
         {/* REGIONAL SCOPE: INVERTED MASK (When isolateRegion is true, opacity is 1.0 to make other regions NOT visible) */}
@@ -402,7 +487,7 @@ export default function MapInner({
             pathOptions={{
               color: "#051310",
               fillColor: "#051310",
-              fillOpacity: 0.40,
+              fillOpacity: boundaryMaskOpacity,
               weight: 0,
               interactive: false
             }}
@@ -414,10 +499,10 @@ export default function MapInner({
           <Polygon
             positions={resolvedRegion.coordinates}
             pathOptions={{
-              color: "#00B37E",
-              fillColor: "#00B37E",
+              color: isBriefing ? '#087F5B' : "#00B37E",
+              fillColor: isBriefing ? '#087F5B' : "#00B37E",
               fillOpacity: 0.04,
-              weight: 2.5,
+              weight: isBriefing ? 1.5 : 2.5,
               dashArray: "6, 6",
               interactive: false
             }}
@@ -439,12 +524,15 @@ export default function MapInner({
         )}
 
         {/* Home Port Anchorage Marker */}
-        {showVesselMarkers && homePortIcon && isValidLatLng(homeLat, homeLng) && (
-          <Marker position={[homeLat, homeLng]} icon={homePortIcon}>
+        {(showVesselMarkers || isBriefing) && homePortIcon && isValidLatLng(homeLat, homeLng) && (
+          <Marker position={[homeLat, homeLng]} title={labels?.homePort || 'Home port'} icon={isBriefing ? L.divIcon({
+            className: 'briefing-home-port', html: '<span style="display:block;width:24px;height:24px;border:3px solid white;border-radius:50%;background:#12211e;box-shadow:0 0 0 2px #12211e"></span>',
+            iconSize: [24, 24], iconAnchor: [12, 12],
+          }) : homePortIcon}>
             <Popup>
               <div className="font-sans text-brand-black p-1">
                 <div className="font-black text-xs uppercase tracking-wide">
-                  🏠 {userProfile?.port || "Home Port Anchorage"}
+                  {isBriefing ? labels?.homePort : '🏠'} {userProfile?.port || "Home Port Anchorage"}
                 </div>
                 <div className="text-[10px] text-gray-500 font-bold mt-1">
                   Coordinates: {homeLat.toFixed(4)}°N, {homeLng.toFixed(4)}°E
@@ -500,12 +588,12 @@ export default function MapInner({
         )}
 
         {/* Active Selected Location Pin Marker */}
-        {selectedLocationPinIcon && center && isValidLatLng(center[0], center[1]) && (
+        {!isBriefing && selectedLocationPinIcon && center && isValidLatLng(center[0], center[1]) && (
           <Marker position={[center[0], center[1]]} icon={selectedLocationPinIcon}>
             <Popup>
               <div className="font-sans text-brand-black p-1">
                 <div className="font-black text-xs uppercase tracking-wider text-[#10B981]">
-                  📍 Selected Location Point
+                  {viewMode === 'auto' ? '📍 Selected Location Point' : 'Home port'}
                 </div>
                 <div className="text-[10px] text-gray-600 font-bold mt-1">
                   {center[0].toFixed(4)}° N, {center[1].toFixed(4)}° E
@@ -540,11 +628,11 @@ export default function MapInner({
           const species = spot.species || [spot.family || ""];
           const depth = spot.depth || 50;
 
-          const isUnsafe = manualOverrideHold || spot.isUnsafe;
+          const isUnsafe = !isBriefing && (manualOverrideHold || spot.isUnsafe);
           const isSelected = selectedHotspot?.id === spot.id;
 
           // Resolve display color using catch probability gradient shade
-          const speciesColor = getHotspotDisplayColor(type, selectedSpecies, species, spot.catchProbability);
+          const speciesColor = isBriefing ? '#087F5B' : getHotspotDisplayColor(type, selectedSpecies, species, spot.catchProbability);
 
           const markerIcon = isUnsafe
             ? unsafeHotspotIcon
@@ -576,6 +664,7 @@ export default function MapInner({
               />
               )}
               <Marker
+                title={name}
                 position={[lat, lng]}
                 icon={markerIcon}
                 eventHandlers={{
@@ -585,7 +674,7 @@ export default function MapInner({
                   },
                 }}
               >
-                <Popup>
+                {!isBriefing && <Popup>
                   <div className="font-sans text-brand-black p-1 space-y-1.5 max-w-[210px]">
                     <div className="flex items-center gap-1.5 font-black text-sm">
                       <span className="text-base">{spot.icon || "🐟"}</span>
@@ -634,7 +723,7 @@ export default function MapInner({
                     {spot.lastUpdated || "Optimal oceanographic conditions observed."}
                   </p>
                 </div>
-              </Popup>
+                </Popup>}
             </Marker>
           </React.Fragment>
           );

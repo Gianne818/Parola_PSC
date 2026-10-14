@@ -2,6 +2,8 @@
 
 import React, { createContext, useContext, useState, useEffect, useCallback } from "react";
 import { UserProfile, AlertNotification, WeatherTelemetry, Hotspot, FuelPool, PhilippineRegion } from "../types";
+import { readUpdates } from '../lib/updates';
+import { APPLICATION_COPY } from '../components/application/application-copy';
 import { storageService } from "../services/storageService";
 import { fetchLiveWeather } from "../services/weatherService";
 import { fetchHotspots } from "../services/supabaseHotspotService";
@@ -51,70 +53,7 @@ export const MUNICIPAL_PORTS = [
 ];
 
 // Initial default notifications
-const INITIAL_NOTIFICATIONS: AlertNotification[] = [
-  {
-    id: "n-eval-today",
-    type: "evaluation",
-    title: {
-      en: "Rate Today's SMS Advisory Catch Accuracy",
-      tl: "I-evaluate ang Accuracy ng SMS Advisory Ngayong Araw",
-      ceb: "I-evaluate ang Accuracy sa SMS Advisory Karong Adlawa",
-      hil: "I-evaluate ang Accuracy sang SMS Advisory Subong nga Adlaw"
-    },
-    message: {
-      en: `Help calibrate AI models: Rate the catch prediction accuracy for your most recent SMS advisory sent today (${new Date().toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })}). Were predicted hotspots accurate?`,
-      tl: `Tumulong sa pag-calibrate ng AI model: I-rate ang catch prediction accuracy para sa iyong pinakabagong SMS advisory ngayong araw (${new Date().toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })}). Naging tumpak ba ang inirekomendang hotspots?`,
-      ceb: `Tabang sa pag-calibrate sa AI model: I-rate ang catch prediction accuracy alang sa imong pinakabag-o nga SMS advisory karong adlawa (${new Date().toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })}). Naging tukma ba ang mga hotspots?`,
-      hil: `Bulig sa pag-calibrate sang AI model: I-rate ang catch prediction accuracy para sa imo pinakabag-o nga SMS advisory subong nga adlaw (${new Date().toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })}). Naging tumpak bala ang mga hotspots?`
-    },
-    timestamp: "Today",
-    read: false,
-    priority: "high",
-    location: "Mercedes Deep / Home Port",
-    actionRequired: true
-  },
-  {
-    id: "n1",
-    type: "weather",
-    title: {
-      en: "Storm Signal #1 Raised",
-      tl: "Storm Signal #1 Itinaas",
-      ceb: "Storm Signal #1 Gipahibalo",
-      hil: "Storm Signal #1 Gintukod"
-    },
-    message: {
-      en: "PAGASA raised Signal 1 over eastern Luzon waters. Wave heights up to 2.8m expected near Mercedes Deep. Small motorized bancas hold sailing.",
-      tl: "Nagtaas ang PAGASA ng Signal 1 sa karagatan ng silangang Luzon. Alon na aabot sa 2.8m ay inaasahan malapit sa Mercedes Deep. Iwasang pumalaot muna.",
-      ceb: "Nagpagula ang PAGASA og Signal 1 sa sidlakang bahin sa Luzon. Alon nga moabot og 2.8m gipaabot duol sa Mercedes Deep. Likayi una ang paglawig.",
-      hil: "Nagpapanaug ang PAGASA sang Signal 1 sa sidlangan sang Luzon. Balod nga madata sa 2.8m ginalantaw malapit sa Mercedes Deep. Likawi anay ang magpalaot."
-    },
-    timestamp: "10 mins ago",
-    read: false,
-    priority: "high",
-    location: "Mercedes Deep",
-    actionRequired: true
-  },
-  {
-    id: "n2",
-    type: "fuel",
-    title: {
-      en: "Fuel Pool Nearing Goal",
-      tl: "Krudo Pool Malapit na sa Layunin",
-      ceb: "Krudo Pool Hapit na sa Target",
-      hil: "Krudo Pool Malapit na sa Target"
-    },
-    message: {
-      en: "Mercedes Fishermen Pool B is now at 85% volume (3,400L / 4,000L). Lock in your discount of -₱2.50/L before closing tonight!",
-      tl: "Ang Mercedes Fishermen Pool B ay nasa 85% na (3,400L / 4,000L). Sumali na para makuha ang discount na -₱2.50/L bago mag-sarado mamayang gabi!",
-      ceb: "Ang Mercedes Fishermen Pool B anaa na sa 85% (3,400L / 4,000L). Apil na aron makuha ang diskwento nga -₱2.50/L sa dili pa mosira karong gabii!",
-      hil: "Ang Mercedes Fishermen Pool B yara na sa 85% (3,400L / 4,000L). Mangin parte na para makuha ang diskwento nga -₱2.50/L antes magsirado karong gabii!"
-    },
-    timestamp: "1 hour ago",
-    read: false,
-    priority: "medium",
-    location: "Mercedes Fish Port"
-  }
-];
+const INITIAL_NOTIFICATIONS: AlertNotification[] = [];
 
 // Initial default fuel pools
 const DEFAULT_POOLS: FuelPool[] = [
@@ -185,6 +124,7 @@ interface AppContextType {
   deleteFuelPool: (poolId: string) => void;
   simulateNotification: () => void;
   markNotificationRead: (id: string) => void;
+  markAllNotificationsRead: () => void;
   purgeNotifications: () => void;
   refreshWeather: () => Promise<void>;
 }
@@ -308,6 +248,10 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       setIsInitialized(true);
     }, 0);
   }, []);
+
+  useEffect(() => {
+    if (isInitialized) storageService.setItem("parola-notifications-clean", notifications);
+  }, [isInitialized, notifications]);
 
   // Sync state to body element for global font-scale and theme classes
   useEffect(() => {
@@ -816,30 +760,32 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       title: randomTemplate.title,
       message: randomTemplate.message,
       timestamp: "Just now",
+      provenance: "sample",
+      occurredAt: new Date().toISOString(),
       read: false,
       priority: randomTemplate.priority,
       location: userProfile.port,
       actionRequired: randomTemplate.actionRequired
     };
 
-    const updated = [newAlert, ...notifications];
-    setNotifications(updated);
-    storageService.setItem("parola-notifications-clean", updated);
+    setNotifications(previous => [newAlert, ...previous]);
     
     // Play sound or fire toast
     showToast(`New ${randomTemplate.type} alert received: "${randomTemplate.title[language]}"`, "info");
   };
 
   const markNotificationRead = (id: string) => {
-    const updated = notifications.map(n => n.id === id ? { ...n, read: true } : n);
-    setNotifications(updated);
-    storageService.setItem("parola-notifications-clean", updated);
+    setNotifications(previous => readUpdates(previous, id));
+  };
+
+  const markAllNotificationsRead = () => {
+    setNotifications(previous => readUpdates(previous));
   };
 
   const purgeNotifications = () => {
     setNotifications([]);
     storageService.setItem("parola-notifications-clean", []);
-    showToast("Notifications cleared.", "info");
+    showToast(APPLICATION_COPY[language].historyCleared, "info");
   };
 
   const refreshWeather = async () => {
@@ -892,6 +838,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         deleteFuelPool,
         simulateNotification,
         markNotificationRead,
+        markAllNotificationsRead,
         purgeNotifications,
         refreshWeather,
       }}

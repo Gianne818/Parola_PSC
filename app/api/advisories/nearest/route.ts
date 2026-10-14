@@ -3,6 +3,8 @@ import { calculateDistance } from '../../../../utils/spatial';
 import { getDbPool } from '@/lib/db';
 import { RATE_LIMITS, checkRateLimit, rateLimitExceededResponse } from '@/lib/rate-limit';
 import type { Pool } from 'pg';
+import { PHILIPPINE_REGIONS } from '@/data/philippineRegions';
+import { loadRegionalPredictions, type PredictionRow } from '@/lib/regional-predictions';
 
 const DEFAULT_LAT = 14.0122;
 const DEFAULT_LON = 123.0114;
@@ -17,17 +19,6 @@ interface SpeciesBounds {
   temp_max: number;
   depth_min?: number;
   depth_max?: number;
-}
-
-interface PredictionRow {
-  id: number;
-  catch_probability: string | number;
-  model_type?: string | null;
-  sst?: string | number | null;
-  chl_a?: string | number | null;
-  dbscan_cluster_id?: number | null;
-  created_at?: string | null;
-  centroid_wkt?: string | null;
 }
 
 /** Escape LIKE wildcards so user input can't force full-table wildcard scans. */
@@ -165,6 +156,11 @@ export async function GET(request: Request) {
       return NextResponse.json({ error: 'species is too long.', hotspots: [] }, { status: 400 });
     }
     const species = speciesRaw?.trim() ? speciesRaw.trim() : null;
+    const regionId = searchParams.get('region');
+    const region = PHILIPPINE_REGIONS.find(item => item.id === regionId);
+    if (regionId !== null && !region) {
+      return NextResponse.json({ error: 'Unknown advisory region.', hotspots: [] }, { status: 400 });
+    }
 
     const db = getDbPool(3);
     if (!db) {
@@ -179,7 +175,7 @@ export async function GET(request: Request) {
       speciesBounds = await getSpeciesBounds(db, species);
     }
 
-    const result = await db.query(
+    const result = region ? await loadRegionalPredictions(db, region, lat, lon, limit) : await db.query(
       `SELECT
         id,
         prediction_date,
@@ -206,6 +202,7 @@ export async function GET(request: Request) {
         hotspots: [],
         source: 'postgres_direct',
         message: 'No predictions found for today. Pipeline may not have run yet.',
+        ...('metadata' in result ? { metadata: result.metadata } : {}),
       });
     }
 
@@ -247,10 +244,12 @@ export async function GET(request: Request) {
         distance_km: distKm,
         efficiency_ratio: efficiencyRatio,
         model_type: row.model_type || 'pelagic',
+        model_type_known: row.model_type === 'pelagic' || row.model_type === 'demersal' || row.model_type === 'both',
         sst: sstVal,
         chl_a: row.chl_a ? Number(row.chl_a) : null,
         dbscan_cluster_id: row.dbscan_cluster_id,
         created_at: row.created_at,
+        prediction_date: row.prediction_date,
       };
     });
 
@@ -259,6 +258,7 @@ export async function GET(request: Request) {
         hotspots,
         source: 'postgres_direct',
         count: hotspots.length,
+        ...('metadata' in result ? { metadata: result.metadata } : {}),
         ...(speciesBounds ? { species_hsi_applied: species, species_bounds: speciesBounds } : {}),
       },
       { headers: { 'Cache-Control': 'public, s-maxage=300, stale-while-revalidate=60' } }

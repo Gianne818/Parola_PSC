@@ -31,6 +31,24 @@ beforeEach(() => {
 });
 
 describe('POST /api/users/register', () => {
+  it.each(['09123456789', '+639123456789', '0912 345 6789', '+63 912 345 6789'])('accepts optional spaces in %s', async phone => {
+    const query = vi.fn((sql: string) => Promise.resolve({ rows: sql.includes('SELECT') ? [] : [{ id: 'new-user', phone_number: phone }] }));
+    getDbPoolMock.mockReturnValue({ query } as never);
+    const res = await POST(postJson({ ...validBody, phone_number: phone }));
+    expect(res.status).toBe(201);
+    expect(query).toHaveBeenCalledWith(expect.stringContaining('SELECT'), [phone]);
+    expect(fetch).not.toHaveBeenCalled();
+  });
+
+  it.each(['091234567890', '+14155552671', '631234567890', '09123456789abc'])('rejects a non-Philippine mobile number %s before writing', async phone => {
+    const query = vi.fn();
+    getDbPoolMock.mockReturnValue({ query } as never);
+    const res = await POST(postJson({ ...validBody, phone_number: phone }));
+    expect(res.status).toBe(400);
+    expect(query).not.toHaveBeenCalled();
+    expect(fetch).not.toHaveBeenCalled();
+  });
+
   it('returns 201 for a new user', async () => {
     const selectMock = vi.fn().mockResolvedValue({ rows: [] });
     const insertMock = vi.fn().mockResolvedValue({

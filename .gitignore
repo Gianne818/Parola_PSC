@@ -61,6 +61,9 @@ ehthumbs.db
 *.temp
 *~
 fixplan.md
+BACKEND_COVERAGE_AUDIT.md
+*.audit.md
+scratch/
 
 # Local tool binaries (e.g. gitleaks used for secret-scan verification)
 .tools/
@@ -73,12 +76,38 @@ SKILL.md
 CLAUDE.md
 .claude/
 .cursor/
+.windsurf/
+.continue/
+.supermaven/
+.cline/
+.system_generated/
 
 # Build caches & test runner artifacts
 .turbo/
 .cache/
 .eslintcache
 vitest.config.*.timestamp*
+test-results/
+playwright-report/
+blob-report/
+.nyc_output/
+
+# Python data science, type checking & model artifacts
+*.pkl
+*.joblib
+*.h5
+*.hdf5
+*.npy
+*.npz
+*.nc
+*.zarr
+.mypy_cache/
+.dmypy.json
+dmypy.json
+*.egg-info/
+*.egg
+*.pyo
+*.pyd
 
 # Environment files - NEVER commit real secrets
 .env

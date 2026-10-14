@@ -48,6 +48,8 @@ export interface PriceTier {
 }
 
 export interface AlertNotification {
+  provenance?: 'verified' | 'sample' | 'legacy';
+  occurredAt?: string | null;
   id: string;
   type: 'weather' | 'fuel' | 'survey' | 'community' | 'evaluation';
   title: {

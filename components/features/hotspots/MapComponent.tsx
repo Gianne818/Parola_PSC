@@ -11,12 +11,13 @@ import { ALL_SPECIES_CONFIGS, GENERAL_PELAGIC_COLOR, GENERAL_DEMERSAL_COLOR, GEN
 /** Prediction radius the ML model was trained on: 9 km */
 export const PREDICTION_RADIUS_KM = 9;
 export const PREDICTION_RADIUS_METERS = PREDICTION_RADIUS_KM * 1000;
+export type MapViewMode = 'auto' | 'port' | 'region';
 
 // Dynamically import the real Leaflet map component with SSR disabled
 const MapInner = dynamic(() => import("./MapInner"), {
   ssr: false,
   loading: () => (
-    <div className="w-full h-full min-h-[450px] md:min-h-[580px] bg-slate-50 dark:bg-[#0B1513] flex flex-col items-center justify-center space-y-4">
+    <div className="w-full h-full bg-slate-50 dark:bg-[#0B1513] flex flex-col items-center justify-center space-y-4">
       <Compass className="w-12 h-12 text-brand-green animate-spin [animation-duration:3s]" />
       <span className="text-xs font-black uppercase tracking-widest text-gray-400">
         Initializing ECDIS System...
@@ -25,7 +26,15 @@ const MapInner = dynamic(() => import("./MapInner"), {
   )
 });
 
+const BriefingMapInner = dynamic(() => import('./MapInner'), {
+  ssr: false,
+  loading: () => <div className="w-full h-full bg-[#EAF1EC]" aria-busy="true" />,
+});
+
 interface MapComponentProps {
+  presentation?: 'default' | 'dashboard';
+  onTileError?: () => void;
+  labels?: { loading: string; homePort: string; advisoryArea: string };
   hotspots: Hotspot[];
   selectedHotspot: Hotspot | null;
   onSelectHotspot: (hotspot: Hotspot | null) => void;
@@ -46,6 +55,12 @@ interface MapComponentProps {
   isolateRegion?: boolean;
   /** Whether to show vessel, home port, and storm hazard markers (default: true) */
   showVesselMarkers?: boolean;
+  /** Controlled framing for home-port selection; auto preserves dashboard behavior. */
+  viewMode?: MapViewMode;
+  boundaryMaskOpacity?: number;
+  minHeight?: number;
+  /** Limit navigation to a viewport-sized Philippine overview. */
+  constrainToPhilippines?: boolean;
 }
 
 export const MapComponent: React.FC<MapComponentProps> = ({
@@ -62,16 +77,32 @@ export const MapComponent: React.FC<MapComponentProps> = ({
   showRegionBoundary = true,
   isolateRegion = false,
   showVesselMarkers = true,
+  viewMode = 'auto',
+  boundaryMaskOpacity = 0.4,
+  minHeight = 450,
+  constrainToPhilippines = false,
+  presentation = 'default',
+  onTileError,
+  labels,
 }) => {
   const { userProfile, updateProfile, showToast, manualOverrideHold } = useApp();
   const [customWaypoint, setCustomWaypoint] = useState<{ lat: number; lng: number } | null>(null);
   const [currentZoom, setCurrentZoom] = useState<number>(10);
 
+  if (presentation === 'dashboard') return (
+    <BriefingMapInner hotspots={hotspots} selectedHotspot={selectedHotspot} onSelectHotspot={onSelectHotspot}
+      filterType="both" selectedSpecies={[]} userProfile={userProfile} customWaypoint={null}
+      setCustomWaypoint={setCustomWaypoint} showToast={showToast} manualOverrideHold={manualOverrideHold}
+      center={center} activeRegion={activeRegion} showRegionBoundary={showRegionBoundary} showVesselMarkers={false}
+      viewMode={viewMode} boundaryMaskOpacity={boundaryMaskOpacity} minHeight={minHeight}
+      showPredictionRadius={false} presentation="dashboard" onTileError={onTileError} labels={labels} />
+  );
+
   return (
     <div className={`relative w-full h-full bg-blue-50/30 flex flex-col md:flex-row select-none ${hideSidebar ? 'border-none rounded-none' : 'border border-slate-200 dark:border-teal-950 rounded-[2rem] overflow-hidden shadow-inner'}`}>
       
       {/* ECDIS Nautical Chart Container */}
-      <div className="relative flex-1 bg-blue-50/50 w-full h-full min-h-[450px]">
+      <div className="relative flex-1 bg-blue-50/50 w-full h-full" style={{ minHeight }}>
         <MapInner
           hotspots={hotspots}
           selectedHotspot={selectedHotspot}
@@ -91,6 +122,10 @@ export const MapComponent: React.FC<MapComponentProps> = ({
           showRegionBoundary={showRegionBoundary}
           isolateRegion={isolateRegion}
           showVesselMarkers={showVesselMarkers}
+          viewMode={viewMode}
+          boundaryMaskOpacity={boundaryMaskOpacity}
+          minHeight={minHeight}
+          constrainToPhilippines={constrainToPhilippines}
         />
 
         {/* Map Model & Species Prediction Color Legend Overlay */}

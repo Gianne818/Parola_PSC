@@ -1,11 +1,7 @@
 import { NextResponse } from 'next/server';
 import { pbkdf2Sync, randomBytes } from 'node:crypto';
 import { getDbPool } from '@/lib/db';
-
-function isValidPhilippinePhone(phone: string): boolean {
-  const digits = phone.replace(/\D/g, '');
-  return /^(63\d{10}|09\d{9}|9\d{9})$/.test(digits);
-}
+import { isValidPhilippineMobile } from '@/lib/philippine-mobile';
 
 function isValidTime(value: unknown): boolean {
   return typeof value === 'string' && /^\d{2}:\d{2}(:\d{2})?$/.test(value);
@@ -60,7 +56,7 @@ export async function POST(request: Request) {
     }
 
     const cleanedPhone = phone_number.trim();
-    if (cleanedPhone.length > 32 || !isValidPhilippinePhone(cleanedPhone)) {
+    if (!isValidPhilippineMobile(cleanedPhone)) {
       return NextResponse.json({ error: 'phone_number must be a valid Philippine mobile number.' }, { status: 400 });
     }
 
