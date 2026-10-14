@@ -8,17 +8,20 @@ import { useRouter } from 'next/navigation';
 import { ArrowLeft, ArrowRight, Check, ChevronDown, Eye, EyeOff, Globe, Info, LoaderCircle, Anchor } from 'lucide-react';
 import { useApp } from '@/context/AppContext';
 import { ParolaLogo } from '@/components/ui/ParolaLogo';
+import type { MascotOutcome } from '@/components/ui/GalunggongMascot';
 import { AUTH_COPY, AUTH_LANGUAGES, type AuthLanguage } from './auth-copy';
+import { canEnterPhilippineMobile, isValidPhilippineMobile } from '@/lib/philippine-mobile';
 import styles from './auth.module.css';
 
 const GalunggongMascot = dynamic(() => import('@/components/ui/GalunggongMascot'), {
   ssr: false,
 });
 
-function CoastalScene({ mobile = false, showMascot, focusedField }: {
+function CoastalScene({ mobile = false, showMascot, focusedField, outcome }: {
   mobile?: boolean;
   showMascot: boolean;
   focusedField: 'phone' | 'password' | null;
+  outcome: MascotOutcome | null;
 }) {
   return (
     <div className={mobile ? styles.mobileArtwork : styles.artwork} aria-hidden="true">
@@ -35,6 +38,7 @@ function CoastalScene({ mobile = false, showMascot, focusedField }: {
             <GalunggongMascot
               isTypingEmail={focusedField === 'phone'}
               isTypingPassword={focusedField === 'password'}
+              outcome={outcome}
               className="w-full h-full"
             />
           </div>
@@ -66,7 +70,7 @@ export default function AuthPage({ mode }: { mode: 'login' | 'register' }) {
   const { isInitialized, isAuthenticated, userProfile, logout, language, changeLanguage, login, register } = useApp();
   const copy = AUTH_COPY[language] ?? AUTH_COPY.en;
   const isRegistration = mode === 'register';
-  const [phone, setPhone] = useState('+63 ');
+  const [phone, setPhone] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [fieldErrors, setFieldErrors] = useState<FieldErrors>({});
@@ -77,6 +81,7 @@ export default function AuthPage({ mode }: { mode: 'login' | 'register' }) {
   const [code, setCode] = useState('');
   const [focusedField, setFocusedField] = useState<'phone' | 'password' | null>(null);
   const [mascotScene, setMascotScene] = useState<'desktop' | 'mobile' | null>(null);
+  const [outcome, setOutcome] = useState<MascotOutcome | null>(null);
   const phoneRef = useRef<HTMLInputElement>(null);
   const passwordRef = useRef<HTMLInputElement>(null);
   const codeRef = useRef<HTMLInputElement>(null);
@@ -109,21 +114,26 @@ export default function AuthPage({ mode }: { mode: 'login' | 'register' }) {
     setFormError(null);
   };
 
+  const reactToOutcome = (kind: MascotOutcome['kind']) => {
+    setOutcome((previous) => ({ id: (previous?.id ?? 0) + 1, kind }));
+  };
+
   const handleAccountSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     if (submitPending.current || leaving) return;
-    const digits = phone.replace(/\D/g, '');
     const errors: FieldErrors = {};
-    if (!/^(63\d{10}|09\d{9}|9\d{9})$/.test(digits) || /[^\d+\s()-]/.test(phone) || phone.trim().length > 32) errors.phone = 'phoneInvalid';
+    if (!isValidPhilippineMobile(phone)) errors.phone = 'phoneInvalid';
     if (!password) errors.password = 'passwordRequired';
     else if (isRegistration && (password.length < 6 || password.length > 128)) errors.password = 'passwordInvalid';
     setFieldErrors(errors);
     setFormError(null);
     if (errors.phone || errors.password) {
+      reactToOutcome('failure');
       (errors.phone ? phoneRef : passwordRef).current?.focus();
       return;
     }
     if (isRegistration) {
+      reactToOutcome('success');
       setCode('');
       setStep('verify');
       return;
@@ -133,10 +143,15 @@ export default function AuthPage({ mode }: { mode: 'login' | 'register' }) {
     try {
       const result = await login(phone.trim(), password);
       if (result.ok) {
+        reactToOutcome('success');
         setLeaving(true);
         router.push('/dashboard');
-      } else setFormError(authError(result.error, 'loginFailed'));
+      } else {
+        reactToOutcome('failure');
+        setFormError(authError(result.error, 'loginFailed'));
+      }
     } catch {
+      reactToOutcome('failure');
       setFormError({ key: 'loginFailed' });
     } finally {
       submitPending.current = false;
@@ -150,6 +165,7 @@ export default function AuthPage({ mode }: { mode: 'login' | 'register' }) {
     setFormError(null);
     // This is the existing preview flow, not verification of phone ownership.
     if (code !== DEMO_CODE) {
+      reactToOutcome('failure');
       setFieldErrors({ code: 'codeInvalid' });
       codeRef.current?.focus();
       return;
@@ -163,13 +179,16 @@ export default function AuthPage({ mode }: { mode: 'login' | 'register' }) {
         licenseNo: `FL-2026-${Math.floor(1000 + Math.random() * 9000)}`,
       }, password);
       if (result.ok) {
+        reactToOutcome('success');
         sessionStorage.setItem('just-registered', 'true');
         router.push('/onboarding');
       } else {
+        reactToOutcome('failure');
         setLeaving(false);
         setFormError(authError(result.error, 'registerFailed'));
       }
     } catch {
+      reactToOutcome('failure');
       setLeaving(false);
       setFormError({ key: 'registerFailed' });
     } finally {
@@ -189,7 +208,7 @@ export default function AuthPage({ mode }: { mode: 'login' | 'register' }) {
     <div className={styles.page} lang={language}>
       <div className={styles.layout}>
         <aside className={styles.coast} aria-label="Parola">
-          <CoastalScene showMascot={mascotScene === 'desktop'} focusedField={focusedField} />
+          <CoastalScene showMascot={mascotScene === 'desktop'} focusedField={focusedField} outcome={outcome} />
           <Link href="/" className={styles.brand} aria-label="Parola">
             <ParolaLogo iconOnly className="h-9 w-9" /><span>Parola</span>
           </Link>
@@ -210,7 +229,7 @@ export default function AuthPage({ mode }: { mode: 'login' | 'register' }) {
           </header>
           <div className={styles.content}>
             <div className={styles.mobileBrand}>
-              <CoastalScene mobile showMascot={mascotScene === 'mobile'} focusedField={focusedField} />
+              <CoastalScene mobile showMascot={mascotScene === 'mobile'} focusedField={focusedField} outcome={outcome} />
               <Link href="/" className={styles.brand} aria-label="Parola"><ParolaLogo iconOnly className="h-9 w-9" /><span>Parola</span></Link>
             </div>
             {showSession ? (
@@ -230,6 +249,7 @@ export default function AuthPage({ mode }: { mode: 'login' | 'register' }) {
                     </li>
                   ))}
                 </ol>}
+                <div key={step} className={isVerification ? styles.verification : undefined}>
                 <div className={styles.heading}>
                   <h1 id="auth-title">{isVerification ? copy.verifyTitle : isRegistration ? copy.registerTitle : copy.loginTitle}</h1>
                   <p>{isVerification ? copy.verifyDescription : isRegistration ? copy.registerDescription : copy.loginDescription}</p>
@@ -255,7 +275,7 @@ export default function AuthPage({ mode }: { mode: 'login' | 'register' }) {
                   <form className={styles.form} onSubmit={handleAccountSubmit} noValidate aria-labelledby="auth-title" aria-busy={pending}>
                     <div className={styles.field}>
                       <label className={styles.label} htmlFor="auth-phone">{copy.phone}</label>
-                      <input ref={phoneRef} id="auth-phone" name="phone" className={styles.input} type="tel" inputMode="tel" autoComplete={isRegistration ? 'tel' : 'username'} placeholder="+63 912 345 6789" value={phone} disabled={pending} required aria-invalid={!!fieldErrors.phone} aria-describedby={fieldErrors.phone ? 'phone-hint phone-error' : 'phone-hint'} onFocus={() => setFocusedField('phone')} onBlur={() => setFocusedField(null)} onChange={(event) => { setPhone(event.target.value); clearError('phone'); }} />
+                      <input ref={phoneRef} id="auth-phone" name="phone" className={styles.input} type="tel" inputMode="tel" autoComplete={isRegistration ? 'tel' : 'username'} placeholder="09123456789" value={phone} disabled={pending} required aria-invalid={!!fieldErrors.phone} aria-describedby={fieldErrors.phone ? 'phone-hint phone-error' : 'phone-hint'} onFocus={() => setFocusedField('phone')} onBlur={() => setFocusedField(null)} onChange={(event) => { if (canEnterPhilippineMobile(event.target.value)) { setPhone(event.target.value); clearError('phone'); } }} />
                       <p id="phone-hint" className={styles.hint}>{isRegistration ? copy.registerPhoneHint : copy.phoneHint}</p>
                       {fieldErrors.phone && <p id="phone-error" className={styles.fieldError} role="alert">{copy[fieldErrors.phone]}</p>}
                     </div>
@@ -276,7 +296,9 @@ export default function AuthPage({ mode }: { mode: 'login' | 'register' }) {
                     </button>
                   </form>
                 )}
+                </div>
                 <p className={styles.switch}>{isRegistration ? copy.haveAccount : copy.noAccount}<Link href={isRegistration ? '/login' : '/register'}>{isRegistration ? copy.signIn : copy.createAccount}</Link></p>
+                {!isVerification && <p className={styles.portContext}><Anchor size={15} aria-hidden="true" /><span>{copy.homePortContext}</span></p>}
               </>
             )}
           </div>

@@ -7,7 +7,7 @@ export const metadata: Metadata = { title: "Pricing | Parola" };
 
 export default function InAppPricingPage() {
   return (
-    <AuthLayout>
+    <AuthLayout variant="application">
       <div className="max-w-6xl mx-auto w-full">
         <ResourceEmbed>
           <PricingPage />

@@ -7,7 +7,7 @@ export const metadata: Metadata = { title: "System Guide | Parola" };
 
 export default function InAppGuidePage() {
   return (
-    <AuthLayout>
+    <AuthLayout variant="application">
       <div className="max-w-6xl mx-auto w-full">
         <ResourceEmbed>
           <GuidePage />

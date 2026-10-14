@@ -6,13 +6,13 @@ import ToastContainer from '../components/ui/ToastContainer';
 
 const interTight = Inter_Tight({
   subsets: ['latin'],
-  variable: '--font-display',
+  variable: '--font-parola-display',
   display: 'swap',
 });
 
 const sans = Plus_Jakarta_Sans({
   subsets: ['latin'],
-  variable: '--font-sans',
+  variable: '--font-parola-body',
   display: 'swap',
 });
 
@@ -24,10 +24,6 @@ export const metadata: Metadata = {
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="en" className={`${interTight.variable} ${sans.variable}`}>
-      <head>
-        {/* Preconnect and fallback for General Sans */}
-        <link rel="stylesheet" href="https://api.fontshare.com/v2/css?f[]=general-sans@300,400,500,600,700,900&display=swap" />
-      </head>
       <body suppressHydrationWarning className="antialiased">
         <AppProvider>
           {children}

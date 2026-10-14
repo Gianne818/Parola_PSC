@@ -1,0 +1,35 @@
+.hub { width: 100%; max-width: 1120px; }
+.intro { max-width: 65ch; margin: 0 0 24px; color: var(--muted); font-size: 1em; line-height: 1.65; }
+.destinations { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 20px; }
+.destination { min-width: 0; display: flex; flex-direction: column; gap: 16px; padding: var(--card-padding); background: var(--surface); border: 1px solid var(--line); border-radius: var(--panel-radius); box-shadow: var(--surface-shadow); color: var(--ink); text-decoration: none; }
+.destination:hover { border-color: #afc3b5; }
+.destination > svg { color: var(--green); }
+.destination h2 { margin: 0 0 12px; font: 800 1.375em/1.25 var(--font-display); letter-spacing: -.025em; text-wrap: balance; }
+.destination p { margin: 0; color: var(--muted); font-size: 1em; line-height: 1.625; }
+.open { display: flex; align-items: center; gap: 8px; min-height: 44px; margin-top: auto; color: var(--green); font-size: .875em; font-weight: 700; }
+.open svg { transition: transform 160ms ease; }
+.destination:hover .open svg { transform: translateX(3px); }
+.reference { margin-top: 24px; padding: var(--card-padding); border: 1px solid var(--line); border-radius: var(--panel-radius); box-shadow: var(--surface-shadow); background: var(--surface); }
+.reference h2 { margin: 0 0 24px; font: 800 1.5em/1.2 var(--font-display); letter-spacing: -.025em; }
+.reference dl { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); margin: 0; }
+.reference dl > div { min-width: 0; padding: 0 20px; border-left: 1px solid var(--line); }
+.reference dl > div:first-child { border-left: 0; padding-left: 0; }
+.reference dt { color: var(--muted); display: flex; align-items: center; gap: 8px; font-size: .8125em; }
+.reference dt svg { color: var(--green); }
+.reference dd { margin: 10px 0 0; font-size: 1em; font-weight: 650; font-variant-numeric: tabular-nums; }
+@media (max-width: 1099px) {
+  .destinations { grid-template-columns: 1fr; gap: 16px; }
+  .destination { display: grid; grid-template-columns: 24px minmax(0, 1fr) auto; align-items: start; gap: 20px; }
+  .destination > svg { margin-top: 3px; }
+  .open { margin-top: 0; align-self: center; }
+  .reference dl { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 24px 0; }
+  .reference dl > div:nth-child(3) { border-left: 0; padding-left: 0; }
+}
+@media (max-width: 767px) {
+  .destination, .reference { padding: 24px; }
+  .destination { grid-template-columns: 24px minmax(0, 1fr); gap: 12px; }
+  .open { grid-column: 2; }
+  .reference dl > div { padding-inline: 12px; }
+  .reference dt { flex-wrap: wrap; }
+}
+@media (prefers-reduced-motion: reduce) { .open svg { transition: none; } }

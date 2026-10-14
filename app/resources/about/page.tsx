@@ -7,7 +7,7 @@ export const metadata: Metadata = { title: "About | Parola" };
 
 export default function InAppAboutPage() {
   return (
-    <AuthLayout>
+    <AuthLayout variant="application">
       <div className="max-w-6xl mx-auto w-full">
         <ResourceEmbed>
           <AboutPage />

@@ -1,7 +1,14 @@
 @import "tailwindcss";
 
+@theme inline {
+  --font-sans: var(--font-parola-body), sans-serif;
+  --font-display: var(--font-parola-display), sans-serif;
+}
+
 
 :root {
+  --font-sans: var(--font-parola-body), sans-serif;
+  --font-display: var(--font-parola-display), sans-serif;
   --color-brand-green: #00B37E;
   --color-brand-black: #12211E;
   --color-brand-offwhite: #FFFFFF;
@@ -10,8 +17,6 @@
 }
 
 @theme {
-  --font-sans: "General Sans", sans-serif;
-  --font-display: "Inter Tight", sans-serif;
 
   --color-brand-green: #00B37E;
   --color-brand-black: #12211E;

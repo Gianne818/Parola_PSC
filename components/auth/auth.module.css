@@ -26,7 +26,7 @@
 
 .layout { min-height: 100svh; display: grid; grid-template-columns: minmax(0, 55fr) minmax(0, 45fr); }
 .coast { position: sticky; top: 0; align-self: start; isolation: isolate; height: 100svh; min-width: 0; overflow: hidden; padding: 28px 40px; background: var(--auth-coast); border-right: 1px solid var(--auth-line); }
-.brand { position: relative; display: inline-flex; align-items: center; gap: 10px; min-height: 44px; width: fit-content; color: var(--auth-ink); text-decoration: none; font-family: var(--font-display); font-size: 23px; font-weight: 800; letter-spacing: -.7px; }
+.brand { position: relative; display: inline-flex; align-items: center; gap: 10px; min-height: 44px; width: fit-content; color: var(--auth-ink); text-decoration: none; font-family: var(--font-display); font-size: 20px; font-weight: 900; letter-spacing: -.5px; text-transform: uppercase; }
 .artwork, .mobileArtwork { position: absolute; inset: 0; z-index: -1; container-type: size; overflow: hidden; }
 /* The image and mascot share the original 2752 x 1536 artwork coordinates.
    This reproduces cover cropping without moving the mascot off its clearing. */
@@ -37,7 +37,7 @@
 .mascot { position: absolute; isolation: isolate; left: 29%; top: 65.7%; width: 20%; aspect-ratio: 1; transform: translate(-50%, -71.5%); }
 .mascot::after { content: ''; position: absolute; z-index: -1; left: 50%; top: 71.5%; width: 34%; height: 4%; border-radius: 50%; background: rgb(20 41 25 / .2); filter: blur(2px); transform: translate(-50%, -50%); }
 .sceneCaption { position: absolute; left: 40px; right: 40px; bottom: 40px; max-width: 330px; margin: 0; color: white; font-family: var(--font-display); font-size: 24px; font-weight: 500; line-height: 1.4; letter-spacing: -.35px; text-wrap: balance; }
-.panel { display: flex; flex-direction: column; min-width: 0; padding: 28px 48px 22px; }
+.panel { display: grid; grid-template-rows: auto minmax(min-content, 1fr) auto; min-width: 0; min-height: 100svh; padding: 28px 48px; }
 .topbar { display: flex; align-items: center; justify-content: space-between; gap: 16px; }
 .home { display: inline-flex; align-items: center; gap: 7px; min-height: 44px; color: var(--auth-muted); font-size: 13px; text-decoration: none; }
 .home:hover, .footer a:hover { color: var(--auth-green); }
@@ -46,10 +46,10 @@
 .language > svg:last-child { position: absolute; right: 0; pointer-events: none; }
 .language select { appearance: none; background: transparent; color: var(--auth-ink); border: 0; border-radius: 4px; min-height: 44px; padding: 12px 19px 12px 24px; font-family: inherit; font-size: 13px; cursor: pointer; max-width: 160px; }
 .mobileBrand { display: none; }
-.content { width: 100%; max-width: 400px; margin: auto; padding: 48px 0; }
-.heading { margin-bottom: 30px; }
-.heading h1 { font-family: var(--font-display); font-size: 32px; font-weight: 650; letter-spacing: -.8px; line-height: 1.15; margin: 0 0 12px; text-wrap: balance; }
-.heading p { color: var(--auth-muted); font-size: 15px; line-height: 1.7; margin: 0; }
+.content { align-self: center; justify-self: center; width: 100%; max-width: 400px; padding: 32px 0; }
+.heading { margin-bottom: 24px; text-align: center; }
+.heading h1 { font-family: var(--font-display); font-size: 36px; font-weight: 800; letter-spacing: -.8px; line-height: 1.15; margin: 0 0 12px; text-wrap: balance; }
+.heading p { color: var(--auth-muted); font-size: 15px; line-height: 1.7; margin: 0; text-wrap: balance; }
 .steps { display: flex; align-items: start; margin: 0 0 28px; padding: 0; list-style: none; }
 .steps li { flex: 1; display: flex; align-items: center; gap: 7px; color: var(--auth-muted); font-size: 12px; line-height: 1.4; }
 .steps li:not(:last-child)::after { content: ''; height: 1px; flex: 1; margin: 0 9px 0 2px; background: var(--auth-line); }
@@ -57,7 +57,11 @@
 .stepNumber { width: 23px; height: 23px; border: 1px solid var(--auth-line); border-radius: 50%; display: inline-flex; align-items: center; justify-content: center; flex-shrink: 0; font-size: 10px; }
 li[aria-current="step"] .stepNumber { background: var(--auth-green); border-color: var(--auth-green); color: white; }
 .complete .stepNumber { color: var(--auth-green); background: #e5f0e9; border-color: #b4d4c2; }
-.form { display: flex; flex-direction: column; gap: 22px; }
+.form { display: flex; flex-direction: column; gap: 20px; }
+.verification { opacity: 1; transform: translateY(0); transition: opacity 160ms ease, transform 160ms ease; }
+@starting-style {
+  .verification { opacity: 0; transform: translateY(4px); }
+}
 .field { min-width: 0; }
 .label { display: block; font-size: 14px; font-weight: 600; margin-bottom: 9px; }
 .inputWrap { position: relative; }
@@ -76,22 +80,21 @@ li[aria-current="step"] .stepNumber { background: var(--auth-green); border-colo
 .spinner { animation: spin 850ms linear infinite; }
 .switch { border-top: 1px solid var(--auth-line); padding-top: 23px; margin-top: 27px; text-align: center; font-size: 13px; line-height: 1.8; color: var(--auth-muted); }
 .switch a { color: var(--auth-green); font-weight: 650; margin-left: 5px; text-decoration: underline; text-underline-offset: 4px; }
+.portContext { display: flex; align-items: flex-start; justify-content: center; gap: 7px; margin: 16px 0 0; color: var(--auth-muted); font-size: 13px; line-height: 1.6; }
+.portContext svg { margin-top: 3px; }
 .demoNote { display: flex; gap: 9px; align-items: flex-start; padding: 12px 14px; border: 1px solid var(--auth-line); border-radius: 8px; font-size: 13px; line-height: 1.65; color: var(--auth-muted); background: #f0f4ee; }
 .demoNote svg { margin-top: 2px; color: var(--auth-green); }
 .demoNote strong { color: var(--auth-ink); display: block; font-weight: 600; margin-bottom: 2px; }
 .demoCode { font-family: ui-monospace, monospace; font-size: 28px; font-weight: 600; letter-spacing: .24em; color: var(--auth-ink); padding: 18px 0 8px; display: block; }
 .codeInput { letter-spacing: .3em; font-family: ui-monospace, monospace; }
-.textButton { display: inline-flex; gap: 7px; align-items: center; justify-content: center; align-self: center; min-height: 44px; border: 0; background: transparent; color: var(--auth-green); font-family: inherit; font-size: 13px; text-decoration: underline; text-underline-offset: 4px; padding: 8px; }
-.sessionIcon { width: 48px; height: 48px; background: var(--auth-coast); color: var(--auth-green); border-radius: 12px; display: flex; align-items: center; justify-content: center; margin-bottom: 23px; }
-.sessionPhone { display: block; color: var(--auth-ink); margin: 8px 0 26px; font-size: 16px; overflow-wrap: anywhere; }
+.textButton { display: flex; gap: 7px; align-items: center; justify-content: center; align-self: center; width: fit-content; margin-inline: auto; min-height: 44px; border: 0; background: transparent; color: var(--auth-green); font-family: inherit; font-size: 13px; text-decoration: underline; text-underline-offset: 4px; padding: 8px; }
+.sessionIcon { width: 48px; height: 48px; background: var(--auth-coast); color: var(--auth-green); border-radius: 12px; display: flex; align-items: center; justify-content: center; margin: 0 auto 23px; }
+.sessionPhone { display: block; color: var(--auth-ink); margin: 8px 0 26px; font-size: 16px; text-align: center; overflow-wrap: anywhere; }
 .footer { display: flex; align-items: center; justify-content: center; gap: 20px; font-size: 12px; color: var(--auth-muted); }
 .footer a { display: inline-flex; align-items: center; min-height: 44px; color: inherit; text-decoration: none; }
 .visuallyHidden { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; border: 0; }
 @keyframes spin { to { transform: rotate(360deg); } }
 
-@media (min-width: 1500px) {
-  .panel { padding-right: max(48px, calc((100vw - 1320px) / 2)); }
-}
 @media (max-width: 1100px) and (min-width: 960px) {
   .coast, .panel { padding-left: 28px; padding-right: 28px; }
   .sceneCaption { left: 28px; right: 28px; }
@@ -102,10 +105,9 @@ li[aria-current="step"] .stepNumber { background: var(--auth-green); border-colo
   .panel { min-height: 100svh; padding: 14px 24px 12px; }
   .topbar { max-width: 520px; width: 100%; margin: 0 auto; }
   .mobileBrand { display: flex; justify-content: flex-end; align-items: flex-start; position: relative; isolation: isolate; height: 136px; overflow: hidden; padding: 12px 16px; border-radius: 8px; margin-bottom: 28px; background: var(--auth-coast); }
-  .mobileBrand .brand { font-size: 21px; }
   .mobileArtwork .sceneFrame { top: 25%; transform: translateY(-25%); }
   .mobileArtwork .mascot { width: 27%; }
-  .content { padding-top: 24px; padding-bottom: 32px; }
+  .content { padding-top: 32px; padding-bottom: 32px; }
   .heading h1 { font-size: 32px; }
 }
 @media (max-width: 380px) {
@@ -116,6 +118,7 @@ li[aria-current="step"] .stepNumber { background: var(--auth-green); border-colo
   .steps li:not(:last-child)::after { margin-right: 6px; margin-left: 0; }
 }
 @media (prefers-reduced-motion: reduce) {
+  .verification { transition: none; }
   .page :is(button, a, input) { transition: none; }
   .spinner { animation: none; }
 }

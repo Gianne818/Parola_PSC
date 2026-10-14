@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useEffect, useSyncExternalStore } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import {
@@ -21,13 +21,31 @@ import { useTranslation } from "../../hooks/use-translation";
 import { ParolaLogo } from "../ui/ParolaLogo";
 import { BottomNav } from "./BottomNav";
 import { getFontScaleClass } from "../../utils/fontScale";
+import DashboardShell from '../dashboard/DashboardShell';
+import { DASHBOARD_COPY } from '../dashboard/dashboard-copy';
+import { isVerifiedUpdate } from '@/lib/updates';
 
 interface AuthLayoutProps {
   children: React.ReactNode;
   fluid?: boolean;
+  variant?: 'default' | 'dashboard' | 'application';
 }
 
-export const AuthLayout: React.FC<AuthLayoutProps> = ({ children, fluid = false }) => {
+function subscribeSidebar(listener: () => void) {
+  window.addEventListener('storage', listener);
+  window.addEventListener('parola-sidebar-change', listener);
+  return () => {
+    window.removeEventListener('storage', listener);
+    window.removeEventListener('parola-sidebar-change', listener);
+  };
+}
+
+function sidebarSnapshot() {
+  try { return localStorage.getItem('sidebar-collapsed') === 'true'; }
+  catch { return false; }
+}
+
+export const AuthLayout: React.FC<AuthLayoutProps> = ({ children, fluid = false, variant = 'default' }) => {
   const router = useRouter();
   const pathname = usePathname();
   const {
@@ -42,15 +60,7 @@ export const AuthLayout: React.FC<AuthLayoutProps> = ({ children, fluid = false 
   } = useApp();
   
   const { t } = useTranslation(language);
-  const [isCollapsed, setIsCollapsed] = useState(false);
-
-  useEffect(() => {
-    // Read sidebar state on load
-    const saved = localStorage.getItem("sidebar-collapsed");
-    if (saved) {
-      setIsCollapsed(saved === "true");
-    }
-  }, []);
+  const isCollapsed = useSyncExternalStore(subscribeSidebar, sidebarSnapshot, () => false);
 
   // Sync auth state
   useEffect(() => {
@@ -64,18 +74,20 @@ export const AuthLayout: React.FC<AuthLayoutProps> = ({ children, fluid = false 
 
   const toggleSidebar = () => {
     const next = !isCollapsed;
-    setIsCollapsed(next);
     localStorage.setItem("sidebar-collapsed", String(next));
+    window.dispatchEvent(new Event('parola-sidebar-change'));
   };
 
   const navItems = [
-    { href: "/dashboard", icon: LayoutDashboard, label: t("dashboard") },
-    { href: "/alerts", icon: ShieldAlert, label: t("alerts") },
-    { href: "/notifications", icon: Bell, label: t("notifications"), badge: true },
-    { href: "/settings", icon: Settings, label: t("settings") },
+    { href: "/dashboard", icon: LayoutDashboard, label: DASHBOARD_COPY[language].dashboard },
+    { href: "/alerts", icon: ShieldAlert, label: DASHBOARD_COPY[language].advisories },
+    { href: "/notifications", icon: Bell, label: DASHBOARD_COPY[language].updates, badge: true },
+    { href: "/settings", icon: Settings, label: DASHBOARD_COPY[language].settings },
   ];
 
-  const unreadCount = notifications.filter((n) => !n.read).length;
+  const unreadCount = notifications.filter((n) => isVerifiedUpdate(n) && !n.read).length;
+
+  if (variant === 'dashboard' || variant === 'application') return <DashboardShell collapsed={isCollapsed} toggleSidebar={toggleSidebar} contentMode={variant === 'application' ? 'scroll' : 'workspace'}>{children}</DashboardShell>;
 
   return (
     <div className={`min-h-screen flex flex-col bg-[#F2F6F4] text-[#12211E] ${getFontScaleClass(fontScale)} transition-colors duration-300`}>

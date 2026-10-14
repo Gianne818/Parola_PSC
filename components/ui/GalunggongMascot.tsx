@@ -3,11 +3,17 @@
 import React, { useEffect, useRef } from 'react';
 import { useRive, useStateMachineInput, Layout, Fit, Alignment } from '@rive-app/react-canvas';
 
+export interface MascotOutcome {
+  id: number;
+  kind: 'success' | 'failure';
+}
+
 interface GalunggongMascotProps {
   isTypingPassword?: boolean;
   isTypingEmail?: boolean;
   triggerSuccess?: boolean;
   triggerFailure?: boolean;
+  outcome?: MascotOutcome | null;
   className?: string;
 }
 
@@ -16,10 +22,13 @@ export default function GalunggongMascot({
   isTypingEmail = false,
   triggerSuccess = false,
   triggerFailure = false,
+  outcome = null,
   className = '',
 }: GalunggongMascotProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const hasSentMouseOverRef = useRef<boolean>(false);
+  // A newly mounted scene must not replay an outcome from before a resize.
+  const lastOutcomeId = useRef(outcome?.id ?? 0);
   // Tracks whether the mascot canvas is currently visible in the viewport.
   // All rive.startRendering() calls are gated on this so the render loop
   // never spins while the mascot is offscreen.
@@ -162,6 +171,8 @@ export default function GalunggongMascot({
     };
   }, [rive, cursorXInput, cursorYInput]);
 
+  /* Rive inputs are mutable SDK handles; assigning value is its documented imperative API. */
+  /* eslint-disable react-hooks/immutability */
   useEffect(() => {
     if (isTypingEmailInput) {
       isTypingEmailInput.value = isTypingEmail;
@@ -175,6 +186,7 @@ export default function GalunggongMascot({
       if (rive && isVisibleRef.current) rive.startRendering();
     }
   }, [isTypingPassword, isTypingPasswordInput, rive]);
+  /* eslint-enable react-hooks/immutability */
 
   useEffect(() => {
     if (triggerSuccess && triggerSuccessInput) {
@@ -189,6 +201,15 @@ export default function GalunggongMascot({
       if (rive && isVisibleRef.current) rive.startRendering();
     }
   }, [triggerFailure, triggerFailureInput, rive]);
+
+  useEffect(() => {
+    if (!outcome || outcome.id <= lastOutcomeId.current) return;
+    const input = outcome.kind === 'success' ? triggerSuccessInput : triggerFailureInput;
+    if (!input || !rive) return;
+    lastOutcomeId.current = outcome.id;
+    input.fire();
+    if (isVisibleRef.current) rive.startRendering();
+  }, [outcome, triggerSuccessInput, triggerFailureInput, rive]);
 
   return (
     <div ref={containerRef} className={`relative select-none ${className}`}>

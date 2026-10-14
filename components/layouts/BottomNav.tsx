@@ -6,22 +6,25 @@ import { usePathname } from "next/navigation";
 import { LayoutDashboard, ShieldAlert, Bell, User, Settings } from "lucide-react";
 import { useTranslation } from "../../hooks/use-translation";
 import { useApp } from "../../context/AppContext";
+import { DASHBOARD_COPY } from '../dashboard/dashboard-copy';
+import { isVerifiedUpdate } from '@/lib/updates';
 
 export const BottomNav: React.FC = () => {
   const pathname = usePathname();
   const { language } = useApp();
   const { t } = useTranslation(language);
 
+  const copy = DASHBOARD_COPY[language];
   const tabs = [
-    { href: "/dashboard", icon: LayoutDashboard, label: "Dash" },
-    { href: "/alerts", icon: ShieldAlert, label: "Alerts" },
-    { href: "/notifications", icon: Bell, label: "Notifs", badge: true },
-    { href: "/profile", icon: User, label: "Profile" },
-    { href: "/settings", icon: Settings, label: "Settings" },
+    { href: "/dashboard", icon: LayoutDashboard, label: copy.dashboard },
+    { href: "/alerts", icon: ShieldAlert, label: copy.advisories },
+    { href: "/notifications", icon: Bell, label: copy.updates, badge: true },
+    { href: "/profile", icon: User, label: copy.profile },
+    { href: "/settings", icon: Settings, label: copy.settings },
   ];
 
   const { notifications } = useApp();
-  const unreadCount = notifications.filter((n) => !n.read).length;
+  const unreadCount = notifications.filter((n) => isVerifiedUpdate(n) && !n.read).length;
 
   return (
     <div className="md:hidden fixed bottom-0 left-0 right-0 h-16 bg-white dark:bg-[#12211E] border-t border-gray-100 dark:border-teal-950 flex items-center justify-around px-2 z-40 shadow-[0_-4px_12px_rgba(0,0,0,0.05)]">

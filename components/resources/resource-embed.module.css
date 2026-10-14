@@ -19,11 +19,15 @@
 }
 .embed > div {
   min-height: auto;
+  background: var(--canvas);
 }
+/* Only the outer canvas and its framing adapt; resource content keeps its styling. */
+.embed > div > main { padding-inline: 0; }
+.embed :global(nav[aria-label="Pricing sections"]) { background: var(--canvas); backdrop-filter: none; }
 @media (max-width: 767px) {
   .embed {
-    --info-nav-top: 56px;
-    --info-anchor-offset: 140px;
-    --guide-sticky-top: 80px;
+    --info-nav-top: 0px;
+    --info-anchor-offset: 82px;
+    --guide-sticky-top: 24px;
   }
 }
