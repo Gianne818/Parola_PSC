@@ -149,7 +149,112 @@ Owner: **Son only**. Updated October 15, 2026. [Hub](../../fixplan.md) | [Shared
 
 ## Progress and handoffs
 
-No assignment is completed and no handoff is outstanding at document creation. Keep this section short; update only your own records. Do not mark a parent feature complete from this checklist alone.
+### Current REG-02-SON migration/persistence continuation
+
+**Verified October 15, 2026:** user-provided output from
+`node scripts/apply-registration-migration.mjs --remove-reported-duplicates`
+confirms the approved two profiles were backed up and removed, migration 02
+committed, and all real database checks passed: normalization, privileges/RLS,
+owner isolation, consent grant/withdrawal/audit, eligibility and Auth revocation.
+Other profile count was preserved and verification fixtures were rolled back.
+The local backup was checked to contain two full profile rows, and the latest
+duplicate report has zero groups. No OTP/SMS request was made by this operation.
+Enabled `PAROLA_PHONE_AUTH_ENABLED=true` in ignored `.env.local`; restart the
+local backend to load it. Actual app HTTP/session integration, Tier's client
+acceptance/UI integration and deployment configuration remain pending. REG-02
+is not marked fully complete. The notes below record earlier attempts.
+
+The read-only report confirmed one duplicate pair. The user was unsure whether
+they were test profiles and explicitly authorized removing both. Prepared a
+Git-ignored local plan restricted to those exact snapshots and added the opt-in
+`--remove-reported-duplicates` operation. It backs up complete rows before deletion,
+refuses linked history/verified profiles/custom DELETE triggers/complex keys, and
+commits removal only with successful migration verification. Auth users are not
+deleted. Nine focused cleanup safeguard tests pass with mocked database calls.
+An execution attempt still failed at connection with EACCES; no rows were removed
+by the agent. User-terminal execution remains pending. No SMS credits were used.
+
+After certificate setup, the user's migration run reached application but raised
+P0001. The migration's explicit apply-stage guard rejects duplicate canonical
+phones; this is suspected, not yet confirmed from live rows. Added a read-only
+`--check-duplicates` command and preflight, saving affected rows only in the
+Git-ignored `.registration-duplicates.local` file and printing counts. Known
+duplicate-guard errors now have a useful safe message. No reconciliation,
+automatic account deletion/merge or SMS request was performed.
+
+The user's terminal reached PostgreSQL but reported `SELF_SIGNED_CERT_IN_CHAIN`
+before migration. The runner now loads a PEM CA from `SUPABASE_DB_CA_FILE` or the
+connection-string `sslrootcert` parameter, validates CA content and keeps
+certificate/hostname verification enabled. Existing inline `SUPABASE_DB_CA`
+remains supported. The TLS error now prints certificate setup instructions;
+no bypass flag or SMS call was added. Live migration verification is still pending.
+
+The user kept UI ownership with their teammate and explicitly requested no SMS
+credit use during backend work. Added the tracked
+`scripts/apply-registration-migration.mjs` runner with apply, dry-run and
+verify-only modes. It verifies the schema and rollback-only fixtures in one
+transaction: existing account count, normalized phones, RLS/privileges, actual
+owner/stranger reads, consent/audit changes, version/owner eligibility and Auth
+confirmation revocation. Fixture rows are removed before committing a migration;
+no OTP or iPROG endpoint is called. Migration 02 now explicitly enables user RLS
+and grants owner-policy-governed SELECT to authenticated clients.
+
+The existing apply helper and the new runner both failed at connection with
+EACCES in this workspace; neither made database changes. The new runner's syntax
+and help checks pass. 157 focused tests across eight backend/hook test files pass;
+these use mocked SMS calls. Live database verification remains pending a run from
+the user's terminal. No extra SMS was requested, app phone-auth flag was not
+enabled, and REG-02-SON is not marked complete.
+
+Replaced the stale draft registration contract with the implemented endpoint,
+session, consent, validation/error and migration examples. Updated shared C03/D02
+notes with the user's proven live OTP test. The UI handoff is now ready for Tier's
+acceptance; all UI files remain unchanged.
+
+### Current REG-02-SON update: Supabase/iPROG OTP hook
+
+Son selected Supabase SMS OTP, explicit messaging consent and helpers disabled
+in this chat; this supersedes the pending backend selection described in the
+older progress notes below. The user reports enabling the Phone provider.
+The requested hook implementation is in `supabase/functions/send-sms/index.ts`,
+with signature/validation/provider-failure tests and `supabase/config.toml`.
+Ownership for this new integration path is recorded in the shared rules.
+See [the deployment and hook setup guide](../supabase-sms-otp.md).
+
+Focused validation: 33 handler tests pass using the isolated cached Vitest runner;
+the scoped TypeScript check and `git diff --check` also pass.
+The local tests exercise real HMAC signatures and mocked HTTP only. Deployment
+was initially blocked by missing workspace deployment credentials/network access;
+the user subsequently deployed and configured the function in the dashboard.
+On October 15, 2026, user-provided terminal output from
+`node scripts/test-supabase-otp.mjs` confirms that a real OTP request was accepted,
+the received code verified the expected phone and Supabase issued a session.
+Session tokens were not printed or saved. The user reports a single SMS on the
+successful repeat test; the earlier multiple-message cause is not established.
+Migration application, profile/consent persistence and Tier's client integration
+remain pending; REG-02-SON remains partial. The app phone-auth flag remains disabled.
+
+### Earlier progress
+
+Live setup check exposed `hook_payload_invalid_content_type` after the user saved
+the Phone provider setting. The local successful hook response previously lacked
+JSON content type. A response-contract regression assertion failed against that
+implementation; the fix returns `Response.json({})` with HTTP 200. Redeployment
+of the existing dashboard function and a fresh real OTP request remain required.
+
+Subsequent user setup: screenshots show a deployed function, an enabled Send SMS
+hook and the three required secret names. Son reports Verify JWT off and the hook
+URL set to the actual `smooth-action` endpoint. Added the standalone
+`scripts/test-supabase-otp.mjs` for a local, single-SMS request/verification check
+without displaying or persisting session tokens. Live verification remains pending
+the user entering their number/code locally. This does not validate the portal UI,
+apply the registration migration or enable the app phone-auth flag.
+
+REG-02-SON selected in the current chat. Independent hardening covers confirmed-phone ownership checks, registration input validation and refusing credential-dropping writes on an outdated schema. Verification route/helper scope were requested from Son; C03/D02 remain pending. See the [registration contract proposal](registration-contract.md). No assignment is marked complete.
+
+`REG-02-SON | Tier | components/auth/AuthPage.tsx, context/AppContext.tsx, utils/auth-fetch.ts | replace demo verification/local login with the agreed server flow, collect consent, surface persistence errors and label offline drafts | blocks end-to-end live registration | requested; waiting for C03/D02 agreement`
+
+Validation: `git diff --check` passed. Focused registration/auth tests and the full `npm test` could not start because Vitest is unavailable; TypeScript could not start because its installation is incomplete. `npm ci --ignore-scripts --no-audit --no-fund --prefer-offline` could not complete: the missing Next.js archive download timed out/returned EACCES; installation was stopped. No passing runtime/typecheck result is claimed. Separate standards/spec reviews found no introduced defects and confirmed the live requirements remain incomplete. No migration, live SMS or deployment was performed. Son subsequently authorized a Conventional Commit and push of this partial work on `codex/son/reg-02`; verification/provider and helper-scope decisions remain pending.
 
 Handoff format: `from assignment | to member | requested file/contract change | acceptance/example | blocks | status`. Record requests here and summarize them in chat; this does not authorize sending external messages or changing the recipient's files. The recipient updates their own plan; Son updates shared integration decisions after coordination.
 
