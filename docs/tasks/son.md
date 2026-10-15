@@ -149,7 +149,11 @@ Owner: **Son only**. Updated October 15, 2026. [Hub](../../fixplan.md) | [Shared
 
 ## Progress and handoffs
 
-No assignment is completed and no handoff is outstanding at document creation. Keep this section short; update only your own records. Do not mark a parent feature complete from this checklist alone.
+REG-02-SON selected in the current chat. Independent hardening covers confirmed-phone ownership checks, registration input validation and refusing credential-dropping writes on an outdated schema. Verification route/helper scope were requested from Son; C03/D02 remain pending. See the [registration contract proposal](registration-contract.md). No assignment is marked complete.
+
+`REG-02-SON | Tier | components/auth/AuthPage.tsx, context/AppContext.tsx, utils/auth-fetch.ts | replace demo verification/local login with the agreed server flow, collect consent, surface persistence errors and label offline drafts | blocks end-to-end live registration | requested; waiting for C03/D02 agreement`
+
+Validation: `git diff --check` passed. Focused registration/auth tests and the full `npm test` could not start because Vitest is unavailable; TypeScript could not start because its installation is incomplete. `npm ci --ignore-scripts --no-audit --no-fund --prefer-offline` could not complete: the missing Next.js archive download timed out/returned EACCES; installation was stopped. No passing runtime/typecheck result is claimed. Separate standards/spec reviews found no introduced defects and confirmed the live requirements remain incomplete. No migration, live SMS or deployment was performed. Son subsequently authorized a Conventional Commit and push of this partial work on `codex/son/reg-02`; verification/provider and helper-scope decisions remain pending.
 
 Handoff format: `from assignment | to member | requested file/contract change | acceptance/example | blocks | status`. Record requests here and summarize them in chat; this does not authorize sending external messages or changing the recipient's files. The recipient updates their own plan; Son updates shared integration decisions after coordination.
 

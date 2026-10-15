@@ -124,4 +124,57 @@ describe('POST /api/users/register', () => {
     const missing = await POST(postJson({ phone_number: '09171234567' }));
     expect(missing.status).toBe(400);
   });
+
+  it.each([null, '', '  ', false, true, [], [14], {}])('rejects coerced coordinates: %j', async coordinate => {
+    const query = vi.fn();
+    getDbPoolMock.mockReturnValue({ query } as never);
+    for (const field of ['latitude', 'longitude']) {
+      const res = await POST(postJson({ ...validBody, [field]: coordinate }));
+      expect(res.status).toBe(400);
+      expect((await res.json()).error).toContain(field);
+    }
+    expect(query).not.toHaveBeenCalled();
+    expect(fetch).not.toHaveBeenCalled();
+  });
+
+  it.each(['24:00', '05:60', '05:00:60', '99:99:99', '', null, 500])('rejects an invalid advisory time: %j', async time => {
+    const query = vi.fn();
+    getDbPoolMock.mockReturnValue({ query } as never);
+    const res = await POST(postJson({ ...validBody, preferred_advisory_time: time }));
+    expect(res.status).toBe(400);
+    expect((await res.json()).error).toContain('preferred_advisory_time');
+    expect(query).not.toHaveBeenCalled();
+    expect(fetch).not.toHaveBeenCalled();
+  });
+
+  it('preserves zero coordinates and accepts numeric coordinate strings', async () => {
+    const query = vi.fn((sql: string) => Promise.resolve({ rows: sql.includes('SELECT') ? [] : [{ id: 'new-user' }] }));
+    getDbPoolMock.mockReturnValue({ query } as never);
+    const res = await POST(postJson({ ...validBody, latitude: '0', longitude: 0, preferred_advisory_time: '23:59:59' }));
+    expect(res.status).toBe(201);
+    expect(query.mock.calls[1]).toEqual([
+      expect.stringContaining('INSERT'),
+      expect.arrayContaining([0, '23:59:59']),
+    ]);
+  });
+
+  it('does not drop the password or fall back when the database schema is outdated', async () => {
+    const query = vi.fn((sql: string) => {
+      if (sql.includes('SELECT')) return Promise.resolve({ rows: [] });
+      return Promise.reject(Object.assign(new Error('missing password_hash'), { code: '42703' }));
+    });
+    getDbPoolMock.mockReturnValue({ query } as never);
+    const res = await POST(postJson({ ...validBody, password: 'secret123' }));
+    expect(res.status).toBe(503);
+    expect((await res.json()).error).toMatch(/database update/i);
+    expect(query).toHaveBeenCalledTimes(2);
+    expect(fetch).not.toHaveBeenCalled();
+  });
+
+  it.each([[], null, 'registration'])('rejects a non-object JSON body: %j', async body => {
+    const res = await POST(postJson(body));
+    expect(res.status).toBe(400);
+    expect(getDbPoolMock).not.toHaveBeenCalled();
+    expect(fetch).not.toHaveBeenCalled();
+  });
 });

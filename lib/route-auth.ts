@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
+import { isValidPhilippineMobile } from '@/lib/philippine-mobile';
 
 export type AuthUser = {
   id: string;
@@ -15,7 +16,7 @@ function getBearerToken(request: Request): string | null {
 }
 
 function normalizePhone(value: string | null | undefined): string {
-  return (value ?? '').replace(/\D/g, '');
+  return value && isValidPhilippineMobile(value) ? value.replace(/\D/g, '') : '';
 }
 
 /**
@@ -36,10 +37,8 @@ export async function getSupabaseUser(request: Request): Promise<AuthUser | null
     const supabase = createClient(url, anonKey);
     const { data, error } = await supabase.auth.getUser(token);
     if (error || !data.user) return null;
-    const phone =
-      (data.user.phone as string | null) ??
-      ((data.user.user_metadata as Record<string, unknown> | null)?.phone_number as string | null) ??
-      null;
+    // Metadata is caller-editable. Only Auth's confirmed phone establishes ownership.
+    const phone = data.user.phone_confirmed_at ? data.user.phone || null : null;
     return { id: data.user.id, phone };
   } catch {
     return null;

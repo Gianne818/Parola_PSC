@@ -4,7 +4,12 @@ import { getDbPool } from '@/lib/db';
 import { isValidPhilippineMobile } from '@/lib/philippine-mobile';
 
 function isValidTime(value: unknown): boolean {
-  return typeof value === 'string' && /^\d{2}:\d{2}(:\d{2})?$/.test(value);
+  return typeof value === 'string' && /^(?:[01]\d|2[0-3]):[0-5]\d(?::[0-5]\d)?$/.test(value);
+}
+
+function parseCoordinate(value: unknown): number {
+  if (typeof value !== 'number' && (typeof value !== 'string' || !value.trim())) return NaN;
+  return Number(value);
 }
 
 /** Match FastAPI hash_password(): salt$pbkdf2-sha256-100k-hex */
@@ -28,7 +33,7 @@ function isRemotePlainHttp(url: string): boolean {
 export async function POST(request: Request) {
   try {
     const body = await request.json().catch(() => null);
-    if (!body || typeof body !== 'object') {
+    if (!body || typeof body !== 'object' || Array.isArray(body)) {
       return NextResponse.json({ error: 'Invalid JSON body.' }, { status: 400 });
     }
     const { phone_number, full_name, home_port_name, latitude, longitude, preferred_advisory_time, coop_id, password } = body as {
@@ -60,8 +65,8 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'phone_number must be a valid Philippine mobile number.' }, { status: 400 });
     }
 
-    const lat = Number(latitude);
-    const lng = Number(longitude);
+    const lat = parseCoordinate(latitude);
+    const lng = parseCoordinate(longitude);
     if (!Number.isFinite(lat) || lat < -90 || lat > 90) {
       return NextResponse.json({ error: 'latitude must be between -90 and 90.' }, { status: 400 });
     }
@@ -76,6 +81,9 @@ export async function POST(request: Request) {
     }
     if (password !== undefined && (typeof password !== 'string' || password.length < 6 || password.length > 128)) {
       return NextResponse.json({ error: 'password must be 6-128 characters.' }, { status: 400 });
+    }
+    if (preferred_advisory_time !== undefined && !isValidTime(preferred_advisory_time)) {
+      return NextResponse.json({ error: 'preferred_advisory_time must be a valid HH:MM or HH:MM:SS time.' }, { status: 400 });
     }
 
     const safeFullName = (typeof full_name === 'string' && full_name.trim() ? full_name.trim() : cleanedPhone).slice(0, 100);
@@ -109,20 +117,13 @@ export async function POST(request: Request) {
             return NextResponse.json(res.rows[0], { status: 201 });
           }
         } catch (insertErr: unknown) {
-          // Column may not exist on DBs created before the password_hash migration.
+          // Never discard credentials to accommodate an outdated database.
           const code = (insertErr as { code?: string } | null)?.code;
           if (code !== '42703') throw insertErr;
-          const res = await db.query(
-            `INSERT INTO public.users (
-              phone_number, full_name, home_port_name, home_port_geom, preferred_advisory_time
-            )
-            VALUES ($1, $2, $3, ST_SetSRID(ST_MakePoint($4, $5), 4326), $6)
-            RETURNING id, phone_number, full_name, home_port_name, created_at;`,
-            [cleanedPhone, safeFullName, safePortName, lng, lat, safeTime]
+          return NextResponse.json(
+            { error: 'Registration requires a database update. Please contact support.' },
+            { status: 503 }
           );
-          if (res.rows && res.rows.length > 0) {
-            return NextResponse.json(res.rows[0], { status: 201 });
-          }
         }
       } catch (dbErr: unknown) {
         const code = (dbErr as { code?: string } | null)?.code;
