@@ -149,6 +149,68 @@ Owner: **Son only**. Updated October 15, 2026. [Hub](../../fixplan.md) | [Shared
 
 ## Progress and handoffs
 
+### Current REG-02-SON migration/persistence continuation
+
+**Verified October 15, 2026:** user-provided output from
+`node scripts/apply-registration-migration.mjs --remove-reported-duplicates`
+confirms the approved two profiles were backed up and removed, migration 02
+committed, and all real database checks passed: normalization, privileges/RLS,
+owner isolation, consent grant/withdrawal/audit, eligibility and Auth revocation.
+Other profile count was preserved and verification fixtures were rolled back.
+The local backup was checked to contain two full profile rows, and the latest
+duplicate report has zero groups. No OTP/SMS request was made by this operation.
+Enabled `PAROLA_PHONE_AUTH_ENABLED=true` in ignored `.env.local`; restart the
+local backend to load it. Actual app HTTP/session integration, Tier's client
+acceptance/UI integration and deployment configuration remain pending. REG-02
+is not marked fully complete. The notes below record earlier attempts.
+
+The read-only report confirmed one duplicate pair. The user was unsure whether
+they were test profiles and explicitly authorized removing both. Prepared a
+Git-ignored local plan restricted to those exact snapshots and added the opt-in
+`--remove-reported-duplicates` operation. It backs up complete rows before deletion,
+refuses linked history/verified profiles/custom DELETE triggers/complex keys, and
+commits removal only with successful migration verification. Auth users are not
+deleted. Nine focused cleanup safeguard tests pass with mocked database calls.
+An execution attempt still failed at connection with EACCES; no rows were removed
+by the agent. User-terminal execution remains pending. No SMS credits were used.
+
+After certificate setup, the user's migration run reached application but raised
+P0001. The migration's explicit apply-stage guard rejects duplicate canonical
+phones; this is suspected, not yet confirmed from live rows. Added a read-only
+`--check-duplicates` command and preflight, saving affected rows only in the
+Git-ignored `.registration-duplicates.local` file and printing counts. Known
+duplicate-guard errors now have a useful safe message. No reconciliation,
+automatic account deletion/merge or SMS request was performed.
+
+The user's terminal reached PostgreSQL but reported `SELF_SIGNED_CERT_IN_CHAIN`
+before migration. The runner now loads a PEM CA from `SUPABASE_DB_CA_FILE` or the
+connection-string `sslrootcert` parameter, validates CA content and keeps
+certificate/hostname verification enabled. Existing inline `SUPABASE_DB_CA`
+remains supported. The TLS error now prints certificate setup instructions;
+no bypass flag or SMS call was added. Live migration verification is still pending.
+
+The user kept UI ownership with their teammate and explicitly requested no SMS
+credit use during backend work. Added the tracked
+`scripts/apply-registration-migration.mjs` runner with apply, dry-run and
+verify-only modes. It verifies the schema and rollback-only fixtures in one
+transaction: existing account count, normalized phones, RLS/privileges, actual
+owner/stranger reads, consent/audit changes, version/owner eligibility and Auth
+confirmation revocation. Fixture rows are removed before committing a migration;
+no OTP or iPROG endpoint is called. Migration 02 now explicitly enables user RLS
+and grants owner-policy-governed SELECT to authenticated clients.
+
+The existing apply helper and the new runner both failed at connection with
+EACCES in this workspace; neither made database changes. The new runner's syntax
+and help checks pass. 157 focused tests across eight backend/hook test files pass;
+these use mocked SMS calls. Live database verification remains pending a run from
+the user's terminal. No extra SMS was requested, app phone-auth flag was not
+enabled, and REG-02-SON is not marked complete.
+
+Replaced the stale draft registration contract with the implemented endpoint,
+session, consent, validation/error and migration examples. Updated shared C03/D02
+notes with the user's proven live OTP test. The UI handoff is now ready for Tier's
+acceptance; all UI files remain unchanged.
+
 ### Current REG-02-SON update: Supabase/iPROG OTP hook
 
 Son selected Supabase SMS OTP, explicit messaging consent and helpers disabled

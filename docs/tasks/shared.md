@@ -34,7 +34,7 @@ File-group names in member checklists are shorthand for this table, never broade
 
 ## Interface handoffs (C03 backend selection recorded; consumer integration pending)
 
-**C03 registration subset, October 15, 2026:** Son explicitly selected Supabase SMS OTP, explicit messaging consent and disabled assisted access in this chat. Backend contract/examples are in [registration-contract.md](registration-contract.md). Tier consultation/client acceptance, real provider configuration, migration application and integration checks remain pending. This selection does not settle REG-01/D01 schedule defaults or report/review delegation.
+**C03 registration subset, October 15, 2026:** Son explicitly selected Supabase SMS OTP, explicit messaging consent and disabled assisted access in this chat. Backend contract/examples are in [registration-contract.md](registration-contract.md). User-provided command output confirms a live iPROG OTP/session test, migration 02 application and real database consent/owner-isolation checks. Two explicitly approved duplicate profiles were backed up and removed; other accounts and Auth identities were preserved. Tier consultation/client acceptance and actual app integration remain pending. This selection does not settle REG-01/D01 schedule defaults or report/review delegation.
 
 Son records each approved interface and example in this section after consulting producer/consumer owners. This document selects responsibilities, not final database/wire shapes. Existing product decisions remain unresolved below; agents must not invent defaults to clear a gate.
 
@@ -53,7 +53,7 @@ A gate is satisfied by a written agreed contract and representative examples/err
 
 ## Product decisions (D02 registration subset selected; remaining decisions pending)
 
-**D02 registration decision:** Son approved Supabase SMS OTP and explicit messaging consent, with helpers disabled for now (current chat, October 15, 2026). Backend registration and consent changes require the confirmed owner's Supabase session; admin keys do not enroll or consent on a fisher's behalf. Tier's client handoff and report/review assistance decisions remain pending. No live provider capability or delivery has been verified.
+**D02 registration decision:** Son approved Supabase SMS OTP and explicit messaging consent, with helpers disabled for now (current chat, October 15, 2026). Backend registration and consent changes require the confirmed owner's Supabase session; admin keys do not enroll or consent on a fisher's behalf. User-provided output confirms live iPROG OTP verification and database consent/audit/owner-isolation checks. Tier's client acceptance, actual app integration and report/review assistance decisions remain pending.
 
 The coordinators must record the actual decision, consulted members, evidence/date and affected gates. No name here grants legal approval or authority to choose unsupported scientific policy.
 

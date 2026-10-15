@@ -64,10 +64,12 @@ CREATE TRIGGER registration_consent_audit AFTER INSERT OR UPDATE ON public.users
 
 -- Self-service reads only. Profile/consent writes must use owner-checked APIs;
 -- an authenticated client must not write verification/consent columns directly.
+ALTER TABLE public.users ENABLE ROW LEVEL SECURITY;
 DROP POLICY IF EXISTS users_select_own ON public.users;
 CREATE POLICY users_select_own ON public.users FOR SELECT TO authenticated USING (auth.uid() = auth_user_id);
 DROP POLICY IF EXISTS users_update_own ON public.users;
 REVOKE INSERT, UPDATE, DELETE ON public.users FROM anon, authenticated;
+GRANT SELECT ON public.users TO authenticated;
 
 ALTER TABLE public.registration_consent_events ENABLE ROW LEVEL SECURITY;
 REVOKE ALL ON public.registration_consent_events FROM anon, authenticated;
