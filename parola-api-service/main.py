@@ -15,6 +15,7 @@ from database import get_db
 import models
 import schemas
 import hsi_calculator
+from species_catalog import resolve_species
 
 DEFAULT_SPECIES_SEED = [
     {
@@ -150,61 +151,20 @@ DEFAULT_SPECIES_SEED = [
 ]
 
 def find_species_profile(db: Session, query_str: str) -> Optional[dict]:
-    if not query_str:
-        return None
-    lower = query_str.strip().lower()
-
     try:
-        pelagics = db.query(models.PelagicSpecies).all()
-        for sp in pelagics:
-            n_match = lower in sp.species_name.lower() or sp.species_name.lower() in lower
-            f_match = sp.family and (lower in sp.family.lower() or sp.family.lower() in lower)
-            l_match = sp.local_name and (lower in sp.local_name.lower() or sp.local_name.lower() in lower)
-            if n_match or f_match or l_match:
-                return {
-                    "id": sp.id,
-                    "species_name": sp.species_name,
-                    "family": sp.family,
-                    "local_name": sp.local_name,
-                    "category": "pelagic",
-                    "temp_min": sp.temp_min,
-                    "temp_opt_low": sp.temp_opt_low,
-                    "temp_opt_high": sp.temp_opt_high,
-                    "temp_max": sp.temp_max,
-                    "depth_min": sp.depth_min,
-                    "depth_max": sp.depth_max,
-                }
+        rows = []
+        for model, category in ((models.PelagicSpecies, 'pelagic'), (models.DemersalSpecies, 'demersal')):
+            for row in db.query(model).limit(201).all():
+                rows.append({'id': row.id, 'category': category, 'species_name': row.common_name, 'common_name': row.common_name,
+                             'family': row.family, 'local_name': None, 'representative_species': row.representative_species, 'name_source': 'common_name'})
+        if len(rows) > 200:
+            raise ValueError('Catalog exceeds reviewed bound')
+        return resolve_species(rows, query_str)
+    except HTTPException:
+        raise
+    except Exception:
+        raise HTTPException(status_code=503, detail={'code': 'species_catalog_unavailable', 'message': 'Species catalog unavailable.'})
 
-        demersals = db.query(models.DemersalSpecies).all()
-        for sp in demersals:
-            n_match = lower in sp.species_name.lower() or sp.species_name.lower() in lower
-            f_match = sp.family and (lower in sp.family.lower() or sp.family.lower() in lower)
-            l_match = sp.local_name and (lower in sp.local_name.lower() or sp.local_name.lower() in lower)
-            if n_match or f_match or l_match:
-                return {
-                    "id": sp.id,
-                    "species_name": sp.species_name,
-                    "family": sp.family,
-                    "local_name": sp.local_name,
-                    "category": "demersal",
-                    "temp_min": sp.temp_min,
-                    "temp_opt_low": sp.temp_opt_low,
-                    "temp_opt_high": sp.temp_opt_high,
-                    "temp_max": sp.temp_max,
-                    "depth_min": sp.depth_min,
-                    "depth_max": sp.depth_max,
-                }
-    except Exception as e:
-        pass
-
-    for sp in DEFAULT_SPECIES_SEED:
-        n_match = lower in sp["species_name"].lower() or sp["species_name"].lower() in lower
-        f_match = lower in sp["family"].lower() or sp["family"].lower() in lower
-        l_match = lower in sp["local_name"].lower() or sp["local_name"].lower() in lower
-        if n_match or f_match or l_match:
-            return sp
-
-    return None
 
 app = FastAPI(
     title="Parola Pelagic Advisory API",
@@ -274,73 +234,9 @@ def startup_db_migration():
     try:
         db = next(get_db())
         db.execute(text("ALTER TABLE public.users ADD COLUMN IF NOT EXISTS password_hash TEXT;"))
-        db.execute(text("""
-            CREATE TABLE IF NOT EXISTS public.pelagic_species (
-                id BIGINT PRIMARY KEY,
-                species_name VARCHAR(100) NOT NULL,
-                family VARCHAR(100),
-                local_name VARCHAR(100),
-                temp_min FLOAT,
-                temp_opt_low FLOAT,
-                temp_opt_high FLOAT,
-                temp_max FLOAT,
-                depth_min FLOAT,
-                depth_max FLOAT
-            );
-        """))
-        db.execute(text("""
-            CREATE TABLE IF NOT EXISTS public.demersal_species (
-                id BIGINT PRIMARY KEY,
-                species_name VARCHAR(100) NOT NULL,
-                family VARCHAR(100),
-                local_name VARCHAR(100),
-                temp_min FLOAT,
-                temp_opt_low FLOAT,
-                temp_opt_high FLOAT,
-                temp_max FLOAT,
-                depth_min FLOAT,
-                depth_max FLOAT
-            );
-        """))
         db.commit()
-
-        p_count = db.query(models.PelagicSpecies).count()
-        if p_count == 0:
-            for item in DEFAULT_SPECIES_SEED:
-                if item["category"] == "pelagic":
-                    sp = models.PelagicSpecies(
-                        id=item["id"],
-                        species_name=item["species_name"],
-                        family=item["family"],
-                        local_name=item["local_name"],
-                        temp_min=item["temp_min"],
-                        temp_opt_low=item["temp_opt_low"],
-                        temp_opt_high=item["temp_opt_high"],
-                        temp_max=item["temp_max"],
-                        depth_min=item["depth_min"],
-                        depth_max=item["depth_max"]
-                    )
-                    db.add(sp)
-            db.commit()
-
-        d_count = db.query(models.DemersalSpecies).count()
-        if d_count == 0:
-            for item in DEFAULT_SPECIES_SEED:
-                if item["category"] == "demersal":
-                    sp = models.DemersalSpecies(
-                        id=item["id"],
-                        species_name=item["species_name"],
-                        family=item["family"],
-                        local_name=item["local_name"],
-                        temp_min=item["temp_min"],
-                        temp_opt_low=item["temp_opt_low"],
-                        temp_opt_high=item["temp_opt_high"],
-                        temp_max=item["temp_max"],
-                        depth_min=item["depth_min"],
-                        depth_max=item["depth_max"]
-                    )
-                    db.add(sp)
-            db.commit()
+        # Species catalogs use the deployed schema; no startup seed or alternate
+        # catalog schema is created. Missing catalogs remain explicitly unavailable.
     except Exception as e:
         pass
 
@@ -554,7 +450,11 @@ def login_user(payload: schemas.UserLogin, db: Session = Depends(get_db)):
         home_port_name=user_obj.home_port_name,
         latitude=coords.lat if coords else 0.0,
         longitude=coords.lon if coords else 0.0,
-        is_active=user_obj.is_active
+        is_active=user_obj.is_active,
+        advisory_days=user_obj.advisory_days,
+        preferred_advisory_time=user_obj.preferred_advisory_time,
+        preferred_language=user_obj.preferred_language,
+        habitat_preference=user_obj.habitat_preference,
     )
 
 
@@ -577,7 +477,11 @@ def get_user_by_phone(phone_number: str = Query(...), db: Session = Depends(get_
         home_port_name=user_obj.home_port_name,
         latitude=coords.lat if coords else 0.0,
         longitude=coords.lon if coords else 0.0,
-        is_active=user_obj.is_active
+        is_active=user_obj.is_active,
+        advisory_days=user_obj.advisory_days,
+        preferred_advisory_time=user_obj.preferred_advisory_time,
+        preferred_language=user_obj.preferred_language,
+        habitat_preference=user_obj.habitat_preference,
     )
 
 
@@ -617,38 +521,34 @@ def get_all_species(db: Session = Depends(get_db)):
         for sp in pelagics:
             results.append(schemas.SpeciesProfileResponse(
                 id=sp.id,
-                species_name=sp.species_name,
+                species_name=sp.common_name,
+                common_name=sp.common_name,
+                representative_species=sp.representative_species,
                 family=sp.family,
-                local_name=sp.local_name,
+                local_name=None,
                 category="pelagic",
-                temp_min=sp.temp_min,
-                temp_opt_low=sp.temp_opt_low,
-                temp_opt_high=sp.temp_opt_high,
-                temp_max=sp.temp_max,
-                depth_min=sp.depth_min,
-                depth_max=sp.depth_max,
+                temp_min=sp.sst_min_c,
+                temp_max=sp.sst_max_c,
+                depth_min=sp.depth_min_m,
+                depth_max=sp.depth_max_m,
             ))
         demersals = db.query(models.DemersalSpecies).all()
         for sp in demersals:
             results.append(schemas.SpeciesProfileResponse(
                 id=sp.id,
-                species_name=sp.species_name,
+                species_name=sp.common_name,
+                common_name=sp.common_name,
+                representative_species=sp.representative_species,
                 family=sp.family,
-                local_name=sp.local_name,
+                local_name=None,
                 category="demersal",
-                temp_min=sp.temp_min,
-                temp_opt_low=sp.temp_opt_low,
-                temp_opt_high=sp.temp_opt_high,
-                temp_max=sp.temp_max,
-                depth_min=sp.depth_min,
-                depth_max=sp.depth_max,
+                temp_min=sp.temp_min_c,
+                temp_max=sp.temp_max_c,
+                depth_min=sp.depth_min_m,
+                depth_max=sp.depth_max_m,
             ))
-    except Exception as e:
-        pass
-
-    if not results:
-        for sp in DEFAULT_SPECIES_SEED:
-            results.append(schemas.SpeciesProfileResponse(**sp))
+    except Exception:
+        raise HTTPException(status_code=503, detail={'code': 'species_catalog_unavailable', 'message': 'Species catalog unavailable.'})
 
     return results
 
@@ -659,17 +559,17 @@ def get_all_species(db: Session = Depends(get_db)):
     tags=["Species Predictions"]
 )
 def get_species_predictions(
-    species: str = Query(..., description="Species name, family, or local name (e.g. Tamban, Sardines, Lapu-lapu)"),
+    species: str = Query(..., min_length=1, max_length=100, description="Exact catalog ID or alias, e.g. pelagic:1 or Tamban"),
     prediction_date: Optional[date_type] = Query(None, description="Prediction date (defaults to latest available date)"),
-    min_probability: float = Query(0.10, ge=0.0, le=1.0, description="Minimum P_species threshold"),
+    min_probability: float = Query(0.10, ge=0.0, le=1.0, description="Minimum unchanged habitat-model score; not species presence"),
     limit: int = Query(50, ge=1, le=500),
     db: Session = Depends(get_db)
 ):
     profile = find_species_profile(db, species)
     if not profile:
         raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail=f"Species profile for '{species}' not found."
+            status_code=422,
+            detail={"code": "species_unsupported", "message": "Species is unsupported or ambiguous. Use a catalog identifier."}
         )
 
     target_date = prediction_date
@@ -692,24 +592,21 @@ def get_species_predictions(
             sst,
             chl_a
         FROM public.daily_grid_predictions
-        WHERE prediction_date = :p_date
+        WHERE prediction_date = :p_date AND model_type = :habitat
+          AND catch_probability >= :minimum
+        ORDER BY catch_probability DESC, id
+        LIMIT :limit
     """)
 
-    rows = db.execute(sql_query, {"p_date": target_date}).fetchall()
+    rows = db.execute(sql_query, {"p_date": target_date, "habitat": profile["category"], "minimum": min_probability, "limit": limit}).fetchall()
 
     results = []
     sp_name = profile.get("species_name") if isinstance(profile, dict) else getattr(profile, "species_name", species)
 
     for row in rows:
         base_prob = row.base_catch_probability
-        s_species = hsi_calculator.calculate_species_suitability(
-            sst=row.sst,
-            depth=None,
-            species_profile=profile
-        )
-        p_species = round(base_prob * s_species, 4)
-
-        if p_species >= min_probability:
+        # Missing validated depth/HSI inputs must not manufacture a species score.
+        if base_prob >= min_probability:
             results.append(schemas.SpeciesGridPredictionItem(
                 grid_id=row.grid_id,
                 prediction_date=row.prediction_date,
@@ -719,14 +616,14 @@ def get_species_predictions(
                 target_lat=row.target_lat,
                 target_lon=row.target_lon,
                 base_catch_probability=base_prob,
-                species_suitability=s_species,
-                species_catch_probability=p_species,
+                species_suitability=None,
+                species_catch_probability=None,
                 species_name=sp_name,
                 sst=row.sst,
                 chl_a=row.chl_a,
                 dbscan_cluster_id=row.dbscan_cluster_id
             ))
 
-    results.sort(key=lambda x: x.species_catch_probability, reverse=True)
+    results.sort(key=lambda x: x.base_catch_probability, reverse=True)
     return results[:limit]
 

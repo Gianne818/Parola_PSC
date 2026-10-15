@@ -34,6 +34,30 @@ File-group names in member checklists are shorthand for this table, never broade
 
 ## Interface handoffs (C03 backend selection recorded; consumer integration pending)
 
+**UI-02/MAP-03/UI-01 current backend signoff:** Son's presentation dry-run and
+apply passed after mapping the observed deployed species columns. Migration 04,
+persisted capability evidence/client-write denial and existing owner/consent
+checks are verified, with fixtures rolled back and no OTP/SMS requests. Backend
+contracts are complete; Tier's client/translation acceptance, Toby's depth/HSI
+validation and full release acceptance remain pending for the parent features.
+The candidate/failed-inspection notes below predate this signoff.
+
+**UI-02/MAP-03/UI-01 backend subset selected by Son:** candidate contract and
+client/science handoffs are in [backend-presentation-contract.md](backend-presentation-contract.md).
+This adds language/error/request bounds, honest species/environment metadata and
+persisted capability evidence; no reviewed translations, validated HSI/depth or
+production readiness are inferred. Tier client and Toby science acceptance plus
+live migration/species-schema checks remain pending.
+
+**REG-02-SON backend signoff, October 15, 2026:** the approved self-service backend
+is complete, using the same backend acceptance boundary as REG-01-SON. Passing
+API/hook checks, user-confirmed real OTP/session issuance and real database
+owner/consent/audit/eligibility checks establish this signoff. Assisted operations
+remain disabled as Son explicitly selected; no assisted workflow is claimed.
+Tier UI integration, full application acceptance and production deployment checks
+remain pending, so parent REG-02 remains partial. The earlier notes below describe
+the prior state; the later D01 entry records the subsequent preference decision.
+
 **C03 registration subset, October 15, 2026:** Son explicitly selected Supabase SMS OTP, explicit messaging consent and disabled assisted access in this chat. Backend contract/examples are in [registration-contract.md](registration-contract.md). User-provided command output confirms a live iPROG OTP/session test, migration 02 application and real database consent/owner-isolation checks. Two explicitly approved duplicate profiles were backed up and removed; other accounts and Auth identities were preserved. Tier consultation/client acceptance and actual app integration remain pending. This selection does not settle REG-01/D01 schedule defaults or report/review delegation.
 
 Son records each approved interface and example in this section after consulting producer/consumer owners. This document selects responsibilities, not final database/wire shapes. Existing product decisions remain unresolved below; agents must not invent defaults to clear a gate.
@@ -59,7 +83,7 @@ The coordinators must record the actual decision, consulted members, evidence/da
 
 | ID | Coordinator; consult | Decision and affected work |
 | --- | --- | --- |
-| D01 | Son; Tier | Weekday minimum/zero-day pause, advisory time (05:00 code vs 04:30 copy), edit cutoff and consent-safe existing-user migration. C03/C04; REG-01, SMS-01, OPS-01. |
+| D01 | Son; Tier | Son approved October 15, 2026: 0–5 distinct ISO weekdays (1 Monday through 7 Sunday); zero pauses routine advisories; 05:00 Asia/Manila default; edits affect future unsent advisories without a cutoff; existing users start with no days. Critical alerts remain independent. Tier acceptance/UI wiring and SMS-01 dispatch implementation remain pending. C03/C04; REG-01, SMS-01, OPS-01. |
 | D02 | Son; Tier | Real verification/provider route, assisted enrollment/report/review scope and revocation. C03/C05/C08; REG-02, REPORT-02, PRIV-01. |
 | D03 | Son; Toby and Tier | Provider/input freshness, affected-area sampling, approved vessel-specific thresholds/comparisons, safe unknown/known-hazard precedence and independent alert cadence versus inference. C01/C02/C04; SAFE-01/02/03, SMS-01/02, OPS-01. Toby coordinates scientific validation; Son coordinates operational agreement. |
 | D04 | Son; Toby and Tier | Highest-score/nearest/combined formula and calibrated confidence, recommendation event/window/threshold, retries/re-download accounting and alternative selection. C01/C06; MAP-02, GEO-03. |
@@ -70,14 +94,23 @@ The coordinators must record the actual decision, consulted members, evidence/da
 | D09 | Toby; Son and Tier | Catch/effort scientific units, pilot/evaluation protocol, review eligibility and honest uncertainty. Son coordinates review/correction access, consent and retention (one-year audit proposal needs review). C05/C08; REPORT, EVAL, PRIV. |
 | D10 | Tier; Son and pilot partners | Regional terminology/translations, accessible forms/statuses and language fallback; Son persists language and operational validation. C03-C05; UI-02. User-flow choices must stay within approved product/safety rules. |
 
+**C03/D01 preference subset, October 15, 2026:** REG-01-SON backend acceptance is
+complete. Owner-only registration/profile APIs, TypeScript/FastAPI contracts,
+and migration 03 implement the approved preference rules. Focused API/schema/
+type checks and Son's live database apply/verification passed; existing profiles
+were preserved and fixtures rolled back without OTP/SMS requests. Tier consumes
+[advisory-preferences-contract.md](advisory-preferences-contract.md). Parent REG-01
+remains partial pending Tier integration and full application acceptance. The
+earlier C03 registration note predates this D01 decision.
+
 ## All 31 parent tasks and member assignments
 
 Priority/status are inherited from the detailed plan; none is complete. A named owner appears only once for each member-specific ID. The full parent acceptance criteria and source evidence remain binding in the linked reference. This matrix is a dependency map, not permission to execute another member's IDs.
 
 | Parent | Priority / inherited status | Tier | Son | Toby |
 | --- | --- | --- | --- | --- |
-| [REG-01](../reference/fixplan-detail.md#reg-01) | P1 / Partial | [REG-01-TIER](tier.md#reg-01-tier) | [REG-01-SON](son.md#reg-01-son) | - |
-| [REG-02](../reference/fixplan-detail.md#reg-02) | P0 / Partial | [REG-02-TIER](tier.md#reg-02-tier) | [REG-02-SON](son.md#reg-02-son) | - |
+| [REG-01](../reference/fixplan-detail.md#reg-01) | P1 / Partial | [REG-01-TIER](tier.md#reg-01-tier) | [REG-01-SON — backend complete](son.md#reg-01-son) | - |
+| [REG-02](../reference/fixplan-detail.md#reg-02) | P0 / Partial | [REG-02-TIER](tier.md#reg-02-tier) | [REG-02-SON — approved self-service backend complete](son.md#reg-02-son) | - |
 | [SMS-01](../reference/fixplan-detail.md#sms-01) | P1 / Partial | [SMS-01-TIER](tier.md#sms-01-tier) | [SMS-01-SON](son.md#sms-01-son) | - |
 | [SMS-02](../reference/fixplan-detail.md#sms-02) | P0 / Partial | [SMS-02-TIER](tier.md#sms-02-tier) | [SMS-02-SON](son.md#sms-02-son) | - |
 | [SMS-03](../reference/fixplan-detail.md#sms-03) | P1 / Partial | [SMS-03-TIER](tier.md#sms-03-tier) | [SMS-03-SON](son.md#sms-03-son) | - |
@@ -90,7 +123,7 @@ Priority/status are inherited from the detailed plan; none is complete. A named 
 | [DATA-04](../reference/fixplan-detail.md#data-04) | P1 / Planned | [DATA-04-TIER](tier.md#data-04-tier) | [DATA-04-SON](son.md#data-04-son) | [DATA-04-TOBY](toby.md#data-04-toby) |
 | [MAP-01](../reference/fixplan-detail.md#map-01) | P0 / Partial | [MAP-01-TIER](tier.md#map-01-tier) | [MAP-01-SON](son.md#map-01-son) | - |
 | [MAP-02](../reference/fixplan-detail.md#map-02) | P1 / Partial | [MAP-02-TIER](tier.md#map-02-tier) | [MAP-02-SON](son.md#map-02-son) | [MAP-02-TOBY](toby.md#map-02-toby) |
-| [MAP-03](../reference/fixplan-detail.md#map-03) | P1 / Partial | [MAP-03-TIER](tier.md#map-03-tier) | [MAP-03-SON](son.md#map-03-son) | [MAP-03-TOBY](toby.md#map-03-toby) |
+| [MAP-03](../reference/fixplan-detail.md#map-03) | P1 / Partial | [MAP-03-TIER](tier.md#map-03-tier) | [MAP-03-SON - backend contracts complete](son.md#map-03-son) | [MAP-03-TOBY](toby.md#map-03-toby) |
 | [OPS-01](../reference/fixplan-detail.md#ops-01) | P1 / Partial | [OPS-01-TIER](tier.md#ops-01-tier) | [OPS-01-SON](son.md#ops-01-son) | [OPS-01-TOBY](toby.md#ops-01-toby) |
 | [REPORT-01](../reference/fixplan-detail.md#report-01) | P1 / Planned | [REPORT-01-TIER](tier.md#report-01-tier) | [REPORT-01-SON](son.md#report-01-son) | - |
 | [REPORT-02](../reference/fixplan-detail.md#report-02) | P1 / Planned | [REPORT-02-TIER](tier.md#report-02-tier) | [REPORT-02-SON](son.md#report-02-son) | [REPORT-02-TOBY](toby.md#report-02-toby) |
@@ -101,8 +134,8 @@ Priority/status are inherited from the detailed plan; none is complete. A named 
 | [ENT-01](../reference/fixplan-detail.md#ent-01) | P2 / Planned | [ENT-01-TIER](tier.md#ent-01-tier) | [ENT-01-SON](son.md#ent-01-son) | - |
 | [ENT-02](../reference/fixplan-detail.md#ent-02) | P2 / Partial | [ENT-02-TIER](tier.md#ent-02-tier) | [ENT-02-SON](son.md#ent-02-son) | [ENT-02-TOBY](toby.md#ent-02-toby) |
 | [ROAD-01](../reference/fixplan-detail.md#road-01) | P2 / Deferred | [ROAD-01-TIER](tier.md#road-01-tier) | [ROAD-01-SON](son.md#road-01-son) | [ROAD-01-TOBY](toby.md#road-01-toby) |
-| [UI-01](../reference/fixplan-detail.md#ui-01) | P1 / Partial | [UI-01-TIER](tier.md#ui-01-tier) | [UI-01-SON](son.md#ui-01-son) | - |
-| [UI-02](../reference/fixplan-detail.md#ui-02) | P1 / Partial | [UI-02-TIER](tier.md#ui-02-tier) | [UI-02-SON](son.md#ui-02-son) | - |
+| [UI-01](../reference/fixplan-detail.md#ui-01) | P1 / Partial | [UI-01-TIER](tier.md#ui-01-tier) | [UI-01-SON - backend contracts complete](son.md#ui-01-son) | - |
+| [UI-02](../reference/fixplan-detail.md#ui-02) | P1 / Partial | [UI-02-TIER](tier.md#ui-02-tier) | [UI-02-SON - backend contracts complete](son.md#ui-02-son) | - |
 | [PRIV-01](../reference/fixplan-detail.md#priv-01) | P1 / Partial | [PRIV-01-TIER](tier.md#priv-01-tier) | [PRIV-01-SON](son.md#priv-01-son) | [PRIV-01-TOBY](toby.md#priv-01-toby) |
 | [UX-01](../reference/fixplan-detail.md#ux-01) | P2 / Deferred | [UX-01-TIER](tier.md#ux-01-tier) | [UX-01-SON](son.md#ux-01-son) | [UX-01-TOBY](toby.md#ux-01-toby) |
 | [LEG-01](../reference/fixplan-detail.md#leg-01) | P2 / Superseded | - | [LEG-01-SON](son.md#leg-01-son) | - |

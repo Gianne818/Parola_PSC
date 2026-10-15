@@ -9,6 +9,24 @@ beforeEach(() => vi.mocked(getDbPool).mockReturnValue(null));
 const row = { id: 5, prediction_date: '2026-09-25', model_type: 'pelagic', catch_probability: 0.8, centroid_wkt: 'POINT(123.95 10.35)' };
 
 describe('regional area API', () => {
+  it('rejects unsupported species before fetching any predictions', async () => {
+    const query = vi.fn().mockResolvedValue({ rows: [{ id: 1, category: 'pelagic', species_name: 'Tamban', family: 'Clupeidae', local_name: 'Sardines' }] });
+    vi.mocked(getDbPool).mockReturnValue({ query } as never);
+    const response = await GET(request('species=unknown'));
+    expect(response.status).toBe(422);
+    expect(await response.json()).toMatchObject({ code: 'species_unsupported', hotspots: [] });
+    expect(query).toHaveBeenCalledTimes(1);
+  });
+  it('preserves habitat scores and exposes missing depth/HSI without fabricated values', async () => {
+    const query = vi.fn().mockResolvedValueOnce({ rows: [{ id: 1, category: 'pelagic', species_name: 'Tamban', family: 'Clupeidae', local_name: 'Sardines' }] })
+      .mockResolvedValueOnce({ rows: [{ ...row, sst: 29, chl_a: 0 }] });
+    vi.mocked(getDbPool).mockReturnValue({ query } as never);
+    const body = await (await GET(request('species=Tamban'))).json();
+    expect(body.species_hsi_applied).toBeUndefined();
+    expect(body).toMatchObject({ species_status: 'resolved', prediction_scope: 'habitat_model', species_hsi_status: 'unavailable' });
+    expect(body.hotspots[0]).toMatchObject({ catch_probability: 0.8, chl_a: 0, depth: null, depth_status: 'unavailable' });
+    expect(query.mock.calls[1][1]).toEqual([100, 'pelagic']);
+  });
   it('rejects unknown regions without querying the database', async () => {
     expect((await GET(request('region=unknown'))).status).toBe(400);
   });

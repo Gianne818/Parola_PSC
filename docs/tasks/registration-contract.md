@@ -1,6 +1,8 @@
 ﻿# REG-02-SON registration API handoff
 
-Status: Son selected Supabase SMS OTP, explicit messaging consent and helpers disabled.
+Status: REG-02-SON's approved self-service backend is complete: Supabase SMS OTP,
+explicit messaging consent and helpers disabled as selected by Son. No assisted
+workflow is claimed implemented.
 A user-run live SMS/verification test passed on October 15, 2026. Backend tests and
 real database migration/consent/owner-isolation checks passed. Actual app HTTP/session
 integration and Tier's UI acceptance remain pending.
@@ -89,7 +91,7 @@ submitted SMS cannot be recalled.
 Names are nonblank strings of at most 100 characters. Coordinates must be finite
 JSON numbers in the normal latitude/longitude ranges; zero is valid. Time accepts
 `HH:MM` or `HH:MM:SS`. Omitting time preserves the existing backend registration
-default `05:00:00`; REG-01/D01 schedule policy remains unresolved. Coordinates
+default `05:00:00`; the approved REG-01 policy starts accounts with no selected weekdays. Coordinates
 here define storage shape, not validated marine suitability.
 
 HTTP 201 returns `status: "registered"`, `contact_verified: true`, `id`,
@@ -98,12 +100,14 @@ HTTP 201 returns `status: "registered"`, `contact_verified: true`, `id`,
 IDs, verification/provenance and timestamps are server-owned. Account creation,
 consent, dispatch scheduling and SMS delivery remain separate states.
 
-`PUT /api/users/profile` requires the same bearer token. Send `phone_number`,
-`full_name`, `home_port_name`, numeric `latitude`/`longitude`, and optional
-`preferred_advisory_time`. Omitted time is preserved. HTTP 200 returns `id`,
-`phone_number`, `full_name`, `home_port_name`, `latitude`, `longitude`. This route
-cannot change phone ownership or consent. No GET method is implemented here;
-authenticated Supabase profile reads are governed by owner RLS.
+REG-01 extends registration/profile responses with persisted weekday, time,
+language and habitat preferences; see [advisory-preferences-contract.md](advisory-preferences-contract.md).
+After migration 03, `GET /api/users/profile` reads the verified owner's profile.
+`PUT /api/users/profile` requires the same bearer token and `phone_number`, plus
+at least one editable field. Names, port, coordinate pair and preferences may be
+updated independently; omitted values are preserved. Responses include numeric
+coordinates and the saved preferences. This route cannot change phone ownership
+or consent. Authenticated Supabase reads remain governed by owner RLS.
 
 Passwords, roles, actor IDs, helper/target IDs and verification timestamps are
 unsupported fields and rejected. New OTP registration does not enroll a password.

@@ -20,8 +20,12 @@ export async function PUT(request: Request) {
     const consent = consentInput(body);
     const result = await registryDb().query(`
       UPDATE public.users u SET messaging_consent = $3,
-        messaging_consent_version = $4, messaging_consent_at = NOW(),
-        messaging_consent_actor_id = $1, updated_at = NOW()
+        messaging_consent_version = $4, messaging_consent_at = CASE
+          WHEN u.messaging_consent IS DISTINCT FROM $3 OR u.messaging_consent_version IS DISTINCT FROM $4
+          THEN NOW() ELSE u.messaging_consent_at END,
+        messaging_consent_actor_id = $1, updated_at = CASE
+          WHEN u.messaging_consent IS DISTINCT FROM $3 OR u.messaging_consent_version IS DISTINCT FROM $4
+          THEN NOW() ELSE u.updated_at END
       FROM auth.users a
       WHERE u.auth_user_id = $1 AND a.id = u.auth_user_id
         AND u.phone_e164 = $2 AND u.phone_verified_at IS NOT NULL AND a.phone_confirmed_at IS NOT NULL

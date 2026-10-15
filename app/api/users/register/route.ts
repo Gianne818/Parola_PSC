@@ -1,4 +1,5 @@
 import { RATE_LIMITS, checkRateLimit, rateLimitExceededResponse } from '@/lib/rate-limit';
+import { ADVISORY_PREFERENCE_FIELDS, registrationPreferences, withAdvisorySchedule } from '@/lib/advisory-preferences';
 import { consentInput, MESSAGING_CONSENT_VERSION, phoneE164, REGISTER_VERIFIED_USER_SQL, registrationBody, registrationJson, registrationOwner, registrationResponse, registryDb, RegistrationError } from '@/lib/registration';
 
 export async function POST(request: Request) {
@@ -6,7 +7,7 @@ export async function POST(request: Request) {
     const limit = await checkRateLimit(request, RATE_LIMITS.registration);
     if (!limit.allowed) return rateLimitExceededResponse(RATE_LIMITS.registration, limit, 'registration');
     const owner = await registrationOwner(request);
-    const body = await registrationBody(request, ['phone_number', 'full_name', 'home_port_name', 'latitude', 'longitude', 'preferred_advisory_time', 'messaging_consent', 'consent_version']);
+    const body = await registrationBody(request, ['phone_number', 'full_name', 'home_port_name', 'latitude', 'longitude', ...ADVISORY_PREFERENCE_FIELDS, 'messaging_consent', 'consent_version']);
     const phone = phoneE164(body.phone_number);
     if (phone !== phoneE164(owner.phone)) throw new RegistrationError(403, 'You can only register your verified phone.');
     const consent = consentInput(body);
@@ -17,12 +18,11 @@ export async function POST(request: Request) {
       const value = body[field];
       if (typeof value !== 'number' || !Number.isFinite(value) || value < min || value > max) throw new RegistrationError(400, `${field} must be a valid numeric coordinate.`);
     }
-    const time = body.preferred_advisory_time === undefined ? '05:00:00' : body.preferred_advisory_time;
-    if (typeof time !== 'string' || !/^(?:[01]\d|2[0-3]):[0-5]\d(?::[0-5]\d)?$/.test(time)) throw new RegistrationError(400, 'preferred_advisory_time must be a valid HH:MM or HH:MM:SS time.');
+    const preferences = registrationPreferences(body);
     try {
-      const result = await registryDb().query(REGISTER_VERIFIED_USER_SQL, [owner.id, phone, full_name.trim(), home_port_name.trim(), body.longitude, body.latitude, time, consent, MESSAGING_CONSENT_VERSION]);
+      const result = await registryDb().query(REGISTER_VERIFIED_USER_SQL, [owner.id, phone, full_name.trim(), home_port_name.trim(), body.longitude, body.latitude, preferences.preferred_advisory_time, consent, MESSAGING_CONSENT_VERSION, preferences.advisory_days, preferences.preferred_language, preferences.habitat_preference]);
       if (!result.rows[0]) throw new RegistrationError(403, 'Phone ownership could not be confirmed.');
-      return registrationJson({ ...result.rows[0], contact_verified: true, status: 'registered' }, 201);
+      return registrationJson(withAdvisorySchedule({ ...result.rows[0], contact_verified: true, status: 'registered' }), 201);
     } catch (error) {
       if ((error as { code?: string })?.code === '23505') throw new RegistrationError(409, 'An account already exists. Sign in instead; legacy account linking requires review.');
       throw error;

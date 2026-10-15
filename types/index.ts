@@ -10,13 +10,32 @@ export interface PhilippineRegion {
   coordinates: [number, number][]; // [lat, lng] array
 }
 
+/** ISO weekdays: Monday=1 through Sunday=7. */
+export type AdvisoryWeekday = 1 | 2 | 3 | 4 | 5 | 6 | 7;
+export type HabitatPreference = 'pelagic' | 'demersal' | 'both';
+
+/** Persisted API fields; next_routine_at is a schedule candidate, not delivery confirmation. */
+export interface AdvisoryPreferences {
+  advisory_days: AdvisoryWeekday[];
+  preferred_advisory_time: string;
+  preferred_language: Language;
+  habitat_preference: HabitatPreference;
+}
+
+export interface AdvisorySchedule extends AdvisoryPreferences {
+  language_status: { requested: Language; message_language: 'en'; fallback: boolean; reviewed: false };
+  advisory_timezone: 'Asia/Manila';
+  routine_paused: boolean;
+  next_routine_at: string | null;
+}
+
 export interface UserProfile {
   id?: string;
   vesselName: string;
   licenseNo: string;
   phone: string;
   boatType: string;
-  speciesPreference: 'pelagic' | 'demersal' | 'both';
+  speciesPreference: HabitatPreference;
   port: string;
   lat: number;
   lng: number;

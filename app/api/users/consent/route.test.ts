@@ -24,6 +24,7 @@ describe('owner messaging consent', () => {
     expect(response.status).toBe(200);
     expect(await response.json()).toMatchObject({ messaging_consent: false, messaging_eligible: false });
     expect(query.mock.calls[0][1]).toEqual([owner.id, owner.phone, false, 'messaging-v1']);
+    expect(query.mock.calls[0][0]).toContain('THEN NOW() ELSE u.messaging_consent_at END');
   });
   it('does not report inactive contacts as eligible when granting consent', async () => {
     query.mockResolvedValue({ rows: [{ messaging_consent: true, messaging_eligible: false }] });

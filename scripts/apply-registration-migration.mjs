@@ -1,6 +1,8 @@
 import { readFile, writeFile } from 'node:fs/promises';
 import { randomUUID, randomInt, X509Certificate } from 'node:crypto';
 import { DuplicateCleanupError, removeApprovedDuplicatePair } from './lib/registration-duplicate-cleanup.mjs';
+import { verifyAdvisoryPreferences } from './lib/advisory-preferences-verification.mjs';
+import { verifyPresentation } from './lib/presentation-verification.mjs';
 
 if (process.argv.includes('--help')) {
   console.log('From the repository root: node scripts/apply-registration-migration.mjs [--dry-run | --verify-only | --check-duplicates | --remove-reported-duplicates]');
@@ -10,9 +12,27 @@ if (process.argv.includes('--help')) {
   console.log('TLS: set SUPABASE_DB_CA_FILE to the downloaded Supabase root certificate path, or SUPABASE_DB_CA to PEM content.');
   console.log('--check-duplicates is read-only and saves duplicate profile details in .registration-duplicates.local (ignored).');
   console.log('--remove-reported-duplicates uses the approved local pair plan, backs up full rows, refuses linked history, then applies/verifies atomically.');
+  console.log('--preferences applies REG-01 migration 03 instead (requires migration 02); may combine with --dry-run or --verify-only. No SMS.');
+  console.log('--presentation applies capability migration 04 and checks deployed species fields; may combine with --dry-run or --verify-only. No SMS.');
+  console.log('--inspect-species reports public species/fish table column names and types in a read-only transaction. No data or schema changes.');
   process.exit(0);
 }
-const options = process.argv.slice(2);
+const inspectSpecies = process.argv.includes('--inspect-species');
+if (inspectSpecies && process.argv.slice(2).length !== 1) {
+  console.error('Use --inspect-species by itself. No database changes made.');
+  process.exit(1);
+}
+const preferences = process.argv.includes('--preferences');
+const presentation = process.argv.includes('--presentation');
+const options = process.argv.slice(2).filter(option => !['--preferences','--presentation','--inspect-species'].includes(option));
+if ((preferences && presentation) || process.argv.filter(option => option === '--presentation').length > 1 || (presentation && options.some(option => !['--dry-run','--verify-only'].includes(option)))) {
+  console.error('Use --presentation alone or with --dry-run or --verify-only. No database changes made.');
+  process.exit(1);
+}
+if (process.argv.filter(option => option === '--preferences').length > 1 || (preferences && options.some(option => !['--dry-run', '--verify-only'].includes(option)))) {
+  console.error('--preferences may only be combined with --dry-run or --verify-only. No database changes made.');
+  process.exit(1);
+}
 if (options.some(option => !['--dry-run', '--verify-only', '--check-duplicates', '--remove-reported-duplicates'].includes(option)) || options.length > 1) {
   console.error('Use --help for valid options.');
   process.exit(1);
@@ -100,9 +120,22 @@ async function checkDuplicates() {
 }
 try {
   await client.connect(); connected = true;
+  if (inspectSpecies) {
+    stage = 'read-only species schema inspection';
+    await client.query('BEGIN READ ONLY');
+    await client.query("SET LOCAL statement_timeout = '10s'");
+    const report = await client.query(`SELECT table_name,column_name,data_type,udt_name
+      FROM information_schema.columns WHERE table_schema='public'
+        AND table_name ~* '(species|fish)' ORDER BY table_name,ordinal_position`);
+    console.log(JSON.stringify({ species_schema: report.rows }, null, 2));
+    await client.query('ROLLBACK');
+    console.log('Read-only schema inspection complete. No row contents, account changes, migration or SMS requests.');
+  } else {
   await client.query(options.includes('--check-duplicates') ? 'BEGIN READ ONLY' : 'BEGIN');
   await client.query("SET LOCAL lock_timeout = '5s'; SET LOCAL statement_timeout = '30s'");
   const before = await client.query('SELECT count(*)::int AS count FROM public.users');
+  const preservationQuery = "SELECT md5(COALESCE(jsonb_agg(to_jsonb(u) - ARRAY['advisory_days','preferred_language','habitat_preference'] ORDER BY u.id)::text, '[]')) AS digest FROM public.users u";
+  const existingProfiles = preferences ? await client.query(preservationQuery) : null;
   if (options.includes('--remove-reported-duplicates')) {
     stage = 'approved duplicate cleanup';
     let plan;
@@ -116,7 +149,7 @@ try {
     before.rows[0].count -= cleanup.removed;
     console.log(`Backed up ${cleanup.removed} approved duplicate profiles to ${cleanup.backupPath}. Removal will commit only if migration verification passes.`);
   }
-  if (!options.includes('--verify-only')) {
+  if (!options.includes('--verify-only') && !preferences && !presentation) {
     stage = 'check duplicate contacts';
     const duplicates = await checkDuplicates();
     console.log(`Duplicate contact groups: ${duplicates.groups}; affected profiles: ${duplicates.profiles}. Details saved to ${DUPLICATE_REPORT}; phone numbers are not printed.`);
@@ -132,12 +165,13 @@ try {
   if (!options.includes('--check-duplicates')) {
   if (!options.includes('--verify-only')) {
     stage = 'apply migration';
-    const source = await readFile(new URL('../backend/migrations/02_verified_registration.sql', import.meta.url), 'utf8');
+    const source = await readFile(new URL(presentation ? '../backend/migrations/04_service_capabilities.sql' : preferences ? '../backend/migrations/03_advisory_preferences.sql' : '../backend/migrations/02_verified_registration.sql', import.meta.url), 'utf8');
     await client.query(source.replace(/^BEGIN;\s*$/m, '').replace(/^COMMIT;\s*$/m, ''));
   }
   stage = 'schema and permissions';
   const after = await client.query('SELECT count(*)::int AS count FROM public.users');
   assert(before.rows[0].count === after.rows[0].count, 'Migration changed the account count.');
+  if (preferences) assert(existingProfiles.rows[0].digest === (await client.query(preservationQuery)).rows[0].digest, 'Migration changed existing profile values.');
   const access = await client.query(`SELECT
     public.parola_phone_e164('0917 123 4567') = '+639171234567' AS local_ok,
     public.parola_phone_e164('+63 (917) 123-4567') = '+639171234567' AS intl_ok,
@@ -149,6 +183,7 @@ try {
     NOT has_function_privilege('authenticated', 'public.parola_sms_recipient_eligible(text,text,uuid)', 'EXECUTE') AS eligibility_private,
     has_function_privilege('service_role', 'public.parola_sms_recipient_eligible(text,text,uuid)', 'EXECUTE') AS dispatch_allowed`);
   assert(Object.values(access.rows[0]).every(value => value === true), 'Normalization, RLS or privilege checks failed.');
+  if (presentation) { stage = 'capability evidence and deployed species schema'; await verifyPresentation(client, assert); }
 
   stage = 'rollback-only consent fixtures';
   await client.query('SAVEPOINT registration_verification');
@@ -171,6 +206,11 @@ try {
   assert(await eligible() === false, 'No-consent contact was eligible.');
   await client.query('UPDATE public.users SET messaging_consent=TRUE, messaging_consent_at=NOW() WHERE id=$1', [actor]);
   assert(await eligible() === true, 'Verified consenting contact was ineligible.');
+  if (preferences) {
+    stage = 'advisory preference persistence and constraints';
+    await verifyAdvisoryPreferences(client, actor, assert);
+    assert(await eligible() === true, 'Routine pause incorrectly blocked independent SMS/critical eligibility.');
+  }
   assert(await eligible(randomUUID()) === false, 'Unrelated owner was eligible.');
   assert(await eligible(actor, 'old-version') === false, 'Outdated consent version was eligible.');
   await client.query('UPDATE public.users SET messaging_consent=FALSE, messaging_consent_at=NOW() WHERE id=$1', [actor]);
@@ -207,9 +247,14 @@ try {
     await client.query('COMMIT');
     console.log(options.includes('--remove-reported-duplicates')
       ? 'PASS: removed the two approved duplicate profiles and applied/verified the migration. Other account count preserved; verification fixtures rolled back.'
+      : presentation ? 'PASS: capability migration applied, evidence controls and deployed species fields verified; fixtures rolled back.'
+      : preferences ? 'PASS: advisory preferences migration applied and verified. Existing profiles preserved; verification fixtures rolled back.'
       : 'PASS: registration migration applied and verified. Existing account count preserved; verification fixtures rolled back.');
   }
   console.log('Checks: phone normalization, RLS/privileges, owner isolation, consent grant/withdrawal/audit, eligibility and Auth revocation. No OTP or SMS requested.');
+  if (preferences) console.log('Preference checks: defaults, five-day save/reload, port-only preservation, invalid/duplicate/sixth-day rejection and routine pause.');
+  if (presentation) console.log('Presentation checks: persisted capability evidence, client-write denial and deployed species fields. No OTP or SMS requested.');
+  }
   }
 } catch (error) {
   if (connected) await client.query('ROLLBACK').catch(() => {});

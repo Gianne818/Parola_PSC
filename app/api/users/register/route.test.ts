@@ -9,6 +9,7 @@ import { POST } from './route';
 
 const query = vi.fn();
 const owner = { id: '11111111-1111-4111-8111-111111111111', phone: '+639171234567' };
+const defaults = { advisory_days: [], preferred_advisory_time: '05:00:00', preferred_language: 'en', habitat_preference: 'both' };
 const valid = { phone_number: '09171234567', full_name: 'Test Fisher', home_port_name: 'Mercedes Fish Port', latitude: 14.1, longitude: 122.9, messaging_consent: true, consent_version: 'messaging-v1' };
 function request(body: unknown) { return new Request('http://localhost/api/users/register', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) }); }
 beforeEach(() => {
@@ -16,7 +17,7 @@ beforeEach(() => {
   vi.mocked(getSupabaseUser).mockResolvedValue(owner);
   vi.mocked(getDbPool).mockReturnValue({ query } as never);
   vi.mocked(checkRateLimit).mockResolvedValue({ allowed: true } as never);
-  query.mockResolvedValue({ rows: [{ id: owner.id, phone_number: owner.phone, messaging_consent: true, messaging_eligible: true }] });
+  query.mockResolvedValue({ rows: [{ ...defaults, id: owner.id, phone_number: owner.phone, messaging_consent: true, messaging_eligible: true }] });
   vi.stubGlobal('fetch', vi.fn().mockRejectedValue(new Error('Unexpected external fallback')));
 });
 afterEach(() => vi.unstubAllGlobals());
@@ -27,7 +28,7 @@ describe('verified registration', () => {
     expect(response.status).toBe(201);
     expect(response.headers.get('cache-control')).toBe('no-store');
     expect(await response.json()).toMatchObject({ id: owner.id, contact_verified: true, status: 'registered', messaging_consent: true });
-    expect(query.mock.calls[0][1]).toEqual([owner.id, '+639171234567', 'Test Fisher', 'Mercedes Fish Port', 122.9, 14.1, '05:00:00', true, 'messaging-v1']);
+    expect(query.mock.calls[0][1]).toEqual([owner.id, '+639171234567', 'Test Fisher', 'Mercedes Fish Port', 122.9, 14.1, '05:00:00', true, 'messaging-v1', [], 'en', 'both']);
     expect(fetch).not.toHaveBeenCalled();
   });
   it.each(['09171234567', '+639171234567', '+63 (917) 123-4567'])('normalizes the same verified phone: %s', async phone => {
@@ -35,7 +36,7 @@ describe('verified registration', () => {
     expect(query.mock.calls[0][1][1]).toBe('+639171234567');
   });
   it('allows account creation when messaging consent is declined', async () => {
-    query.mockResolvedValue({ rows: [{ id: owner.id, messaging_consent: false, messaging_eligible: false }] });
+    query.mockResolvedValue({ rows: [{ ...defaults, id: owner.id, messaging_consent: false, messaging_eligible: false }] });
     const response = await POST(request({ ...valid, messaging_consent: false }));
     expect(response.status).toBe(201);
     expect(await response.json()).toMatchObject({ messaging_consent: false, messaging_eligible: false });
@@ -74,6 +75,22 @@ describe('verified registration', () => {
   });
   it('accepts zero coordinates', async () => {
     expect((await POST(request({ ...valid, latitude: 0, longitude: 0 }))).status).toBe(201);
+  });
+  it('returns a paused schedule when no weekdays were selected without withdrawing consent', async () => {
+    const response = await POST(request(valid));
+    expect(await response.json()).toMatchObject({ ...defaults, routine_paused: true, next_routine_at: null, messaging_consent: true });
+  });
+  it('persists five selected days and explicit time/language/habitat', async () => {
+    const preferences = { advisory_days: [1, 2, 3, 4, 5], preferred_advisory_time: '04:30:15', preferred_language: 'ceb', habitat_preference: 'demersal' };
+    query.mockResolvedValue({ rows: [{ ...preferences, id: owner.id }] });
+    const response = await POST(request({ ...valid, ...preferences, advisory_days: [5, 3, 1, 4, 2] }));
+    expect(response.status).toBe(201);
+    expect(await response.json()).toMatchObject({ ...preferences, routine_paused: false, advisory_timezone: 'Asia/Manila' });
+    expect(query.mock.calls[0][1]).toEqual([owner.id, owner.phone, 'Test Fisher', 'Mercedes Fish Port', 122.9, 14.1, '04:30:15', true, 'messaging-v1', [1, 2, 3, 4, 5], 'ceb', 'demersal']);
+  });
+  it.each([[1, 1], [1, 2, 3, 4, 5, 6], [0], [8], [true], ['1'], null].map(advisory_days => ({ advisory_days })))('rejects invalid weekdays without persistence: $advisory_days', async ({ advisory_days }) => {
+    expect((await POST(request({ ...valid, advisory_days }))).status).toBe(400);
+    expect(query).not.toHaveBeenCalled();
   });
   it.each(['24:00', '05:60', '05:00:60', null])('rejects invalid time: %j', async time => {
     expect((await POST(request({ ...valid, preferred_advisory_time: time }))).status).toBe(400);

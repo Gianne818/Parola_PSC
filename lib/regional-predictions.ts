@@ -27,6 +27,7 @@ export const REGIONAL_PREDICTIONS_SQL = `
     WHERE (prediction_date >= CURRENT_DATE - INTERVAL '2 days'
       OR prediction_date = (SELECT MAX(prediction_date) FROM public.daily_grid_predictions))
       AND catch_probability >= 0.60
+      AND ($5::text IS NULL OR model_type = $5)
       AND ST_Contains(ST_GeomFromText($1, 4326), centroid_geom)
   ), areas AS (
     SELECT * FROM eligible WHERE location_rank = 1
@@ -45,9 +46,9 @@ export const REGIONAL_PREDICTIONS_SQL = `
   SELECT summary.*, COALESCE((SELECT JSONB_AGG(selected ORDER BY distance_m, id) FROM selected), '[]'::jsonb) AS predictions
   FROM summary`;
 
-export async function loadRegionalPredictions(db: Pick<Pool, 'query'>, region: PhilippineRegion, lat: number, lon: number, limit: number): Promise<{ rows: PredictionRow[]; metadata: FishingAreaMetadata }> {
+export async function loadRegionalPredictions(db: Pick<Pool, 'query'>, region: PhilippineRegion, lat: number, lon: number, limit: number, habitat?: 'pelagic' | 'demersal'): Promise<{ rows: PredictionRow[]; metadata: FishingAreaMetadata }> {
   const ring = region.coordinates.map(([latitude, longitude]) => `${longitude} ${latitude}`).join(',');
-  const result = await db.query<RegionalSummary>(REGIONAL_PREDICTIONS_SQL, [`POLYGON((${ring}))`, lon, lat, limit]);
+  const result = await db.query<RegionalSummary>(REGIONAL_PREDICTIONS_SQL, [`POLYGON((${ring}))`, lon, lat, limit, habitat ?? null]);
   const row = result.rows[0];
   return {
     rows: row.predictions,
