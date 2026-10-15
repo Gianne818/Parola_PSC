@@ -13,6 +13,12 @@ Updated October 15, 2026. [Hub](../../fixplan.md) | [Tier](tier.md) | [Son](son.
 
 ## Exact file ownership
 
+**Narrow demo exception requested by Son in this chat:** update the existing
+preview-only OTP comparison in `components/auth/AuthPage.tsx` so any six-digit
+number passes the demo screen. This is limited to that demo check; Tier retains
+the screen, copy, design and real Auth integration. The server demo path remains
+unverified and issues no Supabase session. Live OTP validation is unchanged.
+
 Most-specific path wins. New files use the matching scope; any unlisted/ambiguous integration path needs Son to record its owner before edits. Ownership grants no authority beyond the selected assignment. Existing user changes must be preserved.
 
 | Owner | Owned paths / exceptions |
@@ -33,6 +39,14 @@ Most-specific path wins. New files use the matching scope; any unlisted/ambiguou
 File-group names in member checklists are shorthand for this table, never broader permissions. In particular, Tier's `lib/dashboard.ts` ownership permits consuming the server decision, not inventing separate production safety thresholds. Toby supplies scientifically validated rule/input recommendations; Son owns shared operational safety contracts and enforcement. Coordinate new common helpers before adding them.
 
 ## Interface handoffs (C03 backend selection recorded; consumer integration pending)
+
+**Current SMS operating mode:** Son selected demo operation to conserve credits.
+The app defaults to simulated advisory/OTP previews and issues no demo Supabase
+session or live contact verification. Live paths remain available behind explicit
+server configuration. Hosted hook secrets are separate and require a remote
+IPROG_MOCK_MODE=true setting to pause direct Supabase requests. See
+[SMS demo mode](../sms-demo-mode.md); prior live acceptance does not imply demo
+messages are delivered. Tier consumes the distinct mock/preview response shapes.
 
 **UI-02/MAP-03/UI-01 current backend signoff:** Son's presentation dry-run and
 apply passed after mapping the observed deployed species columns. Migration 04,

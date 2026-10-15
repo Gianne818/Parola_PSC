@@ -1,3 +1,5 @@
+import { isSmsDemoMode } from '../lib/sms-mode.mjs';
+
 export interface IProgSmsConfig {
   endpoint: string;
   apiKey: string;
@@ -17,6 +19,9 @@ export interface SmsSendResponse {
   recipientFormatted: string;
   mode: 'MOCK_DRY_RUN' | 'LIVE_DISPATCH';
   remainingQuotaEstimate?: number;
+  simulated?: boolean;
+  creditsUsed?: number;
+  delivered?: boolean;
   error?: string;
 }
 
@@ -85,7 +90,7 @@ export class IProgSmsService {
   }
 
   public getConfig(): IProgSmsConfig {
-    return { ...this.config };
+    return { ...this.config, mockMode: isSmsDemoMode() || this.config.mockMode };
   }
 
   public updateConfig(newConfig: Partial<IProgSmsConfig>): void {
@@ -95,8 +100,8 @@ export class IProgSmsService {
   public async sendSms(req: SmsSendRequest): Promise<SmsSendResponse> {
     const formattedPhone = sanitizePhilippineMobileNumber(req.recipient);
 
-    // MOCK DRY-RUN GUARD (Preserves 5 free credits)
-    if (this.config.mockMode) {
+    // Demo mode is checked at send time and cannot be bypassed by runtime config.
+    if (this.getConfig().mockMode) {
 
 
       return {
@@ -104,7 +109,9 @@ export class IProgSmsService {
         messageId: `MOCK-PAROLA-${Date.now()}`,
         recipientFormatted: formattedPhone,
         mode: 'MOCK_DRY_RUN',
-        remainingQuotaEstimate: 5,
+        simulated: true,
+        delivered: false,
+        creditsUsed: 0,
       };
     }
 

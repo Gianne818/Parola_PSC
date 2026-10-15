@@ -1,4 +1,5 @@
 import { RATE_LIMITS, checkRateLimit, rateLimitExceededResponse } from '@/lib/rate-limit';
+import { DEMO_SMS_CODE, isSmsDemoMode } from '@/lib/sms-mode.mjs';
 import { phoneAuthClient, phoneE164, registrationBody, registrationJson, registrationResponse, RegistrationError } from '@/lib/registration';
 
 export async function POST(request: Request) {
@@ -10,6 +11,8 @@ export async function POST(request: Request) {
     if (body.captcha_token !== undefined && (typeof body.captcha_token !== 'string' || !body.captcha_token || body.captcha_token.length > 4096)) {
       throw new RegistrationError(400, 'Invalid CAPTCHA token.');
     }
+    if (isSmsDemoMode()) return registrationJson({ status: 'demo_code_requested', mode: 'MOCK_DRY_RUN',
+      demo_code: DEMO_SMS_CODE, simulated: true, contact_verified: false, creditsUsed: 0 }, 202);
     const { error } = await phoneAuthClient().auth.signInWithOtp({
       phone,
       options: { channel: 'sms', shouldCreateUser: true, captchaToken: body.captcha_token as string | undefined },

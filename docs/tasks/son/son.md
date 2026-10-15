@@ -1,10 +1,27 @@
 # Son's task plan
 
+**Current user-selected change: SMS demo mode**, branch `codex/son/sms-demo`.
+Son subsequently requested that any six-digit number pass the demo OTP check,
+including the existing preview screen. Recorded that narrow UI exception in
+shared ownership rules; live verification and real ownership remain unchanged.
+Son requested simulated SMS to conserve credits with live logic retained. Scope:
+iPROG send/config guard, OTP previews/test helper and local settings. No UI work,
+live SMS, credential deletion or migration. [Demo/live instructions](../../sms-demo-mode.md).
+
+Demo implementation verified: 91 focused tests passed, including zero provider
+calls in demo/default/invalid modes, locked runtime config, OTP preview without
+session/ownership and mocked live-path regression. Scoped TypeScript and script/
+diff checks passed. Local PAROLA_SMS_MODE=demo and IPROG_MOCK_MODE=true are saved
+without changing credentials. The real OTP helper was run in demo mode and exited
+without requesting SMS. Restart the app to load settings. Hosted hook secret
+IPROG_MOCK_MODE remains a separate user-controlled setting; no remote configuration
+change or SMS request was made by the agent. No migration is needed.
+
 Owner: **Son only**. Updated October 15, 2026. [Hub](../../fixplan.md) | [Shared rules, files and gates](shared.md) | [Full reference](../reference/fixplan-detail.md)
 
 Son asked to retain the plain task list for future requests: [saved 27-task list](son-backlog.md).
 
-**Current selection: UI-02-SON, MAP-03-SON and UI-01-SON**, explicitly selected
+**Previous selection: UI-02-SON, MAP-03-SON and UI-01-SON**, explicitly selected
 by Son together. Work is on `codex/son/presentation-contracts`; Tier retains UI
 ownership. Scope: bounded/stable registration and language status contracts,
 honest species/environment responses, and persisted capability evidence for

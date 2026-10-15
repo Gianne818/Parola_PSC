@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { smsService } from '@/services/smsServiceInstance';
 import { requireAdmin } from '@/lib/route-auth';
+import { isSmsDemoMode } from '@/lib/sms-mode.mjs';
 
 export async function GET(request: Request) {
   const denied = requireAdmin(request);
@@ -13,7 +14,9 @@ export async function GET(request: Request) {
     senderName: currentConfig.senderName,
     mockMode: currentConfig.mockMode,
     apiKeyConfigured: Boolean(currentConfig.apiKey),
-    remainingFreeQuota: currentConfig.mockMode ? 5 : 'LIVE_QUOTA',
+    mode: currentConfig.mockMode ? 'MOCK_DRY_RUN' : 'LIVE_DISPATCH',
+    demoLocked: isSmsDemoMode(),
+    remainingFreeQuota: null,
   });
 }
 
@@ -34,6 +37,9 @@ export async function POST(request: Request) {
       senderName?: unknown;
       endpoint?: unknown;
     };
+    if (isSmsDemoMode() && mockMode === false) {
+      return NextResponse.json({ error: 'SMS demo mode is locked by server configuration.', code: 'sms_demo_locked' }, { status: 409 });
+    }
 
     if (endpoint !== undefined) {
       if (typeof endpoint !== 'string' || !endpoint.startsWith(ALLOWED_ENDPOINT_PREFIX)) {
