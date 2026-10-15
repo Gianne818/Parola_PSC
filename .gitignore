@@ -60,7 +60,6 @@ ehthumbs.db
 *.tmp
 *.temp
 *~
-fixplan.md
 BACKEND_COVERAGE_AUDIT.md
 *.audit.md
 scratch/
