@@ -5,6 +5,7 @@ import type { ReactNode } from 'react';
 import { manilaDate, predictionPercent, type FishingArea } from '@/lib/dashboard';
 import type { DashboardCopy } from './dashboard-copy';
 import styles from './dashboard.module.css';
+import PredictionProvenance from './PredictionProvenance';
 
 export function AreaDetails({ area, copy, weather }: { area: FishingArea; copy: DashboardCopy; weather?: ReactNode }) {
   const percent = area.source === 'model' ? predictionPercent(area.catchProbability) : null;
@@ -18,6 +19,7 @@ export function AreaDetails({ area, copy, weather }: { area: FishingArea; copy: 
       {percent !== null && <div><dt>{copy.modelEstimate}</dt><dd>{percent}%</dd></div>}
       <div><dt>{copy.predictionTime}</dt><dd>{area.predictionDate?.slice(0, 10) || copy.dateUnknown}</dd></div>
     </dl>
+    <PredictionProvenance area={area} />
     <p className={styles.panelDescription}>{copy.estimateNote}</p>
     {area.source === 'sample' && <p className={styles.notice}>{copy.sample}</p>}
     {area.speciesAdjusted && <p className={styles.panelDescription}>{copy.speciesNote}</p>}

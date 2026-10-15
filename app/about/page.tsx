@@ -7,7 +7,7 @@ import styles from "@/components/information/information.module.css";
 export const metadata: Metadata = {
   title: "About | Parola",
   description:
-    "Why Parola brings maritime advisories and fishing hotspot guidance to basic phones in Philippine coastal communities.",
+    "Parola's coastal guidance proposal, current portal access and planned outbound SMS for Philippine communities.",
 };
 const objectives = [
   [
@@ -153,10 +153,12 @@ export default function AboutPage() {
               </p>
             </div>
             <div data-reveal>
-              <h3>A two-way conversation</h3>
+              <h3>Outbound advisories, no reply required</h3>
               <p>
-                Commands such as ADVISORY, HOTSPOT, and STATUS let fishers
-                request information when they need it.
+                Routine SMS for up to five selected weekdays and separate
+                any-day critical alerts are planned. The current portal offers
+                manual weather requests when enabled. No inbound commands,
+                rating replies or catch reports are required to receive advisories.
               </p>
             </div>
           </div>
@@ -221,7 +223,7 @@ export default function AboutPage() {
                 <div>
                   <dt>Municipal subscription</dt>
                   <dd>₱0</dd>
-                  <small>Craft at or below 3.0 GT</small>
+                  <small>Standard access; eligibility review pending</small>
                 </div>
                 <div>
                   <dt>SMS access</dt>
@@ -238,7 +240,7 @@ export default function AboutPage() {
         <section id="fleet-planning" className={styles.section}>
           <div className={styles.sectionHeading}>
             <h2>Plan a coastal or fleet rollout.</h2>
-            <p>Start with the boats, ports, and communication needs involved. Fleet terms and satellite arrangements need confirmation before deployment.</p>
+            <p>Start with the boats, ports, and communication needs involved. Fleet and satellite features are roadmap proposals; working integrations and contracts are not established.</p>
           </div>
           <div className={styles.twoColumns} data-reveal-group>
             <div className={styles.card} data-reveal>
@@ -253,7 +255,7 @@ export default function AboutPage() {
             <div className={styles.card} data-reveal>
               <h3>For commercial fleets and satellite use</h3>
               <ol className={styles.setupChecklist}>
-                <li>List vessel count, registered gross tonnage, and operating areas. Fleet agreements start at five commercial vessels.</li>
+                <li>List vessel count, registered gross tonnage, and operating areas. The fleet proposal considers five or more vessels; no agreement is established here.</li>
                 <li>Identify who receives advisories and manages fleet information.</li>
                 <li>Review onboard chartplotter file formats and any satellite connection you intend to use.</li>
               </ol>
@@ -266,13 +268,13 @@ export default function AboutPage() {
           <div>
             <h2>Connect your vessel or coastal cooperative.</h2>
             <p>
-              Register your vessel and home port, or start with the guide to
-              explore advisories, hotspot predictions, and safety holds.
+              Create an account and set your home port, or start with the guide.
+              Portal registration does not verify vessel eligibility or activate SMS scheduling.
             </p>
           </div>
           <div className={styles.actions}>
             <Link href="/register" className={styles.button}>
-              Register vessel
+              Create account
               <ArrowRight size={14} />
             </Link>
             <Link href="/guide" className={styles.secondaryButton}>

@@ -30,7 +30,7 @@ export default function ProductPreview() {
         </div>
       </div>
       <figcaption className={styles.productCaption}>
-        <span aria-hidden="true" />The Parola dashboard
+        <span aria-hidden="true" />Dashboard screenshot · not current conditions
       </figcaption>
     </figure>
   );

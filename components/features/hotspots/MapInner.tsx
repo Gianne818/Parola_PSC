@@ -10,6 +10,7 @@ import { getSpeciesColor, getSpeciesConfig, getHotspotDisplayColor, GENERAL_PELA
 import { PHILIPPINE_REGIONS, detectPhilippineRegion, isCoordinateInRegion } from "../../../data/philippineRegions";
 
 import { PREDICTION_RADIUS_KM, PREDICTION_RADIUS_METERS, type MapViewMode } from "./MapComponent";
+import { isClientCoordinate } from '@/lib/frontend/coordinates';
 
 const PHILIPPINE_NAVIGATION_BOUNDS: L.LatLngBoundsLiteral = [[4.5, 115.5], [21.5, 127.5]];
 
@@ -117,7 +118,7 @@ interface MapInnerProps {
 }
 
 const isValidLatLng = (lat: number, lng: number): boolean => {
-  return typeof lat === "number" && typeof lng === "number" && !isNaN(lat) && !isNaN(lng);
+  return isClientCoordinate(lat, lng);
 };
 
 // RegionBoundsController component to dynamically fit bounds to active region and lock viewport
@@ -240,7 +241,7 @@ function MapEventsHandler({
           onSelectHotspot(null); // Clear active hotspot selection to focus on custom waypoint
           showToast(`Plotted Waypoint: ${clickedLat}°N, ${clickedLng}°E`, "info");
         } else {
-          showToast("Point is out of Philippine Territorial Waters!", "error");
+          showToast("Point is outside the current map display extent. This check does not establish fishing permission.", "error");
         }
       }
     },
@@ -324,8 +325,8 @@ export default function MapInner({
 }: MapInnerProps) {
   const isBriefing = presentation === 'dashboard';
   // Validate and fall back on home port coordinates
-  const homeLat = userProfile?.lat ?? 14.0122;
-  const homeLng = userProfile?.lng ?? 123.0114;
+  const homeLat = userProfile?.lat;
+  const homeLng = userProfile?.lng;
   
   const centerLat = center?.[0];
   const centerLng = center?.[1];
@@ -626,7 +627,7 @@ export default function MapInner({
           const type = spot.type || (spot.group === "pelagic" ? "pelagic" : "demersal");
           const name = spot.name || spot.label || "Unknown Spot";
           const species = spot.species || [spot.family || ""];
-          const depth = spot.depth || 50;
+          const depth = Number.isFinite(spot.depth) ? spot.depth : null;
 
           const isUnsafe = !isBriefing && (manualOverrideHold || spot.isUnsafe);
           const isSelected = selectedHotspot?.id === spot.id;
@@ -704,23 +705,20 @@ export default function MapInner({
                           color: speciesColor
                         }}
                       >
-                        <span>⚡ {(spot.catchProbability <= 1 ? spot.catchProbability * 100 : spot.catchProbability).toFixed(0)}% LightGBM Catch Probability</span>
+                        <span>⚡ {(spot.catchProbability <= 1 ? spot.catchProbability * 100 : spot.catchProbability).toFixed(0)}% model score (unverified)</span>
                       </div>
                     )}
                     {spot.distanceKm !== undefined && (
                       <div>Haversine Distance: <span className="text-slate-900 font-extrabold">{spot.distanceKm.toFixed(1)} km ({spot.compassBearing})</span></div>
                     )}
-                    {spot.distanceKm !== undefined && spot.catchProbability !== undefined && spot.distanceKm > 0 && (
-                      <div>Yield Efficiency Ratio: <span className="text-amber-700 font-extrabold">{((spot.catchProbability <= 1 ? spot.catchProbability * 100 : spot.catchProbability) / spot.distanceKm).toFixed(2)} %/km</span></div>
-                    )}
                     {spot.sst !== undefined && (
                       <div>Sea Temp (SST): <span className="text-amber-600 font-extrabold">{spot.sst}°C</span></div>
                     )}
-                    <div>Depth: <span className="text-brand-black font-extrabold">{depth}m</span></div>
-                    <div>Species: <span className="text-brand-green font-extrabold">{species.join(", ")}</span></div>
+                    <div>Depth: <span className="text-brand-black font-extrabold">{depth === null ? 'Unavailable' : `${depth} m`}</span></div>
+                    <div>Species: <span className="text-brand-green font-extrabold">{species.filter(Boolean).join(", ") || "Unavailable; no species evidence supplied"}</span></div>
                   </div>
                   <p className="text-[10px] text-gray-400 font-medium leading-normal pt-1 border-t border-gray-100">
-                    {spot.lastUpdated || "Optimal oceanographic conditions observed."}
+                    {spot.lastUpdated || "Record time unavailable."}
                   </p>
                 </div>
                 </Popup>}

@@ -41,7 +41,7 @@ const messages = {
   evaluation: ['Catch feedback', 'Feedback sa huli', 'Feedback sa kuha', 'Feedback sa kuha'],
   localHistory: ['Saved on this device', 'Naka-save sa device na ito', 'Na-save niini nga device', 'Na-save sa sini nga device'],
   profilePort: ['Profile and home port', 'Profile at daungan', 'Profile ug pantalan', 'Profile kag pantalan'],
-  savedDetails: ['Saved registration details', 'Naka-save na detalye ng rehistro', 'Na-save nga detalye sa rehistro', 'Na-save nga detalye sang rehistro'],
+  savedDetails: ['Saved profile details; these do not verify phone ownership, vessel registration or fishing permission.', 'Naka-save na detalye ng profile; hindi nito pinatutunayan ang pagmamay-ari ng numero, rehistro ng bangka o pahintulot na mangisda.', 'Na-save nga detalye sa profile; dili kini pamatuod sa pagpanag-iya sa numero, rehistro sa bangka o pagtugot sa pagpangisda.', 'Na-save nga detalye sang profile; indi ini pamatuod sang pagpanag-iya sang numero, rehistro sang bangka ukon pagtugot sa pagpangisda.'],
   operator: ['Vessel / operator name', 'Pangalan ng bangka / operator', 'Ngalan sa bangka / operator', 'Ngalan sang bangka / operator'],
   registeredPhone: ['Registered mobile number', 'Rehistradong mobile number', 'Rehistradong mobile number', 'Rehistrado nga mobile number'],
   boatType: ['Boat type', 'Uri ng bangka', 'Klase sa bangka', 'Klase sang bangka'],

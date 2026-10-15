@@ -15,6 +15,7 @@ import { APPLICATION_COPY } from '@/components/application/application-copy';
 import styles from '@/components/application/application.module.css';
 import ForecastReading from '@/components/dashboard/ForecastReading';
 import { GUIDANCE_COPY } from '@/components/dashboard/guidance-copy';
+import WeatherCoverage from '@/components/dashboard/WeatherCoverage';
 
 export default function AdvisoriesPage() {
   const { userProfile, language, manualOverrideHold } = useApp();
@@ -34,6 +35,7 @@ export default function AdvisoriesPage() {
     { label: copy.storm, reading: weather.data?.stormSignal, unit: '', icon: CloudLightning },
   ];
   const stale = weather.failed || readings.some(({ reading }) => reading?.value != null && !isReadingCurrent(reading, now));
+  const received = displayTime(weather.data?.receivedAt, language);
   return <AuthLayout variant="application">
     <div className={`${styles.page} ${styles.advisories}`}><div className={styles.columns}>
       <article className={styles.bulletin}>
@@ -42,7 +44,7 @@ export default function AdvisoriesPage() {
           <p className={styles.advisoryPort}>{userProfile.port || copy.portMissing}</p>
           <p>{state === 'hold' ? copy.holdDescription : state === 'clear' ? copy.clearDescription : copy.incompleteDescription}</p>
           {weather.data?.hold.active && weather.data.hold.reason && <p><strong>{text.regionalReason}: </strong>{weather.data.hold.reason}</p>}
-          <p className={styles.small}>{weather.loading ? copy.refreshing : weather.data ? `${guidance.retrieved}: ${displayTime(weather.data.receivedAt, language)} PHT` : copy.unknownTime}</p>
+          <p className={styles.small}>{weather.loading ? copy.refreshing : received ? `${guidance.retrieved}: ${received} PHT` : copy.unknownTime}</p>
           {stale && weather.data && !weather.loading && <p className={styles.small}>{copy.lastAvailable}</p>}
           {weather.failed && !weather.loading && <p role="status" className={styles.muted}>{copy.refreshFailed}</p>}
           <div className={styles.actions}><button type="button" className={styles.button} onClick={weather.refresh} disabled={weather.loading}><RefreshCw size={16} aria-hidden="true" />{copy.refresh}</button><Link className={styles.link} href="/dashboard">{copy.viewAreas}</Link></div>
@@ -54,6 +56,7 @@ export default function AdvisoriesPage() {
           <dl className={styles.supportingWeather}>{readings.slice(2).map(({ label, reading, unit, icon }, index) =>
             <ForecastReading key={label} label={label} reading={reading} unit={unit} icon={icon} language={language} now={now} record={index === 1} />)}</dl>
           <p className={styles.regionalNote}>{guidance.regionalNote}</p>
+          <WeatherCoverage data={weather.data} requested={userProfile} regionName={region.name} />
           <details className={styles.disclosure}><summary>{text.methodology}</summary><p>{text.methodologyText}</p><p>{text.forecastNote}</p><p>{copy.holdChecks}: {weather.data?.hold.available ? copy.holdRecorded : copy.holdUnknown}. {displayTime(weather.data?.hold.checkedAt, language) || copy.unknownTime}</p></details>
         </section>
       </article>

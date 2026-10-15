@@ -1,6 +1,7 @@
 /**
  * Reverse and Forward Geocoding Service using OpenStreetMap Nominatim
  */
+import { isClientCoordinate, parseCoordinateText } from '@/lib/frontend/coordinates';
 import { fetchWithTimeout } from "../utils/fetchWithTimeout";
 
 // Nominatim usage policy (https://operations.osmfoundation.org/policies/nominatim/):
@@ -36,6 +37,7 @@ const searchCache = new Map<string, { timestamp: number; value: GeocodingResult[
  * Reverse Geocode coordinates to exact real location/address name.
  */
 export async function reverseGeocode(lat: number, lng: number): Promise<string> {
+  if (!isClientCoordinate(lat, lng)) throw new Error('Location coordinates are invalid.');
   const fallback = `Coastal Spot (${lat.toFixed(4)}, ${lng.toFixed(4)})`;
   // Serve cached results instantly (Nominatim policy: cache + max 1 req/s)
   const cacheKey = `${lat.toFixed(4)},${lng.toFixed(4)}`;
@@ -112,7 +114,12 @@ export async function searchLocations(query: string): Promise<GeocodingResult[]>
 
     if (response.ok) {
       const data = await response.json();
-      const results: GeocodingResult[] = data.map((item: any) => {
+      if (!Array.isArray(data)) return [];
+      const results: GeocodingResult[] = data.flatMap((item: any) => {
+        if (!item || typeof item.display_name !== 'string') return [];
+        const lat = parseCoordinateText(item.lat);
+        const lng = parseCoordinateText(item.lon);
+        if (!isClientCoordinate(lat, lng)) return [];
         const addr = item.address || {};
         const barangay = addr.village || addr.suburb || addr.neighbourhood || '';
         const municipality = addr.town || addr.city || addr.municipality || addr.county || '';
@@ -126,8 +133,8 @@ export async function searchLocations(query: string): Promise<GeocodingResult[]>
 
         return {
           name,
-          lat: parseFloat(item.lat),
-          lng: parseFloat(item.lon),
+          lat: lat!,
+          lng: lng!,
           locality: municipality,
           province,
           fullAddress: item.display_name,
