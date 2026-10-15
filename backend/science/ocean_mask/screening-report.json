@@ -1,0 +1,102 @@
+{
+  "purpose": "Offline candidate screening; matches are not accuracy or release approval",
+  "production_approved": false,
+  "pending_gates": [
+    "C01",
+    "D08"
+  ],
+  "source": {
+    "candidate": "Natural Earth 1:10 million land, v5.0.0 GeoJSON snapshot",
+    "upstream_url": "https://raw.githubusercontent.com/nvkelso/natural-earth-vector/ace5fed0eaf3c6c03c951e75b439ba8fffbc218e/geojson/ne_10m_land.geojson",
+    "upstream_commit": "ace5fed0eaf3c6c03c951e75b439ba8fffbc218e",
+    "upstream_sha256": "1ac90796408bc6ad6911d69448485d3c4dbf2190370080368a09976e1c9f7416",
+    "geometry_sha256": "e3944b196f38446ab971b53a188ac9b12b1b1a2bb05bbf4259c4202b9d069107",
+    "license": "Public domain",
+    "license_url": "https://www.naturalearthdata.com/about/terms-of-use/",
+    "coordinate_order": "longitude,latitude (CRS84)",
+    "study_bounds": [
+      117.0,
+      5.0,
+      127.0,
+      21.0
+    ],
+    "selection": "Keep every complete polygon whose exterior intersects study_bounds; no clipping, simplification, buffering or coordinate rounding",
+    "polygon_count": 232,
+    "production_approved": false
+  },
+  "fixture_version": "ph-mask-screening-v1",
+  "fixture_sha256": "7088cde199506db831227c3b440734dbb3f3bb5d46f87808724b077a166b70fc",
+  "counts": {
+    "match": 6,
+    "unscored": 3
+  },
+  "review_counts": {
+    "provisional": 6,
+    "unreviewed": 3
+  },
+  "cases": [
+    {
+      "id": "iloilo-rounded-plan-control",
+      "expected": "land",
+      "actual": "land",
+      "review_status": "provisional",
+      "screening": "match"
+    },
+    {
+      "id": "roxas-rounded-plan-control",
+      "expected": "land",
+      "actual": "land",
+      "review_status": "provisional",
+      "screening": "match"
+    },
+    {
+      "id": "cebu-rounded-plan-control",
+      "expected": "land",
+      "actual": "land",
+      "review_status": "provisional",
+      "screening": "match"
+    },
+    {
+      "id": "manila-rounded-plan-control",
+      "expected": "land",
+      "actual": "land",
+      "review_status": "provisional",
+      "screening": "match"
+    },
+    {
+      "id": "sulu-sea-plan-control",
+      "expected": "water_candidate",
+      "actual": "water_candidate",
+      "review_status": "provisional",
+      "screening": "match"
+    },
+    {
+      "id": "philippine-sea-plan-control",
+      "expected": "water_candidate",
+      "actual": "water_candidate",
+      "review_status": "provisional",
+      "screening": "match"
+    },
+    {
+      "id": "malapascua-review-probe",
+      "expected": null,
+      "actual": "water_candidate",
+      "review_status": "unreviewed",
+      "screening": "unscored"
+    },
+    {
+      "id": "cabilao-review-probe",
+      "expected": null,
+      "actual": "water_candidate",
+      "review_status": "unreviewed",
+      "screening": "unscored"
+    },
+    {
+      "id": "cebu-coastal-cell-review-probe",
+      "expected": null,
+      "actual": "coastal_or_mixed",
+      "review_status": "unreviewed",
+      "screening": "unscored"
+    }
+  ]
+}

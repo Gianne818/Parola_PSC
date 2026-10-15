@@ -1,0 +1,52 @@
+{
+  "version": "ph-mask-screening-v1",
+  "coordinate_order": "longitude,latitude (CRS84)",
+  "status": "Proposed screening controls only. No field/survey/independent shoreline review has been completed.",
+  "cases": [
+    {
+      "id": "iloilo-rounded-plan-control", "kind": "point",
+      "coordinates": [122.56, 10.70], "expected": "land", "review_status": "provisional",
+      "basis": "docs/reference/fixplan-detail.md section 7; rounded coastal coordinates need exact shoreline review."
+    },
+    {
+      "id": "roxas-rounded-plan-control", "kind": "point",
+      "coordinates": [122.75, 11.58], "expected": "land", "review_status": "provisional",
+      "basis": "docs/reference/fixplan-detail.md section 7; rounded coastal coordinates need exact shoreline review."
+    },
+    {
+      "id": "cebu-rounded-plan-control", "kind": "point",
+      "coordinates": [123.89, 10.31], "expected": "land", "review_status": "provisional",
+      "basis": "docs/reference/fixplan-detail.md section 7; rounded coastal coordinates need exact shoreline review."
+    },
+    {
+      "id": "manila-rounded-plan-control", "kind": "point",
+      "coordinates": [120.98, 14.60], "expected": "land", "review_status": "provisional",
+      "basis": "docs/reference/fixplan-detail.md section 7; rounded coastal coordinates need exact shoreline review."
+    },
+    {
+      "id": "sulu-sea-plan-control", "kind": "point",
+      "coordinates": [120.0, 8.0], "expected": "water_candidate", "review_status": "provisional",
+      "basis": "docs/reference/fixplan-detail.md section 7; ocean screening only, not fishing eligibility."
+    },
+    {
+      "id": "philippine-sea-plan-control", "kind": "point",
+      "coordinates": [126.0, 13.0], "expected": "water_candidate", "review_status": "provisional",
+      "basis": "docs/reference/fixplan-detail.md section 7; ocean screening only, not fishing eligibility."
+    },
+    {
+      "id": "malapascua-review-probe", "kind": "point",
+      "coordinates": [124.117, 11.333], "expected": null, "review_status": "unreviewed",
+      "basis": "Proposed small-island probe, independently verify exact point and land footprint before setting an expected class."
+    },
+    {
+      "id": "cabilao-review-probe", "kind": "point",
+      "coordinates": [123.772, 9.891], "expected": null, "review_status": "unreviewed",
+      "basis": "Proposed small-island probe, independently verify exact point and land footprint before setting an expected class."
+    },
+    {
+      "id": "cebu-coastal-cell-review-probe", "kind": "cell",
+      "bounds": [123.84, 10.26, 123.94, 10.36], "expected": null, "review_status": "unreviewed",
+      "basis": "Proposed mixed-cell probe approximating the current inference envelope width. Independent shoreline review and actual source-cell geometry still required."
+    }
+  ]
+}
