@@ -554,7 +554,11 @@ def login_user(payload: schemas.UserLogin, db: Session = Depends(get_db)):
         home_port_name=user_obj.home_port_name,
         latitude=coords.lat if coords else 0.0,
         longitude=coords.lon if coords else 0.0,
-        is_active=user_obj.is_active
+        is_active=user_obj.is_active,
+        advisory_days=user_obj.advisory_days,
+        preferred_advisory_time=user_obj.preferred_advisory_time,
+        preferred_language=user_obj.preferred_language,
+        habitat_preference=user_obj.habitat_preference,
     )
 
 
@@ -577,7 +581,11 @@ def get_user_by_phone(phone_number: str = Query(...), db: Session = Depends(get_
         home_port_name=user_obj.home_port_name,
         latitude=coords.lat if coords else 0.0,
         longitude=coords.lon if coords else 0.0,
-        is_active=user_obj.is_active
+        is_active=user_obj.is_active,
+        advisory_days=user_obj.advisory_days,
+        preferred_advisory_time=user_obj.preferred_advisory_time,
+        preferred_language=user_obj.preferred_language,
+        habitat_preference=user_obj.habitat_preference,
     )
 
 

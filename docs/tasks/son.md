@@ -2,13 +2,22 @@
 
 Owner: **Son only**. Updated October 15, 2026. [Hub](../../fixplan.md) | [Shared rules, files and gates](shared.md) | [Full reference](../reference/fixplan-detail.md)
 
+Son asked to retain the plain task list for future requests: [saved 27-task list](son-backlog.md).
+
+**Current selection: REG-01-SON.** On October 15, 2026, Son selected preference
+persistence and approved D01: 0–5 distinct weekdays; zero pauses routine messages;
+05:00 Asia/Manila default; changes affect future unsent advisories without an edit
+cutoff; existing accounts receive no selected days until they choose. Critical
+alerts remain independent. Tier retains UI ownership. Work is on
+`codex/son/reg-01`; no live SMS requests are authorized by this task.
+
 ## Before coding
 
 - Confirm identity from this chat; otherwise ask "Who are you working as: Tier, Son, or Toby?" and wait. Never infer it from a branch, username or last session.
 - Work on one explicitly selected `-SON` assignment. For a general "continue", propose your next ready assignment and wait for selection. A specific matching assignment in the user's request already establishes the task.
 - Only edit owned files listed below and their assigned tests; read other areas for context. Request the owning member's change when a shared dependency is missing. Never finish their portion yourself.
 - C01-C08 are interface gates and D01-D10 are unresolved decisions in the shared rules. Pending prerequisites block dependent integration/live behavior; isolated evaluation/tests may proceed only where an assignment explicitly allows it.
-- Parent statuses describe existing code, not completion. All boxes remain unchecked. Deferred/superseded items are not the next task without explicit separate prioritization.
+- Check off only Son assignments whose acceptance evidence is recorded. Parent statuses remain partial until every required member portion and integration check is complete. Deferred/superseded items need explicit separate prioritization.
 
 ## Allowed files
 
@@ -23,7 +32,7 @@ Owner: **Son only**. Updated October 15, 2026. [Hub](../../fixplan.md) | [Shared
 
 ## Assignments
 
-- [ ] <a id="reg-01-son"></a>**REG-01-SON | P1 | Partial** - [Persist selected-day preferences.](../reference/fixplan-detail.md#reg-01)
+- [x] <a id="reg-01-son"></a>**REG-01-SON | P1 | Complete (backend)** - [Persist selected-day preferences.](../reference/fixplan-detail.md#reg-01)
   - **Files:** API, DB. **Work:** Persist validated preferences consistently across Next.js/FastAPI/types; preserve them on unrelated edits.
   - **Needs:** C03; D01. **Done when:** Distinct-day limits, time/language/habitat persistence and migration behavior pass API tests.
 
@@ -148,6 +157,33 @@ Owner: **Son only**. Updated October 15, 2026. [Hub](../../fixplan.md) | [Shared
   - **Needs:** Deferred; separate fuel product authorization. **Done when:** Authorized persistent orders/commitments and confirmed volume/status required; not a prerequisite for pilot fuel evaluation.
 
 ## Progress and handoffs
+
+### Current REG-01-SON preference persistence
+
+Implemented owner-only preference read/update and registration defaults, shared
+TypeScript and FastAPI preference contracts, and migration 03 with database
+constraints. Contract and Tier handoff: [advisory-preferences-contract.md](advisory-preferences-contract.md).
+Routine weekdays are explicit (0–5, ISO Monday=1); empty pauses routine advisories
+without withdrawing consent or blocking independent critical eligibility.
+Unrelated profile updates preserve saved days/time/language/habitat. Responses
+provide the next strictly future Manila schedule candidate. This task does not
+implement SMS-01 scheduling or MAP-02 ranking.
+
+Focused Python schema checks pass (4 tests); scoped backend TypeScript and script
+syntax checks pass. The initial root Vitest attempt could not start because an
+installed rolldown dependency is missing; the existing isolated runner completed
+165 backend/auth/preference tests successfully; after correcting parameterized
+test inputs, all 112 tests in the three directly changed suites passed again,
+and scoped TypeScript including the new tests passed. The agent database attempt
+failed at connect with EACCES. Subsequently, Son supplied successful dry-run and
+apply output for migration 03 on October 15, 2026: existing profiles preserved,
+verification fixtures rolled back, and defaults, five-day save/reload, port-only
+preservation, invalid/duplicate/sixth-day rejection and routine pause verified.
+Owner isolation, RLS/privileges, consent/audit and independent SMS eligibility
+also passed. No OTP or SMS was requested. REG-01-SON backend acceptance is
+complete. The parent REG-01 remains partial pending Tier's UI integration and
+full application acceptance. Changes still require the Git commit/review workflow.
+Son's saved list remains in [son-backlog.md](son-backlog.md).
 
 ### Current REG-02-SON migration/persistence continuation
 

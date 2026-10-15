@@ -1,7 +1,8 @@
 import uuid
+import re
 from datetime import date, time
-from typing import List, Optional
-from pydantic import BaseModel, Field
+from typing import List, Literal, Optional
+from pydantic import BaseModel, Field, field_validator
 
 class FishingHotspotItem(BaseModel):
     grid_id: int
@@ -45,13 +46,39 @@ class CreateFeedbackRequest(BaseModel):
     raw_sms_body: Optional[str] = None
 
 
-class UserCreate(BaseModel):
+class AdvisoryPreferences(BaseModel):
+    advisory_days: List[int] = Field(default_factory=list, max_length=5)
+    preferred_advisory_time: time = time(5, 0)
+    preferred_language: Literal['en', 'tl', 'ceb', 'hil'] = 'en'
+    habitat_preference: Literal['pelagic', 'demersal', 'both'] = 'both'
+
+    @field_validator('advisory_days', mode='before')
+    @classmethod
+    def validate_days(cls, value):
+        if (not isinstance(value, list) or len(value) > 5
+                or any(type(day) is not int or day < 1 or day > 7 for day in value)
+                or len(set(value)) != len(value)):
+            raise ValueError('Use 0–5 distinct ISO weekdays, Monday=1 through Sunday=7.')
+        return sorted(value)
+
+    @field_validator('preferred_advisory_time', mode='before')
+    @classmethod
+    def validate_advisory_time(cls, value):
+        if isinstance(value, time):
+            if value.tzinfo is not None or value.microsecond:
+                raise ValueError('Use a whole-second Manila local time.')
+            return value
+        if not isinstance(value, str) or not re.fullmatch(r'(?:[01]\d|2[0-3]):[0-5]\d(?::[0-5]\d)?', value):
+            raise ValueError('Use HH:MM or HH:MM:SS in Manila time.')
+        return value
+
+
+class UserCreate(AdvisoryPreferences):
     phone_number: str = Field(..., min_length=7, max_length=32, example="09171234567")
     full_name: str = Field(..., min_length=1, max_length=100, example="Juan Dela Cruz")
     home_port_name: Optional[str] = Field("Brgy Pasil, Cebu", max_length=100, example="Brgy Pasil, Cebu")
     latitude: float = Field(..., ge=-90, le=90, example=10.2929)
     longitude: float = Field(..., ge=-180, le=180, example=123.8961)
-    preferred_advisory_time: Optional[time] = Field(default="05:00:00")
     coop_id: Optional[uuid.UUID] = None
     password: Optional[str] = Field(None, min_length=8, max_length=128, example="secret123")
 
@@ -61,7 +88,7 @@ class UserLogin(BaseModel):
     password: str = Field(..., example="secret123")
 
 
-class UserResponse(BaseModel):
+class UserResponse(AdvisoryPreferences):
     id: uuid.UUID
     phone_number: str
     full_name: Optional[str]

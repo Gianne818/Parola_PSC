@@ -1,7 +1,7 @@
 import uuid
-from datetime import datetime
-from sqlalchemy import Column, BigInteger, Integer, Float, String, Date, Boolean, Time, DateTime, ForeignKey, Text
-from sqlalchemy.dialects.postgresql import UUID
+from datetime import datetime, time
+from sqlalchemy import Column, BigInteger, Integer, SmallInteger, Float, String, Date, Boolean, Time, DateTime, ForeignKey, Text, text
+from sqlalchemy.dialects.postgresql import ARRAY, UUID
 from geoalchemy2 import Geometry
 from database import Base
 
@@ -29,7 +29,10 @@ class User(Base):
     full_name = Column(String(100))
     home_port_name = Column(String(100), default="Brgy Pasil, Cebu")
     home_port_geom = Column(Geometry("POINT", srid=4326, spatial_index=True), nullable=False)
-    preferred_advisory_time = Column(Time, nullable=False)
+    preferred_advisory_time = Column(Time, nullable=False, default=time(5, 0))
+    advisory_days = Column(ARRAY(SmallInteger), nullable=False, server_default=text("'{}'::smallint[]"))
+    preferred_language = Column(Text, nullable=False, server_default=text("'en'"))
+    habitat_preference = Column(Text, nullable=False, server_default=text("'both'"))
     coop_id = Column(UUID(as_uuid=True), nullable=True)
     password_hash = Column(Text, nullable=True)
     is_active = Column(Boolean, default=True)

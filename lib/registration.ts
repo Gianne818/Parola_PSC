@@ -73,15 +73,17 @@ export const REGISTER_VERIFIED_USER_SQL = `
   INSERT INTO public.users (
     id, auth_user_id, phone_number, full_name, home_port_name, home_port_geom,
     preferred_advisory_time, phone_verified_at, messaging_consent,
-    messaging_consent_version, messaging_consent_at, messaging_consent_actor_id
+    messaging_consent_version, messaging_consent_at, messaging_consent_actor_id,
+    advisory_days, preferred_language, habitat_preference
   )
   SELECT a.id, a.id, $2, $3, $4, ST_SetSRID(ST_MakePoint($5, $6), 4326), $7,
-    NOW(), $8, $9, NOW(), a.id
+    NOW(), $8, $9, NOW(), a.id, $10::smallint[], $11, $12
   FROM auth.users a
   WHERE a.id = $1 AND a.phone_confirmed_at IS NOT NULL
     AND public.parola_phone_e164(a.phone) = $2
   RETURNING id, phone_number, full_name, home_port_name, created_at,
     messaging_consent, messaging_consent_version, messaging_consent_at,
+    advisory_days, preferred_advisory_time::text, preferred_language, habitat_preference,
     (is_active IS TRUE AND messaging_consent) AS messaging_eligible;
 `;
 

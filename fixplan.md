@@ -47,7 +47,7 @@ Use separate task branches/checkouts: `codex/tier/<task>`, `codex/son/<task>`, `
 - Marine entitlements, privacy, consent and reviewed catch/model data apply before live operation.
 - A: trust/safety foundation; B: municipal pilot and scoped commercial trials; C: verified enterprise exports; D: separately validated roadmap.
 - ROAD-01/UX-01/LEG-02 remain deferred; LEG-01 is superseded. Fuel pooling is outside the core proposal.
-- All implementation boxes remain unchecked. Existing "Partial" status is not completion; a parent needs every active member portion and integration evidence.
+- Member checklists record proven completed portions (REG-01-SON backend is complete). A parent remains "Partial" until every active member portion and integration acceptance is complete.
 
 ## 5. References, decisions and sharing
 
