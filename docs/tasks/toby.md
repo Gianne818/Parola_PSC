@@ -93,7 +93,17 @@ Owner: **Toby only**. Updated October 15, 2026. [Hub](../../fixplan.md) | [Share
 
 ## Progress and handoffs
 
-No assignment is completed and no handoff is outstanding at document creation. Keep this section short; update only your own records. Do not mark a parent feature complete from this checklist alone.
+### DATA-01-TOBY — source/fixture screening, 2026-10-15
+
+- Selected by Toby in chat; branch `codex/toby/data-01`. Initial offline evaluation portion implemented under `backend/science/ocean_mask/`; the full assignment remains unchecked. No production inference/publication or other member's files changed.
+- Pinned Natural Earth v5.0.0 GeoJSON, upstream/subset SHA-256 and deterministic extraction; bundled 232 full polygons for the study rectangle. Source comparison, limitations and reproducible commands are in [scientific evaluation notes](../../backend/science/ocean_mask/README.md).
+- Screening: four plan city controls classified land; two open-water controls retained (six provisional matches, not accuracy evidence). Two proposed small-island points classify as water candidates; these and a coastal cell remain unscored pending independent coordinate/shoreline review. The provider's newer v5.1.1 shapefile and `global-land-mask` have not been executed/evaluated here.
+- Checks: `python3 -m unittest discover -s backend/science/ocean_mask/tests -v` — 21 passed (Python 3.14.3). Re-extraction from pinned upstream bytes reproduced the bundled geometry and manifest byte for byte; report regeneration also matched exactly. `git diff --check` passed. D08 control/source review and C01 agreement still block approved generation exclusion/publication; do not mark DATA-01 or this full assignment complete.
+
+| From assignment | To member | Requested file/contract change | Acceptance/example | Blocks | Status |
+| --- | --- | --- | --- | --- | --- |
+| DATA-01-TOBY | Son | Record C01/D08 agreement in `docs/tasks/shared.md`: mask/source IDs/checksums and coverage, numeric longitude/latitude order, unknown/boundary and mixed-cell exclusion semantics; coordinate schema/type changes in Son-owned files only. | Examples for land, retained ocean, exact boundary, missing mask, out-of-coverage and island inside a mixed source cell; preserve home-port eligibility as a separate concern. Toby supplies source/control review evidence before approval. | Production generation adapter, shared geometry publication and cross-layer integration. | Requested; pending agreement and D08 evidence. |
+| DATA-01-TOBY | Son | Coordinate pinned `global-land-mask`/NumPy dependencies and data lineage/reuse review in Son-owned Python manifests if proceeding with that comparison. | Reproducible package/data versions plus the same reviewed coordinates; nominal 1-km sampling is not accepted as accuracy evidence. | Executable GLOBE-based candidate comparison only; current standard-library evaluation is independent. | Requested; no dependency installed or manifest changed. |
 
 Handoff format: `from assignment | to member | requested file/contract change | acceptance/example | blocks | status`. Record requests here and summarize them in chat; this does not authorize sending external messages or changing the recipient's files. The recipient updates their own plan; Son updates shared integration decisions after coordination.
 
