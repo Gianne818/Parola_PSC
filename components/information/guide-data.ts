@@ -22,22 +22,23 @@ export const STEPS: StepGuide[] = [
     title: "How to create your first account",
     duration: "1 min",
     shortDesc:
-      "Use your mobile number, a password, and your preferred language.",
+      "Verify your mobile number with an SMS code, then choose your home port and messaging consent.",
     actionUrl: "/register",
     actionLabel: "Open Registration",
     instructions: [
       "Open Registration and enter your Philippine mobile number.",
-      "Create a password with at least six characters.",
-      "Choose English, Tagalog, Cebuano, or Hiligaynon as your system language.",
-      "Select Continue, then use the displayed demo code and Create account to continue. No verification SMS is sent; this does not verify phone ownership or enroll you in automatic advisories.",
+      "Select Request SMS code. Acceptance does not confirm handset delivery. Enter the received six-digit code and select Verify code; no demo code or password is used.",
+      "The surrounding interface supports English, Tagalog, Cebuano and Hiligaynon. Phone verification and consent currently use an English fallback.",
+      "Enter your full name and choose a home port, or enter another port with numeric coordinates. Read the current SMS consent text and explicitly agree or decline; either choice permits account creation.",
+      "Select Create account and wait for server confirmation. If saving fails, your entries are unsaved; check the saved account before retrying. No offline account is created. Consent does not confirm scheduling or SMS delivery.",
     ],
     operationalTip:
-      "Web registration needs internet access. Reading a delivered SMS needs an SMS-capable phone and cellular signal, without mobile data. A trusted person can help you use the web form.",
+      "Web registration needs internet access and an available OTP service. Reading a delivered SMS needs an SMS-capable phone and cellular signal, without mobile data. Assisted access is disabled; verify only your own number. Withdraw messaging consent in Settings without deleting your account.",
     image: "/images/guide-registration-current.png",
     imageAlt:
-      "Current Parola registration form with mobile number, password, and language selection",
+      "Historical Parola registration form with mobile number, password, and language selection",
     imageCaption:
-      "Actual registration screen: mobile number, password, and system language. Account setup comes before home-port selection.",
+      "Historical password-form reference. The current flow uses an SMS code, a Supabase owner session, home-port details and explicit messaging consent; this image does not demonstrate the current flow.",
   },
   {
     id: "complete-onboarding",
