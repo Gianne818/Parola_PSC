@@ -27,11 +27,14 @@ Most-specific path wins. New files use the matching scope; any unlisted/ambiguou
 | Toby: HSI | `parola-api-service/hsi_calculator.py`, `parola-api-service/tests/test_hsi_calculator.py`. API callers/schemas stay Son's; interface changes require handoff. |
 | Son: legacy integration | Remaining `StarIsdaData/backend/**`, including `main.py`, `database.py`, `config.py` and their tests; remaining `backend/**` excluding Toby's inference/science scopes. |
 | Son: shared integration | `types/index.ts` and other shared types; all dependency manifests/lockfiles (including Python requirements), root configuration, `middleware.ts`, deployment scripts, CI/hooks and integration-test configuration. Son coordinates these changes; Tier/Toby submit requests rather than changing them via install/codegen side effects. |
+| Son: Supabase integration | `supabase/**`: REG-02-SON Send SMS Auth hook, its configuration and tests; deployment instructions in `docs/supabase-sms-otp.md`. |
 | Documentation | Each member owns their own task-file statuses/handoffs. Son maintains hub/shared rules/reference/team-wide instructions and other integration docs after coordination. Tier owns frontend user guides/copy; Toby scientific documentation in owned directories. Explicit user-requested team-document maintenance is the stated exception. |
 
 File-group names in member checklists are shorthand for this table, never broader permissions. In particular, Tier's `lib/dashboard.ts` ownership permits consuming the server decision, not inventing separate production safety thresholds. Toby supplies scientifically validated rule/input recommendations; Son owns shared operational safety contracts and enforcement. Coordinate new common helpers before adding them.
 
-## Interface handoffs (all Pending; no API changes implemented)
+## Interface handoffs (C03 backend selection recorded; consumer integration pending)
+
+**C03 registration subset, October 15, 2026:** Son explicitly selected Supabase SMS OTP, explicit messaging consent and disabled assisted access in this chat. Backend contract/examples are in [registration-contract.md](registration-contract.md). Tier consultation/client acceptance, real provider configuration, migration application and integration checks remain pending. This selection does not settle REG-01/D01 schedule defaults or report/review delegation.
 
 Son records each approved interface and example in this section after consulting producer/consumer owners. This document selects responsibilities, not final database/wire shapes. Existing product decisions remain unresolved below; agents must not invent defaults to clear a gate.
 
@@ -48,7 +51,9 @@ Son records each approved interface and example in this section after consulting
 
 A gate is satisfied by a written agreed contract and representative examples/errors, not by assuming a feature is deployed. Son owns schema/contract/dependency edits; Toby implements producer-side adapters/tests; Tier implements client consumption/tests after agreement. If runtime implementation is not yet available, isolated fixtures/tests may use the agreed contract, but cannot be connected to live guidance or advertised as working.
 
-## Product decisions (all Pending)
+## Product decisions (D02 registration subset selected; remaining decisions pending)
+
+**D02 registration decision:** Son approved Supabase SMS OTP and explicit messaging consent, with helpers disabled for now (current chat, October 15, 2026). Backend registration and consent changes require the confirmed owner's Supabase session; admin keys do not enroll or consent on a fisher's behalf. Tier's client handoff and report/review assistance decisions remain pending. No live provider capability or delivery has been verified.
 
 The coordinators must record the actual decision, consulted members, evidence/date and affected gates. No name here grants legal approval or authority to choose unsupported scientific policy.
 

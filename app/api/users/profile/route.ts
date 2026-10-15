@@ -1,89 +1,32 @@
-import { NextResponse } from 'next/server';
-import { requireOwnerOrAdmin } from '@/lib/route-auth';
+import { phoneE164, registrationBody, registrationJson, registrationOwner, registrationResponse, registryDb, RegistrationError } from '@/lib/registration';
 
 export async function PUT(request: Request) {
-  try {
-    const body = await request.json().catch(() => null);
-    if (!body || typeof body !== 'object') {
-      return NextResponse.json({ error: 'Invalid JSON body.' }, { status: 400 });
+  return registrationResponse(async () => {
+    const owner = await registrationOwner(request);
+    const body = await registrationBody(request, ['phone_number', 'full_name', 'home_port_name', 'latitude', 'longitude', 'preferred_advisory_time']);
+    const phone = phoneE164(body.phone_number);
+    if (phone !== phoneE164(owner.phone)) throw new RegistrationError(403, 'You can only edit your own profile.');
+    for (const field of ['full_name', 'home_port_name'] as const) {
+      const value = body[field];
+      if (typeof value !== 'string' || !value.trim() || value.length > 100) throw new RegistrationError(400, `${field} must be 1-100 characters.`);
     }
-    const { phone_number, full_name, home_port_name, latitude, longitude, preferred_advisory_time, coop_id, password } = body as {
-      phone_number?: unknown;
-      full_name?: unknown;
-      home_port_name?: unknown;
-      latitude?: unknown;
-      longitude?: unknown;
-      preferred_advisory_time?: unknown;
-      coop_id?: unknown;
-      password?: unknown;
-    };
-
-    if (typeof phone_number !== 'string' || !phone_number.trim()) {
-      return NextResponse.json(
-        { error: 'phone_number, latitude, and longitude are required' },
-        { status: 400 }
-      );
+    for (const [field, min, max] of [['latitude', -90, 90], ['longitude', -180, 180]] as const) {
+      const value = body[field];
+      if (typeof value !== 'number' || !Number.isFinite(value) || value < min || value > max) throw new RegistrationError(400, `${field} must be a valid numeric coordinate.`);
     }
-    if (latitude === undefined || longitude === undefined) {
-      return NextResponse.json(
-        { error: 'phone_number, latitude, and longitude are required' },
-        { status: 400 }
-      );
-    }
-
-    const denied = await requireOwnerOrAdmin(request, phone_number);
-    if (denied) return denied;
-
-    const lat = Number(latitude);
-    const lng = Number(longitude);
-    if (!Number.isFinite(lat) || lat < -90 || lat > 90) {
-      return NextResponse.json({ error: 'latitude must be between -90 and 90.' }, { status: 400 });
-    }
-    if (!Number.isFinite(lng) || lng < -180 || lng > 180) {
-      return NextResponse.json({ error: 'longitude must be between -180 and 180.' }, { status: 400 });
-    }
-    if (full_name !== undefined && (typeof full_name !== 'string' || full_name.length > 100)) {
-      return NextResponse.json({ error: 'full_name must be at most 100 characters.' }, { status: 400 });
-    }
-
-    const apiUrl = process.env.PAROLA_API_URL || 'http://localhost:8000';
-    const backendApiKey = process.env.PAROLA_API_KEY || '';
-    const controller = new AbortController();
-    const timeout = setTimeout(() => controller.abort(), 8000);
-    let response: Response;
-    try {
-      response = await fetch(`${apiUrl}/api/users/profile`, {
-        method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
-          ...(backendApiKey ? { 'X-API-Key': backendApiKey } : {}),
-        },
-        body: JSON.stringify({
-          phone_number,
-          full_name: full_name || 'Captain',
-          home_port_name: home_port_name || 'Municipal Port',
-          latitude: lat,
-          longitude: lng,
-          preferred_advisory_time: preferred_advisory_time || '05:00:00',
-          coop_id: coop_id || null,
-          password: password || undefined,
-        }),
-        signal: controller.signal,
-      });
-    } finally {
-      clearTimeout(timeout);
-    }
-
-    if (!response.ok) {
-      const errorData = await response.json().catch(() => ({} as Record<string, unknown>));
-      const detail = typeof errorData.detail === 'string' ? errorData.detail : 'Failed to update user profile';
-      return NextResponse.json({ error: detail }, { status: response.status });
-    }
-
-    const data = await response.json();
-    return NextResponse.json(data, { status: 200 });
-  } catch {
-    console.error('[Profile API] update failed');
-    return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
-  }
+    const time = body.preferred_advisory_time;
+    if (time !== undefined && (typeof time !== 'string' || !/^(?:[01]\d|2[0-3]):[0-5]\d(?::[0-5]\d)?$/.test(time))) throw new RegistrationError(400, 'preferred_advisory_time must be a valid HH:MM or HH:MM:SS time.');
+    const result = await registryDb().query(`
+      UPDATE public.users u SET full_name = $3, home_port_name = $4,
+        home_port_geom = ST_SetSRID(ST_MakePoint($5, $6), 4326),
+        preferred_advisory_time = COALESCE($7::time, u.preferred_advisory_time), updated_at = NOW()
+      FROM auth.users a WHERE u.auth_user_id = $1 AND a.id = u.auth_user_id
+        AND u.phone_e164 = $2 AND a.phone_confirmed_at IS NOT NULL
+        AND public.parola_phone_e164(a.phone) = $2
+      RETURNING u.id, u.phone_number, u.full_name, u.home_port_name,
+        ST_Y(u.home_port_geom) AS latitude, ST_X(u.home_port_geom) AS longitude;`,
+    [owner.id, phone, (body.full_name as string).trim(), (body.home_port_name as string).trim(), body.longitude, body.latitude, time ?? null]);
+    if (!result.rows[0]) throw new RegistrationError(404, 'Verified registration not found.');
+    return registrationJson(result.rows[0]);
+  });
 }

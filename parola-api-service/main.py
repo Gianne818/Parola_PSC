@@ -509,79 +509,19 @@ def submit_feedback(payload: schemas.CreateFeedbackRequest, db: Session = Depend
 
 @app.post("/api/users", response_model=schemas.UserResponse, status_code=status.HTTP_201_CREATED, tags=["Users"])
 def register_user(payload: schemas.UserCreate, db: Session = Depends(get_db)):
-    cleaned_phone = payload.phone_number.strip()
-    existing = db.query(models.User).filter(models.User.phone_number == cleaned_phone).first()
-
-    if existing:
-        raise HTTPException(
-            status_code=status.HTTP_409_CONFLICT,
-            detail="An account with this phone number already exists. Please sign in instead."
-        )
-
-    home_port_geom = func.ST_SetSRID(func.ST_MakePoint(payload.longitude, payload.latitude), 4326)
-    pwd_hash = hash_password(payload.password) if payload.password else None
-
-    new_user = models.User(
-        phone_number=cleaned_phone,
-        full_name=payload.full_name,
-        home_port_name=payload.home_port_name,
-        home_port_geom=home_port_geom,
-        preferred_advisory_time=payload.preferred_advisory_time or "05:00:00",
-        password_hash=pwd_hash
-    )
-    db.add(new_user)
-    db.commit()
-    db.refresh(new_user)
-
-    coords = db.execute(
-        text("SELECT ST_Y(home_port_geom) as lat, ST_X(home_port_geom) as lon FROM public.users WHERE id = :uid"),
-        {"uid": str(new_user.id)}
-    ).fetchone()
-
-    return schemas.UserResponse(
-        id=new_user.id,
-        phone_number=new_user.phone_number,
-        full_name=new_user.full_name,
-        home_port_name=new_user.home_port_name,
-        latitude=coords.lat if coords else 0.0,
-        longitude=coords.lon if coords else 0.0,
-        is_active=new_user.is_active
+    # REG-02: there is one enrollment writer, which validates the real Supabase
+    # session and persists explicit consent. This legacy route cannot bypass it.
+    raise HTTPException(
+        status_code=status.HTTP_410_GONE,
+        detail="Use the verified registration flow at /api/users/register.",
     )
 
 
 @app.put("/api/users/profile", response_model=schemas.UserResponse, tags=["Users"], dependencies=[Depends(require_api_key)])
 def update_user_profile(payload: schemas.UserCreate, db: Session = Depends(get_db)):
-    cleaned_phone = payload.phone_number.strip()
-    existing = db.query(models.User).filter(models.User.phone_number == cleaned_phone).first()
-
-    if not existing:
-        raise HTTPException(status_code=404, detail="User profile not found.")
-
-    home_port_geom = func.ST_SetSRID(func.ST_MakePoint(payload.longitude, payload.latitude), 4326)
-    existing.full_name = payload.full_name
-    existing.home_port_name = payload.home_port_name
-    existing.home_port_geom = home_port_geom
-    if payload.preferred_advisory_time:
-        existing.preferred_advisory_time = payload.preferred_advisory_time
-    if payload.password:
-        existing.password_hash = hash_password(payload.password)
-
-    db.commit()
-    db.refresh(existing)
-
-    coords = db.execute(
-        text("SELECT ST_Y(home_port_geom) as lat, ST_X(home_port_geom) as lon FROM public.users WHERE id = :uid"),
-        {"uid": str(existing.id)}
-    ).fetchone()
-
-    return schemas.UserResponse(
-        id=existing.id,
-        phone_number=existing.phone_number,
-        full_name=existing.full_name,
-        home_port_name=existing.home_port_name,
-        latitude=coords.lat if coords else 0.0,
-        longitude=coords.lon if coords else 0.0,
-        is_active=existing.is_active
+    raise HTTPException(
+        status_code=status.HTTP_410_GONE,
+        detail="Use owner-authenticated profile updates at /api/users/profile.",
     )
 
 

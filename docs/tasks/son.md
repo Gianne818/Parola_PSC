@@ -149,6 +149,45 @@ Owner: **Son only**. Updated October 15, 2026. [Hub](../../fixplan.md) | [Shared
 
 ## Progress and handoffs
 
+### Current REG-02-SON update: Supabase/iPROG OTP hook
+
+Son selected Supabase SMS OTP, explicit messaging consent and helpers disabled
+in this chat; this supersedes the pending backend selection described in the
+older progress notes below. The user reports enabling the Phone provider.
+The requested hook implementation is in `supabase/functions/send-sms/index.ts`,
+with signature/validation/provider-failure tests and `supabase/config.toml`.
+Ownership for this new integration path is recorded in the shared rules.
+See [the deployment and hook setup guide](../supabase-sms-otp.md).
+
+Focused validation: 33 handler tests pass using the isolated cached Vitest runner;
+the scoped TypeScript check and `git diff --check` also pass.
+The local tests exercise real HMAC signatures and mocked HTTP only. Deployment
+was initially blocked by missing workspace deployment credentials/network access;
+the user subsequently deployed and configured the function in the dashboard.
+On October 15, 2026, user-provided terminal output from
+`node scripts/test-supabase-otp.mjs` confirms that a real OTP request was accepted,
+the received code verified the expected phone and Supabase issued a session.
+Session tokens were not printed or saved. The user reports a single SMS on the
+successful repeat test; the earlier multiple-message cause is not established.
+Migration application, profile/consent persistence and Tier's client integration
+remain pending; REG-02-SON remains partial. The app phone-auth flag remains disabled.
+
+### Earlier progress
+
+Live setup check exposed `hook_payload_invalid_content_type` after the user saved
+the Phone provider setting. The local successful hook response previously lacked
+JSON content type. A response-contract regression assertion failed against that
+implementation; the fix returns `Response.json({})` with HTTP 200. Redeployment
+of the existing dashboard function and a fresh real OTP request remain required.
+
+Subsequent user setup: screenshots show a deployed function, an enabled Send SMS
+hook and the three required secret names. Son reports Verify JWT off and the hook
+URL set to the actual `smooth-action` endpoint. Added the standalone
+`scripts/test-supabase-otp.mjs` for a local, single-SMS request/verification check
+without displaying or persisting session tokens. Live verification remains pending
+the user entering their number/code locally. This does not validate the portal UI,
+apply the registration migration or enable the app phone-auth flag.
+
 REG-02-SON selected in the current chat. Independent hardening covers confirmed-phone ownership checks, registration input validation and refusing credential-dropping writes on an outdated schema. Verification route/helper scope were requested from Son; C03/D02 remain pending. See the [registration contract proposal](registration-contract.md). No assignment is marked complete.
 
 `REG-02-SON | Tier | components/auth/AuthPage.tsx, context/AppContext.tsx, utils/auth-fetch.ts | replace demo verification/local login with the agreed server flow, collect consent, surface persistence errors and label offline drafts | blocks end-to-end live registration | requested; waiting for C03/D02 agreement`

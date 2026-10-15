@@ -1,0 +1,6 @@
+project_id = "parola-psc"
+
+# Supabase Auth signs this hook using Standard Webhooks, not a user JWT.
+# The function verifies that signature before contacting iPROG.
+[functions.send-sms]
+verify_jwt = false

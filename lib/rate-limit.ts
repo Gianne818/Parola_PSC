@@ -1,4 +1,3 @@
-import { NextResponse } from 'next/server';
 
 export interface RateLimitConfig {
   /** Max requests per window. */
@@ -20,6 +19,9 @@ export interface RateLimitResult {
 }
 
 export const RATE_LIMITS = {
+  otpRequest: { limit: 3, windowMs: 60_000, keyPrefix: 'otp-request' },
+  otpVerify: { limit: 5, windowMs: 15 * 60_000, keyPrefix: 'otp-verify' },
+  registration: { limit: 10, windowMs: 15 * 60_000, keyPrefix: 'registration' },
   /** Billed SMS dispatch: 5/min per IP. */
   smsSend: { limit: 5, windowMs: 60_000, keyPrefix: 'sms-send' },
   /** Login brute-force protection: 5 per 15 min per IP and per phone. */
@@ -158,8 +160,8 @@ export async function checkRateLimit(
 }
 
 /** 429 JSON response with Retry-After header. */
-export function rateLimitedResponse(retryAfterSec: number, scope?: string): NextResponse {
-  return NextResponse.json(
+export function rateLimitedResponse(retryAfterSec: number, scope?: string): Response {
+  return Response.json(
     { error: 'Too many requests. Please try again later.', ...(scope ? { scope } : {}) },
     {
       status: 429,
@@ -177,8 +179,8 @@ export function rateLimitExceededResponse(
   config: RateLimitConfig,
   result: RateLimitResult,
   scope?: string
-): NextResponse {
-  return NextResponse.json(
+): Response {
+  return Response.json(
     { error: 'Too many requests. Please try again later.', ...(scope ? { scope } : {}) },
     {
       status: 429,
