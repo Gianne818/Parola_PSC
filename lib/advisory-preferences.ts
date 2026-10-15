@@ -10,26 +10,26 @@ export function advisoryPreferenceInput(body: Record<string, unknown>): Partial<
     const days = body.advisory_days;
     if (!Array.isArray(days) || days.length > 5 || days.some(day => !Number.isInteger(day) || day < 1 || day > 7)
       || new Set(days).size !== days.length) {
-      throw new RegistrationError(400, 'advisory_days must contain 0–5 distinct ISO weekdays (Monday=1 through Sunday=7).');
+      throw new RegistrationError(400, 'advisory_days must contain 0–5 distinct ISO weekdays (Monday=1 through Sunday=7).', 'invalid_preference', 'advisory_days');
     }
     result.advisory_days = [...days].sort((a, b) => a - b) as AdvisoryWeekday[];
   }
   if (body.preferred_advisory_time !== undefined) {
     const value = body.preferred_advisory_time;
     if (typeof value !== 'string' || !/^(?:[01]\d|2[0-3]):[0-5]\d(?::[0-5]\d)?$/.test(value)) {
-      throw new RegistrationError(400, 'preferred_advisory_time must be a valid HH:MM or HH:MM:SS time.');
+      throw new RegistrationError(400, 'preferred_advisory_time must be a valid HH:MM or HH:MM:SS time.', 'invalid_preference', 'preferred_advisory_time');
     }
     result.preferred_advisory_time = value.length === 5 ? `${value}:00` : value;
   }
   if (body.preferred_language !== undefined) {
     if (!['en', 'tl', 'ceb', 'hil'].includes(body.preferred_language as string)) {
-      throw new RegistrationError(400, 'preferred_language must be en, tl, ceb or hil.');
+      throw new RegistrationError(400, 'preferred_language must be en, tl, ceb or hil.', 'invalid_preference', 'preferred_language');
     }
     result.preferred_language = body.preferred_language as AdvisoryPreferences['preferred_language'];
   }
   if (body.habitat_preference !== undefined) {
     if (!['pelagic', 'demersal', 'both'].includes(body.habitat_preference as string)) {
-      throw new RegistrationError(400, 'habitat_preference must be pelagic, demersal or both.');
+      throw new RegistrationError(400, 'habitat_preference must be pelagic, demersal or both.', 'invalid_preference', 'habitat_preference');
     }
     result.habitat_preference = body.habitat_preference as AdvisoryPreferences['habitat_preference'];
   }
@@ -56,5 +56,6 @@ export function nextRoutineAt(preferences: Pick<AdvisoryPreferences, 'advisory_d
 }
 
 export function withAdvisorySchedule<T extends AdvisoryPreferences>(profile: T, now = new Date()) {
-  return { ...profile, advisory_timezone: 'Asia/Manila' as const, routine_paused: profile.advisory_days.length === 0, next_routine_at: nextRoutineAt(profile, now) };
+  return { ...profile, advisory_timezone: 'Asia/Manila' as const, routine_paused: profile.advisory_days.length === 0, next_routine_at: nextRoutineAt(profile, now),
+    language_status: { requested: profile.preferred_language, message_language: 'en' as const, fallback: profile.preferred_language !== 'en', reviewed: false as const } };
 }

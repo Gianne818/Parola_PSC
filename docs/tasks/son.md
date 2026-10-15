@@ -4,7 +4,13 @@ Owner: **Son only**. Updated October 15, 2026. [Hub](../../fixplan.md) | [Shared
 
 Son asked to retain the plain task list for future requests: [saved 27-task list](son-backlog.md).
 
-**Current selection: REG-01-SON.** On October 15, 2026, Son selected preference
+**Current selection: UI-02-SON, MAP-03-SON and UI-01-SON**, explicitly selected
+by Son together. Work is on `codex/son/presentation-contracts`; Tier retains UI
+ownership. Scope: bounded/stable registration and language status contracts,
+honest species/environment responses, and persisted capability evidence for
+client consumption. No SMS requests or scientific threshold changes are authorized.
+
+**Previous selection: REG-01-SON.** On October 15, 2026, Son selected preference
 persistence and approved D01: 0–5 distinct weekdays; zero pauses routine messages;
 05:00 Asia/Manila default; changes affect future unsent advisories without an edit
 cutoff; existing accounts receive no selected days until they choose. Critical
@@ -36,9 +42,10 @@ alerts remain independent. Tier retains UI ownership. Work is on
   - **Files:** API, DB. **Work:** Persist validated preferences consistently across Next.js/FastAPI/types; preserve them on unrelated edits.
   - **Needs:** C03; D01. **Done when:** Distinct-day limits, time/language/habitat persistence and migration behavior pass API tests.
 
-- [ ] <a id="reg-02-son"></a>**REG-02-SON | P0 | Partial** - [Verify contacts, consent and assisted authority.](../reference/fixplan-detail.md#reg-02)
+- [x] <a id="reg-02-son"></a>**REG-02-SON | P0 | Complete (approved self-service backend)** - [Verify contacts, consent and assisted authority.](../reference/fixplan-detail.md#reg-02)
   - **Files:** API, DB, AUTH. **Work:** Implement verified contact/consent eligibility and scoped assisted changes with actor provenance.
   - **Needs:** C03; D02. **Done when:** Demo verification cannot enroll live recipients; unauthorized cross-user edits fail and assisted edits are attributable.
+  - **Approved scope:** Supabase SMS OTP and explicit owner consent; assisted operations are disabled and rejected, as Son selected in this chat. No assisted workflow is claimed implemented. Backend signoff uses passing API/hook tests, the live OTP/session result and live database owner/consent/audit checks. Tier's UI and full application/release acceptance remain pending for parent REG-02.
 
 - [ ] <a id="sms-01-son"></a>**SMS-01-SON | P1 | Partial** - [Schedule routine advisories durably.](../reference/fixplan-detail.md#sms-01)
   - **Files:** API, DB, DISPATCH. **Work:** Implement Manila-time selected-day jobs, durable recipient/day identity, valid target selection and last-minute safety gating.
@@ -88,7 +95,7 @@ alerts remain independent. Tier retains UI ownership. Work is on
   - **Files:** API, DB. **Work:** Apply scope/valid run/habitat/threshold before ranking and paging; standardize score units and coherent run selection.
   - **Needs:** C01, C06; D04; Toby threshold/ranking review. **Done when:** No duplicates/region starvation; nearest mode is nearest among eligible rows and no stale regional substitution.
 
-- [ ] <a id="map-03-son"></a>**MAP-03-SON | P1 | Partial** - [Correct species and environment presentation.](../reference/fixplan-detail.md#map-03)
+- [x] <a id="map-03-son"></a>**MAP-03-SON | P1 | Complete (current backend contracts)** - [Correct species and environment presentation.](../reference/fixplan-detail.md#map-03)
   - **Files:** API, DB. **Work:** Verify deployed species fields/aliases and remove unrelated-first-row fallback; expose real depth/environment support.
   - **Needs:** C01, C02; Toby HSI definitions. **Done when:** Unknown species never inherits another profile or falsely claims adjustment.
 
@@ -132,11 +139,11 @@ alerts remain independent. Tier retains UI ownership. Work is on
   - **Files:** API, DB, DISPATCH. **Work:** Later own satellite transport/custom fleet/API access and suitably anonymized institutional delivery.
   - **Needs:** Deferred; C07/C08 and separate prioritization. **Done when:** Real channel/cost/access checks and privacy aggregation precede launch.
 
-- [ ] <a id="ui-01-son"></a>**UI-01-SON | P1 | Partial** - [Align all public and signed-in journeys.](../reference/fixplan-detail.md#ui-01)
+- [x] <a id="ui-01-son"></a>**UI-01-SON | P1 | Complete (current backend contracts)** - [Align all public and signed-in journeys.](../reference/fixplan-detail.md#ui-01)
   - **Files:** API, DB. **Work:** Provide factual capability/readiness/source metadata used by Tier; remove no frontend copy on Tier's behalf.
   - **Needs:** Relevant C01-C08; UI wiring depends on real capability evidence. **Done when:** Persisted capability status cannot be synthesized from preview/local storage or imply deployment proof.
 
-- [ ] <a id="ui-02-son"></a>**UI-02-SON | P1 | Partial** - [Extend accessible regional-language flows.](../reference/fixplan-detail.md#ui-02)
+- [x] <a id="ui-02-son"></a>**UI-02-SON | P1 | Complete (current backend contracts)** - [Extend accessible regional-language flows.](../reference/fixplan-detail.md#ui-02)
   - **Files:** API, DB. **Work:** Persist language and provide stable localized-validation/status inputs and duplicate-safe bounded requests.
   - **Needs:** C03-C05; D10. **Done when:** Language survives reload; server behavior supports retries without requiring a native app.
 
@@ -157,6 +164,37 @@ alerts remain independent. Tier retains UI ownership. Work is on
   - **Needs:** Deferred; separate fuel product authorization. **Done when:** Authorized persistent orders/commitments and confirmed volume/status required; not a prerequisite for pilot fuel evaluation.
 
 ## Progress and handoffs
+
+### UI-02-SON / MAP-03-SON / UI-01-SON backend acceptance
+
+**Verified October 15, 2026:** Son supplied successful presentation dry-run and
+apply output. Migration 04 committed; capability evidence controls, client-write
+denial and actual deployed species fields passed. Verification fixtures rolled
+back. Existing ownership, RLS/privileges, consent/audit and Auth-revocation checks
+also passed. No OTP/SMS requested. The current backend contracts are complete.
+
+UI-02 provides persisted language/fallback metadata, stable validation codes and
+fields, 64 KiB/5-second request-body bounds, and repeated-consent timestamp
+preservation. Profile and registration retries retain owner/duplicate checks.
+This does not certify reviewed translations or implement future report/SMS retry
+channels; those remain Tier/REPORT-01/C05/SMS-01/02 handoffs.
+
+MAP-03 uses the observed common_name/representative_species and unit-suffixed
+schema consistently in Next.js, Python ORM and catalog responses. Exact aliases
+and scoped IDs reject unknown/ambiguous queries. No unrelated-row fallback,
+fixed depth or false HSI adjustment remains; habitat scores remain unchanged.
+Real depth/HSI/source validation remains a Toby dependency before adjustment can
+be enabled. Incompatible startup catalog creation/seeding was removed.
+
+UI-01 reads persisted capability implementation/evidence and fails unavailable
+when storage/evidence is missing or expired. Seeds never claim deployment proof.
+Validation: 174 JavaScript tests/7 Python tests passed before schema correction;
+then 23 affected JavaScript tests, 5 Python schema/alias tests and scoped TypeScript
+passed after mapping the actual deployed columns. Syntax/diff checks passed.
+Contract and Tier/Toby requests: [backend-presentation-contract.md](backend-presentation-contract.md).
+The three parent features remain partial until consumer/science/release acceptance
+is complete. Code changes still require commit/review; no readiness evidence was
+invented from local storage, configuration or preview output.
 
 ### Current REG-01-SON preference persistence
 
@@ -185,7 +223,7 @@ complete. The parent REG-01 remains partial pending Tier's UI integration and
 full application acceptance. Changes still require the Git commit/review workflow.
 Son's saved list remains in [son-backlog.md](son-backlog.md).
 
-### Current REG-02-SON migration/persistence continuation
+### REG-02-SON backend acceptance
 
 **Verified October 15, 2026:** user-provided output from
 `node scripts/apply-registration-migration.mjs --remove-reported-duplicates`
@@ -196,9 +234,14 @@ Other profile count was preserved and verification fixtures were rolled back.
 The local backup was checked to contain two full profile rows, and the latest
 duplicate report has zero groups. No OTP/SMS request was made by this operation.
 Enabled `PAROLA_PHONE_AUTH_ENABLED=true` in ignored `.env.local`; restart the
-local backend to load it. Actual app HTTP/session integration, Tier's client
-acceptance/UI integration and deployment configuration remain pending. REG-02
-is not marked fully complete. The notes below record earlier attempts.
+local backend to load it; the restarted development server was subsequently
+confirmed to respond on port 3000. Together with the live OTP/session result and
+passing API/hook tests, these checks complete the approved REG-02-SON self-service
+backend scope. Assisted operations remain disabled as agreed. Full app HTTP/
+session integration, Tier's client acceptance/UI and production deployment checks
+remain pending for parent REG-02, which is still partial. This uses the same
+backend-only acceptance boundary as REG-01-SON. The notes below record earlier
+attempts and do not supersede this signoff.
 
 The read-only report confirmed one duplicate pair. The user was unsure whether
 they were test profiles and explicitly authorized removing both. Prepared a
@@ -247,7 +290,7 @@ session, consent, validation/error and migration examples. Updated shared C03/D0
 notes with the user's proven live OTP test. The UI handoff is now ready for Tier's
 acceptance; all UI files remain unchanged.
 
-### Current REG-02-SON update: Supabase/iPROG OTP hook
+### Historical REG-02-SON update: Supabase/iPROG OTP hook
 
 Son selected Supabase SMS OTP, explicit messaging consent and helpers disabled
 in this chat; this supersedes the pending backend selection described in the

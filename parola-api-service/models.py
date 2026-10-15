@@ -1,6 +1,6 @@
 import uuid
 from datetime import datetime, time
-from sqlalchemy import Column, BigInteger, Integer, SmallInteger, Float, String, Date, Boolean, Time, DateTime, ForeignKey, Text, text
+from sqlalchemy import Column, BigInteger, Integer, SmallInteger, Float, String, Date, Boolean, Time, DateTime, ForeignKey, Text, Numeric, text
 from sqlalchemy.dialects.postgresql import ARRAY, UUID
 from geoalchemy2 import Geometry
 from database import Base
@@ -72,29 +72,30 @@ class PelagicSpecies(Base):
     __tablename__ = "pelagic_species"
     __table_args__ = {"schema": "public"}
 
-    id = Column(BigInteger, primary_key=True, index=True)
-    species_name = Column(String(100), nullable=False)
-    family = Column(String(100))
-    local_name = Column(String(100))
-    temp_min = Column(Float)
-    temp_opt_low = Column(Float)
-    temp_opt_high = Column(Float)
-    temp_max = Column(Float)
-    depth_min = Column(Float)
-    depth_max = Column(Float)
+    id = Column(Integer, primary_key=True)
+    family = Column(Text)
+    common_name = Column(Text)
+    representative_species = Column(Text)
+    depth_min_m = Column(Numeric)
+    depth_max_m = Column(Numeric)
+    sst_min_c = Column(Numeric)
+    sst_max_c = Column(Numeric)
+    salinity_min = Column(Numeric)
+    salinity_max = Column(Numeric)
+    environment = Column(Text)
+
 
 class DemersalSpecies(Base):
     __tablename__ = "demersal_species"
     __table_args__ = {"schema": "public"}
 
-    id = Column(BigInteger, primary_key=True, index=True)
-    species_name = Column(String(100), nullable=False)
-    family = Column(String(100))
-    local_name = Column(String(100))
-    temp_min = Column(Float)
-    temp_opt_low = Column(Float)
-    temp_opt_high = Column(Float)
-    temp_max = Column(Float)
-    depth_min = Column(Float)
-    depth_max = Column(Float)
-
+    id = Column(Integer, primary_key=True)
+    family = Column(Text)
+    common_name = Column(Text)
+    representative_species = Column(Text)
+    depth_min_m = Column(Numeric)
+    depth_max_m = Column(Numeric)
+    temp_min_c = Column(Numeric)
+    temp_max_c = Column(Numeric)
+    max_distance_to_reef_km = Column(Numeric)
+    environment = Column(Text)

@@ -1,6 +1,8 @@
 ﻿# REG-02-SON registration API handoff
 
-Status: Son selected Supabase SMS OTP, explicit messaging consent and helpers disabled.
+Status: REG-02-SON's approved self-service backend is complete: Supabase SMS OTP,
+explicit messaging consent and helpers disabled as selected by Son. No assisted
+workflow is claimed implemented.
 A user-run live SMS/verification test passed on October 15, 2026. Backend tests and
 real database migration/consent/owner-isolation checks passed. Actual app HTTP/session
 integration and Tier's UI acceptance remain pending.

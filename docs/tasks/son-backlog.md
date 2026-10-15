@@ -6,7 +6,7 @@ between implemented backend work, pending integration and completed assignments.
 The UI belongs to Tier. These are the 27 Son assignments in active scope, including completed work; deferred and
 superseded work is excluded. This list does not authorize starting other tasks.
 
-1. **REG-02 — Finish registration:** connect the UI through Tier, verify the full account/profile/consent flow, and configure deployment.
+1. **REG-02 — Registration: APPROVED SELF-SERVICE BACKEND COMPLETE.** Live OTP/session verification, owner enforcement, explicit consent/audit and database migration checks passed. Assisted operations remain disabled as agreed. Tier UI integration, full application acceptance and production deployment checks remain pending for the parent feature.
 2. **REG-01 — Save advisory preferences: BACKEND COMPLETE.** Selected weekdays, delivery time, language and habitat preferences implemented; API checks and the user-run live migration verification passed. Tier UI integration and full parent acceptance remain pending.
 3. **SMS-01 — Schedule routine advisories:** durable Manila-time scheduling with duplicate prevention.
 4. **SMS-02 — Deliver critical alerts:** independent alerts, delivery tracking, safe retries and authenticated callbacks.
@@ -20,7 +20,7 @@ superseded work is excluded. This list does not authorize starting other tasks.
 12. **DATA-04 — Integrate historical clusters:** persist and serve Toby's validated VIIRS/DBSCAN outputs.
 13. **MAP-01 — Standardize coordinates:** numeric latitude/longitude and consistent validation across endpoints.
 14. **MAP-02 — Fix ranking and filtering:** eligible runs, freshness, pagination and nearest/highest-score selection.
-15. **MAP-03 — Correct species/environment responses:** expose supported values and units consistently.
+15. **MAP-03 — Correct species/environment responses: BACKEND CONTRACTS COMPLETE.** expose supported values and units consistently.
 16. **OPS-01 — Harden ingestion:** dates, run tracking, failures and operational visibility.
 17. **REPORT-01 — Add trip reports:** structured voluntary reporting, including zero catch.
 18. **REPORT-02 — Review assisted reports:** attribution, review and approval before learning from them.
@@ -30,6 +30,10 @@ superseded work is excluded. This list does not authorize starting other tasks.
 22. **GEO-03 — Distribute recommendations:** apply agreed rules for suitable fishing grounds.
 23. **ENT-01 — Implement entitlements:** vessel verification, access permissions and zone locks.
 24. **ENT-02 — Generate Geo-Packs:** real exports with verified access and safety checks.
-25. **UI-01 — Support consistent app journeys:** align backend responses and documented capabilities with Tier.
-26. **UI-02 — Support regional languages:** persist language choices and provide agreed validation/fallback behavior.
+25. **UI-01 — Support consistent app journeys: BACKEND CONTRACTS COMPLETE.** align backend responses and documented capabilities with Tier.
+26. **UI-02 — Support regional languages: BACKEND CONTRACTS COMPLETE.** persist language choices and provide agreed validation/fallback behavior.
 27. **PRIV-01 — Complete privacy controls:** identity/report separation, scoped delegated access and consent enforcement.
+
+UI-02/MAP-03/UI-01 live presentation migration/schema/evidence checks passed.
+Tier UI integration, reviewed translations and Toby depth/HSI validation remain
+separate dependencies before the full features can be accepted.

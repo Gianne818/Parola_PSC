@@ -2,12 +2,15 @@ import { createClient } from '@supabase/supabase-js';
 import { getSupabaseUser, type AuthUser } from '@/lib/route-auth';
 import { getDbPool } from '@/lib/db';
 import { isValidPhilippineMobile } from '@/lib/philippine-mobile';
+import { boundedJson, RequestBodyError } from '@/lib/request-body';
 
 export const MESSAGING_CONSENT_VERSION = 'messaging-v1';
 export const MESSAGING_CONSENT_TEXT = 'I agree to receive Parola fishing advisories and safety alerts by SMS at my verified phone number. I can withdraw this messaging consent in the portal. Sponsor messages are not included.';
 
 export class RegistrationError extends Error {
-  constructor(public status: number, message: string) { super(message); }
+  constructor(public status: number, message: string,
+    public code = ({ 400: 'invalid_request', 401: 'auth_required', 403: 'ownership_required', 404: 'profile_not_found', 409: 'conflict', 503: 'service_unavailable' } as Record<number, string>)[status] || 'request_failed',
+    public field?: string) { super(message); }
 }
 
 export function registrationJson(body: unknown, status = 200) {
@@ -17,28 +20,29 @@ export function registrationJson(body: unknown, status = 200) {
 export async function registrationResponse(action: () => Promise<Response>): Promise<Response> {
   try { return await action(); }
   catch (error) {
-    if (error instanceof RegistrationError) return registrationJson({ error: error.message }, error.status);
-    return registrationJson({ error: 'Registration service unavailable. Please try again.' }, 503);
+    if (error instanceof RegistrationError || error instanceof RequestBodyError) return registrationJson({ error: error.message, code: error.code,
+      ...(error instanceof RegistrationError && error.field ? { field: error.field } : {}), message_language: 'en' }, error.status);
+    return registrationJson({ error: 'Registration service unavailable. Please try again.', code: 'service_unavailable', message_language: 'en' }, 503);
   }
 }
 
 export async function registrationBody(request: Request, allowed: readonly string[]): Promise<Record<string, unknown>> {
-  const body: unknown = await request.json().catch(() => null);
-  if (!body || typeof body !== 'object' || Array.isArray(body)) throw new RegistrationError(400, 'Invalid JSON body.');
+  const body = await boundedJson(request);
+  if (!body || typeof body !== 'object' || Array.isArray(body)) throw new RegistrationError(400, 'Invalid JSON body.', 'invalid_json');
   if (Object.keys(body).some(key => !allowed.includes(key))) {
-    throw new RegistrationError(400, 'Unsupported registration fields. Assisted registration is disabled.');
+    throw new RegistrationError(400, 'Unsupported registration fields. Assisted registration is disabled.', 'unsupported_fields');
   }
   return body as Record<string, unknown>;
 }
 
 export function phoneE164(value: unknown): string {
-  if (typeof value !== 'string' || !isValidPhilippineMobile(value)) throw new RegistrationError(400, 'A valid Philippine mobile number is required.');
+  if (typeof value !== 'string' || !isValidPhilippineMobile(value)) throw new RegistrationError(400, 'A valid Philippine mobile number is required.', 'invalid_phone', 'phone_number');
   return `+63${value.replace(/\D/g, '').slice(-10)}`;
 }
 
 export function consentInput(body: Record<string, unknown>): boolean {
-  if (typeof body.messaging_consent !== 'boolean') throw new RegistrationError(400, 'An explicit messaging_consent choice is required.');
-  if (body.consent_version !== MESSAGING_CONSENT_VERSION) throw new RegistrationError(409, 'Review the current messaging consent before submitting.');
+  if (typeof body.messaging_consent !== 'boolean') throw new RegistrationError(400, 'An explicit messaging_consent choice is required.', 'consent_required', 'messaging_consent');
+  if (body.consent_version !== MESSAGING_CONSENT_VERSION) throw new RegistrationError(409, 'Review the current messaging consent before submitting.', 'consent_version_outdated', 'consent_version');
   return body.messaging_consent;
 }
 

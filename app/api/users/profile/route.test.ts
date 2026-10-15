@@ -41,7 +41,8 @@ describe('owner profile edits', () => {
     const response = await GET(new Request('http://localhost/api/users/profile?phone_number=09170000000'));
     expect(response.status).toBe(200);
     expect(response.headers.get('cache-control')).toBe('no-store');
-    expect(await response.json()).toMatchObject({ ...saved, advisory_timezone: 'Asia/Manila', routine_paused: false });
+    expect(await response.json()).toMatchObject({ ...saved, advisory_timezone: 'Asia/Manila', routine_paused: false,
+      language_status: { requested: 'hil', message_language: 'en', fallback: true, reviewed: false } });
     expect(query.mock.calls[0][1]).toEqual([owner.id, owner.phone]);
     expect(query.mock.calls[0][0]).toContain('a.phone_confirmed_at IS NOT NULL');
   });

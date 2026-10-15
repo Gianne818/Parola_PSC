@@ -118,7 +118,10 @@ class BatchPredictionIngestRequest(BaseModel):
 
 class SpeciesProfileResponse(BaseModel):
     id: int
-    species_name: str
+    species_name: Optional[str] = None
+    common_name: Optional[str] = None
+    representative_species: Optional[str] = None
+    name_source: Literal['common_name'] = 'common_name'
     family: Optional[str] = None
     local_name: Optional[str] = None
     category: str = Field(..., description="Species category: 'pelagic' or 'demersal'")
@@ -142,8 +145,12 @@ class SpeciesGridPredictionItem(BaseModel):
     target_lat: float
     target_lon: float
     base_catch_probability: float
-    species_suitability: float
-    species_catch_probability: float
+    species_suitability: Optional[float] = None
+    species_catch_probability: Optional[float] = None
+    prediction_scope: Literal['habitat_model'] = 'habitat_model'
+    species_hsi_status: Literal['unavailable'] = 'unavailable'
+    depth: Optional[float] = None
+    depth_status: Literal['unavailable'] = 'unavailable'
     species_name: Optional[str] = None
     sst: Optional[float] = None
     chl_a: Optional[float] = None

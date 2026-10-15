@@ -23,6 +23,7 @@ export interface AdvisoryPreferences {
 }
 
 export interface AdvisorySchedule extends AdvisoryPreferences {
+  language_status: { requested: Language; message_language: 'en'; fallback: boolean; reviewed: false };
   advisory_timezone: 'Asia/Manila';
   routine_paused: boolean;
   next_routine_at: string | null;
