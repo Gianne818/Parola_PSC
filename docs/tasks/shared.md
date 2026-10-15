@@ -1,6 +1,6 @@
 # Team ownership, interfaces and release gates
 
-Updated October 15, 2026. [Hub](../../fixplan.md) | [Tier](tier.md) | [Son](son.md) | [Toby](toby.md) | [Detailed reference](../reference/fixplan-detail.md)
+Updated October 16, 2026. [Hub](../../fixplan.md) | [Tier](tier.md) | [Son](son/son.md) | [Toby](toby.md) | [Detailed reference](../reference/fixplan-detail.md)
 
 ## Identity and selected scope
 
@@ -13,11 +13,11 @@ Updated October 15, 2026. [Hub](../../fixplan.md) | [Tier](tier.md) | [Son](son.
 
 ## Exact file ownership
 
-**Narrow demo exception requested by Son in this chat:** update the existing
-preview-only OTP comparison in `components/auth/AuthPage.tsx` so any six-digit
-number passes the demo screen. This is limited to that demo check; Tier retains
-the screen, copy, design and real Auth integration. The server demo path remains
-unverified and issues no Supabase session. Live OTP validation is unchanged.
+**PR #6 compatibility scope, October 16, 2026:** Son removes only PR #6's
+outdated `AuthPage.tsx` OTP comparison change. Tier owns the isolated frontend
+demo in PR #5 and all frontend integration. That demo is independent of Son's
+API preview; neither creates real authentication or verifies phone ownership.
+Backend budget guards and live verification logic remain in place.
 
 Most-specific path wins. New files use the matching scope; any unlisted/ambiguous integration path needs Son to record its owner before edits. Ownership grants no authority beyond the selected assignment. Existing user changes must be preserved.
 
@@ -46,7 +46,9 @@ session or live contact verification. Live paths remain available behind explici
 server configuration. Hosted hook secrets are separate and require a remote
 IPROG_MOCK_MODE=true setting to pause direct Supabase requests. See
 [SMS demo mode](../sms-demo-mode.md); prior live acceptance does not imply demo
-messages are delivered. Tier consumes the distinct mock/preview response shapes.
+messages are delivered. Tier owns the independent frontend demo in PR #5;
+using the API preview is optional and must preserve its unverified, session-free
+response contract.
 
 **UI-02/MAP-03/UI-01 current backend signoff:** Son's presentation dry-run and
 apply passed after mapping the observed deployed species columns. Migration 04,
@@ -123,37 +125,37 @@ Priority/status are inherited from the detailed plan; none is complete. A named 
 
 | Parent | Priority / inherited status | Tier | Son | Toby |
 | --- | --- | --- | --- | --- |
-| [REG-01](../reference/fixplan-detail.md#reg-01) | P1 / Partial | [REG-01-TIER](tier.md#reg-01-tier) | [REG-01-SON — backend complete](son.md#reg-01-son) | - |
-| [REG-02](../reference/fixplan-detail.md#reg-02) | P0 / Partial | [REG-02-TIER](tier.md#reg-02-tier) | [REG-02-SON — approved self-service backend complete](son.md#reg-02-son) | - |
-| [SMS-01](../reference/fixplan-detail.md#sms-01) | P1 / Partial | [SMS-01-TIER](tier.md#sms-01-tier) | [SMS-01-SON](son.md#sms-01-son) | - |
-| [SMS-02](../reference/fixplan-detail.md#sms-02) | P0 / Partial | [SMS-02-TIER](tier.md#sms-02-tier) | [SMS-02-SON](son.md#sms-02-son) | - |
-| [SMS-03](../reference/fixplan-detail.md#sms-03) | P1 / Partial | [SMS-03-TIER](tier.md#sms-03-tier) | [SMS-03-SON](son.md#sms-03-son) | - |
-| [SAFE-01](../reference/fixplan-detail.md#safe-01) | P0 / Partial | [SAFE-01-TIER](tier.md#safe-01-tier) | [SAFE-01-SON](son.md#safe-01-son) | [SAFE-01-TOBY](toby.md#safe-01-toby) |
-| [SAFE-02](../reference/fixplan-detail.md#safe-02) | P0 / Partial | [SAFE-02-TIER](tier.md#safe-02-tier) | [SAFE-02-SON](son.md#safe-02-son) | [SAFE-02-TOBY](toby.md#safe-02-toby) |
-| [SAFE-03](../reference/fixplan-detail.md#safe-03) | P0 / Partial | [SAFE-03-TIER](tier.md#safe-03-tier) | [SAFE-03-SON](son.md#safe-03-son) | [SAFE-03-TOBY](toby.md#safe-03-toby) |
-| [DATA-01](../reference/fixplan-detail.md#data-01) | P0 / Planned | [DATA-01-TIER](tier.md#data-01-tier) | [DATA-01-SON](son.md#data-01-son) | [DATA-01-TOBY](toby.md#data-01-toby) |
-| [DATA-02](../reference/fixplan-detail.md#data-02) | P0 / Planned | [DATA-02-TIER](tier.md#data-02-tier) | [DATA-02-SON](son.md#data-02-son) | [DATA-02-TOBY](toby.md#data-02-toby) |
-| [DATA-03](../reference/fixplan-detail.md#data-03) | P0 / Planned | [DATA-03-TIER](tier.md#data-03-tier) | [DATA-03-SON](son.md#data-03-son) | [DATA-03-TOBY](toby.md#data-03-toby) |
-| [DATA-04](../reference/fixplan-detail.md#data-04) | P1 / Planned | [DATA-04-TIER](tier.md#data-04-tier) | [DATA-04-SON](son.md#data-04-son) | [DATA-04-TOBY](toby.md#data-04-toby) |
-| [MAP-01](../reference/fixplan-detail.md#map-01) | P0 / Partial | [MAP-01-TIER](tier.md#map-01-tier) | [MAP-01-SON](son.md#map-01-son) | - |
-| [MAP-02](../reference/fixplan-detail.md#map-02) | P1 / Partial | [MAP-02-TIER](tier.md#map-02-tier) | [MAP-02-SON](son.md#map-02-son) | [MAP-02-TOBY](toby.md#map-02-toby) |
-| [MAP-03](../reference/fixplan-detail.md#map-03) | P1 / Partial | [MAP-03-TIER](tier.md#map-03-tier) | [MAP-03-SON - backend contracts complete](son.md#map-03-son) | [MAP-03-TOBY](toby.md#map-03-toby) |
-| [OPS-01](../reference/fixplan-detail.md#ops-01) | P1 / Partial | [OPS-01-TIER](tier.md#ops-01-tier) | [OPS-01-SON](son.md#ops-01-son) | [OPS-01-TOBY](toby.md#ops-01-toby) |
-| [REPORT-01](../reference/fixplan-detail.md#report-01) | P1 / Planned | [REPORT-01-TIER](tier.md#report-01-tier) | [REPORT-01-SON](son.md#report-01-son) | - |
-| [REPORT-02](../reference/fixplan-detail.md#report-02) | P1 / Planned | [REPORT-02-TIER](tier.md#report-02-tier) | [REPORT-02-SON](son.md#report-02-son) | [REPORT-02-TOBY](toby.md#report-02-toby) |
-| [EVAL-01](../reference/fixplan-detail.md#eval-01) | P1 / Planned | [EVAL-01-TIER](tier.md#eval-01-tier) | [EVAL-01-SON](son.md#eval-01-son) | [EVAL-01-TOBY](toby.md#eval-01-toby) |
-| [GEO-01](../reference/fixplan-detail.md#geo-01) | P0 / Planned | [GEO-01-TIER](tier.md#geo-01-tier) | [GEO-01-SON](son.md#geo-01-son) | - |
-| [GEO-02](../reference/fixplan-detail.md#geo-02) | P1 / Planned | [GEO-02-TIER](tier.md#geo-02-tier) | [GEO-02-SON](son.md#geo-02-son) | - |
-| [GEO-03](../reference/fixplan-detail.md#geo-03) | P1 / Planned | [GEO-03-TIER](tier.md#geo-03-tier) | [GEO-03-SON](son.md#geo-03-son) | [GEO-03-TOBY](toby.md#geo-03-toby) |
-| [ENT-01](../reference/fixplan-detail.md#ent-01) | P2 / Planned | [ENT-01-TIER](tier.md#ent-01-tier) | [ENT-01-SON](son.md#ent-01-son) | - |
-| [ENT-02](../reference/fixplan-detail.md#ent-02) | P2 / Partial | [ENT-02-TIER](tier.md#ent-02-tier) | [ENT-02-SON](son.md#ent-02-son) | [ENT-02-TOBY](toby.md#ent-02-toby) |
-| [ROAD-01](../reference/fixplan-detail.md#road-01) | P2 / Deferred | [ROAD-01-TIER](tier.md#road-01-tier) | [ROAD-01-SON](son.md#road-01-son) | [ROAD-01-TOBY](toby.md#road-01-toby) |
-| [UI-01](../reference/fixplan-detail.md#ui-01) | P1 / Partial | [UI-01-TIER](tier.md#ui-01-tier) | [UI-01-SON - backend contracts complete](son.md#ui-01-son) | - |
-| [UI-02](../reference/fixplan-detail.md#ui-02) | P1 / Partial | [UI-02-TIER](tier.md#ui-02-tier) | [UI-02-SON - backend contracts complete](son.md#ui-02-son) | - |
-| [PRIV-01](../reference/fixplan-detail.md#priv-01) | P1 / Partial | [PRIV-01-TIER](tier.md#priv-01-tier) | [PRIV-01-SON](son.md#priv-01-son) | [PRIV-01-TOBY](toby.md#priv-01-toby) |
-| [UX-01](../reference/fixplan-detail.md#ux-01) | P2 / Deferred | [UX-01-TIER](tier.md#ux-01-tier) | [UX-01-SON](son.md#ux-01-son) | [UX-01-TOBY](toby.md#ux-01-toby) |
-| [LEG-01](../reference/fixplan-detail.md#leg-01) | P2 / Superseded | - | [LEG-01-SON](son.md#leg-01-son) | - |
-| [LEG-02](../reference/fixplan-detail.md#leg-02) | P2 / Deferred | [LEG-02-TIER](tier.md#leg-02-tier) | [LEG-02-SON](son.md#leg-02-son) | - |
+| [REG-01](../reference/fixplan-detail.md#reg-01) | P1 / Partial | [REG-01-TIER](tier.md#reg-01-tier) | [REG-01-SON — backend complete](son/son.md#reg-01-son) | - |
+| [REG-02](../reference/fixplan-detail.md#reg-02) | P0 / Partial | [REG-02-TIER](tier.md#reg-02-tier) | [REG-02-SON — approved self-service backend complete](son/son.md#reg-02-son) | - |
+| [SMS-01](../reference/fixplan-detail.md#sms-01) | P1 / Partial | [SMS-01-TIER](tier.md#sms-01-tier) | [SMS-01-SON](son/son.md#sms-01-son) | - |
+| [SMS-02](../reference/fixplan-detail.md#sms-02) | P0 / Partial | [SMS-02-TIER](tier.md#sms-02-tier) | [SMS-02-SON](son/son.md#sms-02-son) | - |
+| [SMS-03](../reference/fixplan-detail.md#sms-03) | P1 / Partial | [SMS-03-TIER](tier.md#sms-03-tier) | [SMS-03-SON](son/son.md#sms-03-son) | - |
+| [SAFE-01](../reference/fixplan-detail.md#safe-01) | P0 / Partial | [SAFE-01-TIER](tier.md#safe-01-tier) | [SAFE-01-SON](son/son.md#safe-01-son) | [SAFE-01-TOBY](toby.md#safe-01-toby) |
+| [SAFE-02](../reference/fixplan-detail.md#safe-02) | P0 / Partial | [SAFE-02-TIER](tier.md#safe-02-tier) | [SAFE-02-SON](son/son.md#safe-02-son) | [SAFE-02-TOBY](toby.md#safe-02-toby) |
+| [SAFE-03](../reference/fixplan-detail.md#safe-03) | P0 / Partial | [SAFE-03-TIER](tier.md#safe-03-tier) | [SAFE-03-SON](son/son.md#safe-03-son) | [SAFE-03-TOBY](toby.md#safe-03-toby) |
+| [DATA-01](../reference/fixplan-detail.md#data-01) | P0 / Planned | [DATA-01-TIER](tier.md#data-01-tier) | [DATA-01-SON](son/son.md#data-01-son) | [DATA-01-TOBY](toby.md#data-01-toby) |
+| [DATA-02](../reference/fixplan-detail.md#data-02) | P0 / Planned | [DATA-02-TIER](tier.md#data-02-tier) | [DATA-02-SON](son/son.md#data-02-son) | [DATA-02-TOBY](toby.md#data-02-toby) |
+| [DATA-03](../reference/fixplan-detail.md#data-03) | P0 / Planned | [DATA-03-TIER](tier.md#data-03-tier) | [DATA-03-SON](son/son.md#data-03-son) | [DATA-03-TOBY](toby.md#data-03-toby) |
+| [DATA-04](../reference/fixplan-detail.md#data-04) | P1 / Planned | [DATA-04-TIER](tier.md#data-04-tier) | [DATA-04-SON](son/son.md#data-04-son) | [DATA-04-TOBY](toby.md#data-04-toby) |
+| [MAP-01](../reference/fixplan-detail.md#map-01) | P0 / Partial | [MAP-01-TIER](tier.md#map-01-tier) | [MAP-01-SON](son/son.md#map-01-son) | - |
+| [MAP-02](../reference/fixplan-detail.md#map-02) | P1 / Partial | [MAP-02-TIER](tier.md#map-02-tier) | [MAP-02-SON](son/son.md#map-02-son) | [MAP-02-TOBY](toby.md#map-02-toby) |
+| [MAP-03](../reference/fixplan-detail.md#map-03) | P1 / Partial | [MAP-03-TIER](tier.md#map-03-tier) | [MAP-03-SON - backend contracts complete](son/son.md#map-03-son) | [MAP-03-TOBY](toby.md#map-03-toby) |
+| [OPS-01](../reference/fixplan-detail.md#ops-01) | P1 / Partial | [OPS-01-TIER](tier.md#ops-01-tier) | [OPS-01-SON](son/son.md#ops-01-son) | [OPS-01-TOBY](toby.md#ops-01-toby) |
+| [REPORT-01](../reference/fixplan-detail.md#report-01) | P1 / Planned | [REPORT-01-TIER](tier.md#report-01-tier) | [REPORT-01-SON](son/son.md#report-01-son) | - |
+| [REPORT-02](../reference/fixplan-detail.md#report-02) | P1 / Planned | [REPORT-02-TIER](tier.md#report-02-tier) | [REPORT-02-SON](son/son.md#report-02-son) | [REPORT-02-TOBY](toby.md#report-02-toby) |
+| [EVAL-01](../reference/fixplan-detail.md#eval-01) | P1 / Planned | [EVAL-01-TIER](tier.md#eval-01-tier) | [EVAL-01-SON](son/son.md#eval-01-son) | [EVAL-01-TOBY](toby.md#eval-01-toby) |
+| [GEO-01](../reference/fixplan-detail.md#geo-01) | P0 / Planned | [GEO-01-TIER](tier.md#geo-01-tier) | [GEO-01-SON](son/son.md#geo-01-son) | - |
+| [GEO-02](../reference/fixplan-detail.md#geo-02) | P1 / Planned | [GEO-02-TIER](tier.md#geo-02-tier) | [GEO-02-SON](son/son.md#geo-02-son) | - |
+| [GEO-03](../reference/fixplan-detail.md#geo-03) | P1 / Planned | [GEO-03-TIER](tier.md#geo-03-tier) | [GEO-03-SON](son/son.md#geo-03-son) | [GEO-03-TOBY](toby.md#geo-03-toby) |
+| [ENT-01](../reference/fixplan-detail.md#ent-01) | P2 / Planned | [ENT-01-TIER](tier.md#ent-01-tier) | [ENT-01-SON](son/son.md#ent-01-son) | - |
+| [ENT-02](../reference/fixplan-detail.md#ent-02) | P2 / Partial | [ENT-02-TIER](tier.md#ent-02-tier) | [ENT-02-SON](son/son.md#ent-02-son) | [ENT-02-TOBY](toby.md#ent-02-toby) |
+| [ROAD-01](../reference/fixplan-detail.md#road-01) | P2 / Deferred | [ROAD-01-TIER](tier.md#road-01-tier) | [ROAD-01-SON](son/son.md#road-01-son) | [ROAD-01-TOBY](toby.md#road-01-toby) |
+| [UI-01](../reference/fixplan-detail.md#ui-01) | P1 / Partial | [UI-01-TIER](tier.md#ui-01-tier) | [UI-01-SON - backend contracts complete](son/son.md#ui-01-son) | - |
+| [UI-02](../reference/fixplan-detail.md#ui-02) | P1 / Partial | [UI-02-TIER](tier.md#ui-02-tier) | [UI-02-SON - backend contracts complete](son/son.md#ui-02-son) | - |
+| [PRIV-01](../reference/fixplan-detail.md#priv-01) | P1 / Partial | [PRIV-01-TIER](tier.md#priv-01-tier) | [PRIV-01-SON](son/son.md#priv-01-son) | [PRIV-01-TOBY](toby.md#priv-01-toby) |
+| [UX-01](../reference/fixplan-detail.md#ux-01) | P2 / Deferred | [UX-01-TIER](tier.md#ux-01-tier) | [UX-01-SON](son/son.md#ux-01-son) | [UX-01-TOBY](toby.md#ux-01-toby) |
+| [LEG-01](../reference/fixplan-detail.md#leg-01) | P2 / Superseded | - | [LEG-01-SON](son/son.md#leg-01-son) | - |
+| [LEG-02](../reference/fixplan-detail.md#leg-02) | P2 / Deferred | [LEG-02-TIER](tier.md#leg-02-tier) | [LEG-02-SON](son/son.md#leg-02-son) | - |
 
 Historical H01-H22 findings and their resolutions remain in [reference section 3.1](../reference/fixplan-detail.md#31-original-22-findings-complete-traceability). Some earlier audit files and the external concept PDF are local-only/ignored; the archived text preserves the attributed observations, page references and limitations so teammates do not need those local files to understand their assignment. Never add secrets or the external PDF to solve a missing reference.
 

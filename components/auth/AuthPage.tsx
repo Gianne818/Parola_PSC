@@ -164,7 +164,7 @@ export default function AuthPage({ mode }: { mode: 'login' | 'register' }) {
     if (submitPending.current || leaving) return;
     setFormError(null);
     // This is the existing preview flow, not verification of phone ownership.
-    if (!/^\d{6}$/.test(code)) {
+    if (code !== DEMO_CODE) {
       reactToOutcome('failure');
       setFieldErrors({ code: 'codeInvalid' });
       codeRef.current?.focus();
