@@ -16,6 +16,7 @@ import type { DashboardCopy } from './dashboard-copy';
 import styles from './dashboard.module.css';
 import AreaWeather from './AreaWeather';
 import { GUIDANCE_COPY } from './guidance-copy';
+import { predictionDay } from '@/lib/frontend/timestamps';
 
 const DashboardMap = dynamic(() => import('./DashboardMap'), { ssr: false, loading: () => <div className={styles.mapLoading} aria-busy="true" /> });
 
@@ -32,7 +33,8 @@ export default function DashboardWorkspace(props: WorkspaceProps) {
   const viewport = useWorkspaceViewport();
   const [forecastCache] = useState(() => new Map<string, DashboardWeather>());
   const text = GUIDANCE_COPY[language];
-  const dates = props.areaMetadata?.predictionDates || [...new Set(areas.flatMap(area => area.predictionDate ? [area.predictionDate.slice(0, 10)] : []))].sort().reverse();
+  const dates = [...new Set((props.areaMetadata?.predictionDates || areas.map(area => area.predictionDate))
+    .map(predictionDay).filter((date): date is string => date !== null))].sort().reverse();
   const latestDate = dates[0];
   const earlierPredictions = dates.some(date => date < (manilaDate(new Date()) || ''));
   const formattedPredictionDate = latestDate ? new Intl.DateTimeFormat(language === 'tl' ? 'fil' : language, { timeZone: 'Asia/Manila', year: 'numeric', month: 'long', day: 'numeric' }).format(new Date(`${latestDate.slice(0, 10)}T00:00:00+08:00`)) : null;
@@ -81,6 +83,7 @@ export default function DashboardWorkspace(props: WorkspaceProps) {
           : selected ? <>{state === 'hold' && <p className={styles.notice}>{copy.reference}</p>}
             <AreaDetails area={selected} copy={copy} weather={<AreaWeather key={`${selected.lat},${selected.lng}`} area={selected} regionId={region.id} cache={forecastCache} language={language} />} /></>
             : <>
+              {areas.length > 0 && <p className={styles.panelDescription} lang="en">Prediction source and validity are unverified. Refreshing this list does not make predictions current.</p>}
               {earlierPredictions && <p className={styles.predictionNotice}>{latestDate < (manilaDate(new Date()) || '') ? `${text.lastPredictions} · ${formattedPredictionDate}` : text.earlierDates}</p>}
               {props.areaMetadata?.capped && <p className={styles.panelDescription}>{text.capped.replace('{returned}', String(props.areaMetadata.returnedCount)).replace('{total}', String(props.areaMetadata.eligibleCount))}</p>}
               <FishingAreas areas={areas} loading={loading} failed={failed} retry={retry} limit={limit} showMore={() => setLimit(previous => previous === 3 ? 10 : previous + 10)}

@@ -23,12 +23,12 @@ const sections = [
   ["pricing-questions", "Questions"],
 ];
 const fleetFeatures = [
-  "Discounted annual volume licensing",
-  "Central fleet dashboard and live coordinates",
-  "Simultaneous multi-zone downloads and unlocks",
-  "Direct API feeds into dispatch consoles",
-  "Dedicated account manager and 24/7 SLA",
-  "Consolidated billing and crew access",
+  "Proposed annual licensing; no contract established",
+  "Fleet dashboard planned; no live vessel tracking",
+  "Multi-zone entitlements planned",
+  "Dispatch API integration planned",
+  "Support terms pending; no SLA established",
+  "Fleet billing and delegated access planned",
 ];
 
 export function PricingContent() {
@@ -87,16 +87,16 @@ export function PricingContent() {
             </span>
             <h1>Pricing for municipal fishers and commercial fleets.</h1>
             <p className={styles.intro}>
-              Free municipal access. Commercial subscriptions based on
-              registered gross tonnage.
+              Free Standard municipal access. Commercial prices and vessel
+              classes below are proposals; paid activation is not available here.
             </p>
           </div>
           <div id="municipal-access" className={styles.freeAccess} data-entry>
             <div>
               <h2>Municipal access, without a subscription.</h2>
               <p>
-                Municipal craft at or below 3.0 GT receive free subsidized
-                access. Register to set your home port.
+                Standard municipal access is free. Tonnage eligibility and
+                marine boundaries require review. Create an account to set your home port.
               </p>
               <Link href="/register" className={styles.textLink}>
                 Register for municipal access
@@ -108,7 +108,7 @@ export function PricingContent() {
                   <li>Choose your coastal region and home port during onboarding.</li>
                   <li>Explore the dashboard and review how advisories work in the guide.</li>
                 </ol>
-                <p>₱0 means no municipal subscription fee. Confirm SMS service activation, the destination number, and any outgoing text charges before sending a command. Web registration needs internet access; reading a delivered SMS does not need mobile data.</p>
+                <p>₱0 means no Standard municipal subscription fee. The portal currently offers manual weather SMS requests when the service is enabled; a request does not confirm delivery. Routine SMS for up to five selected weekdays and separate any-day critical alerts are planned. No inbound commands or replies are required. Registration and portal reporting need internet; reading a delivered SMS does not.</p>
                 <Link href="/guide#read-sms-advisory" className={styles.textLink}>Learn to read an advisory <ArrowRight size={14} /></Link>
               </AnimatedDisclosure>
             </div>
@@ -143,9 +143,9 @@ export function PricingContent() {
               <h2 className="mt-3!">Compare by vessel class.</h2>
             </div>
             <p>
-              Choose your registered gross-tonnage class. Every plan includes
-              one zone unlock per day and unlimited re-downloads of that zone
-              for 24 hours.
+              Compare proposed gross-tonnage bands. Verification, activation,
+              authoritative marine scope, and zone cycle rules remain pending.
+              Account creation grants no commercial entitlement or fishing permission.
             </p>
           </div>
           <div className={styles.comparison} data-reveal-group data-comparison>
@@ -166,7 +166,7 @@ export function PricingContent() {
                 </div>
                 <dl>
                   <div>
-                    <dt>Coverage</dt>
+                    <dt>Proposed scope — coverage unverified</dt>
                     <dd>{[
                       "Within 50 km of your home port, outside municipal waters.",
                       "One selected Fisheries Management Area (FMA).",
@@ -174,8 +174,8 @@ export function PricingContent() {
                     ][index]}</dd>
                   </div>
                   <div>
-                    <dt>Daily download quota</dt>
-                    <dd>Unlock one zone each day. Download that same zone again for 24 hours without another unlock.</dd>
+                    <dt>Proposed zone allowance</dt>
+                    <dd>{tier.quotaDescription}</dd>
                   </div>
                 </dl>
                 <div className={styles.tierActions}>
@@ -184,11 +184,11 @@ export function PricingContent() {
                     className={styles.button}
                     aria-label={`Create an account for ${tier.name}`}
                   >
-                    Register Vessel
+                    Create account only
                     <ArrowRight size={13} />
                   </Link>
                   <AnimatedDisclosure
-                    label={`View full inclusions — ${["small", "medium", "large"][index]}-scale`}
+                    label={`View proposal and current limits — ${["small", "medium", "large"][index]}-scale`}
                   >
                     <p>{tier.targetVessels}</p>
                     <p>{tier.scopeDescription} {tier.quotaDescription}</p>
@@ -204,7 +204,7 @@ export function PricingContent() {
                       onClick={() => setExportOpen(true)}
                     >
                       <Download size={13} />
-                      Test Geo-Pack export
+                      Download a sample Geo-Pack
                     </button>
                   </AnimatedDisclosure>
                 </div>
@@ -212,8 +212,9 @@ export function PricingContent() {
             ))}
           </div>
           <p className={`${styles.legal} mt-4`}>
-            Commercial tonnage classes: Section 3(n), RA 8550 as amended by RA
-            10654. Prices are monthly, per vessel.
+            Displayed tonnage bands are provisional and do not establish legal
+            classification. Prices are proposed monthly amounts per vessel,
+            not a checkout, active subscription or guarantee of service.
           </p>
         </section>
         <section
@@ -224,13 +225,13 @@ export function PricingContent() {
           <div className={styles.fleet} data-reveal>
             <div>
               <span className={styles.eyebrow}>
-                One agreement for your fleet
+                Fleet roadmap proposal
               </span>
               <h2 className="mt-3!">Fleet agreements</h2>
               <p>
-                Operators with five or more commercial vessels can arrange an
-                annual license with shared operational visibility and tailored
-                fleet terms.
+                The proposal considers operators with five or more vessels.
+                Annual licensing, shared visibility and fleet terms require
+                separate validation and agreement; they are not active services.
               </p>
               <ul className={styles.features}>
                 {fleetFeatures.map((feature) => (
@@ -243,7 +244,7 @@ export function PricingContent() {
               <p>
                 Commercial vessels
                 <br />
-                <strong>Annual corporate license</strong>
+                <strong>Proposed annual corporate license</strong>
               </p>
               <p>
                 Structure coverage around your vessel tonnages and operating
@@ -260,31 +261,30 @@ export function PricingContent() {
           <div className={styles.sectionHeading}>
             <h2>Offline Geo-Packs and satellite sync</h2>
             <p>
-              Prepare forecast files before departure, then explore
-              low-bandwidth refreshes for longer voyages beyond cellular reach.
+              Explore local sample files. Validated forecast exports and
+              satellite refreshes are not available in this demo.
             </p>
           </div>
           <div className={styles.twoColumns} data-reveal-group>
             <article className={styles.delivery} data-reveal>
               <Download size={24} />
-              <h3>Take the forecast onboard.</h3>
+              <h3>Explore a sample export.</h3>
               <p>
-                Download 24–72 hour forecast bundles in .GPX, .KML, or .GeoJSON.
-                Transfer sea-temperature fronts and hotspot coordinates to an SD
-                card or USB drive for your chartplotter.
+                Download static demonstration points in .GPX, .KML or .GeoJSON.
+                The horizon selector does not generate a forecast. Sample files
+                are not for navigation or fishing decisions.
               </p>
               <div className={styles.deliveryNote}>
-                <strong>One zone, multiple formats.</strong>
+                <strong>Sample files, no entitlement.</strong>
                 <br />
-                Unlock one forecast zone per 24-hour cycle. Re-download that
-                zone across all supported formats without using more quota.
+                Zone locks, cycle resets and re-download rules require a
+                verified server contract. This demo establishes none of them.
               </div>
-              <AnimatedDisclosure label="Supported equipment and delivery details">
+              <AnimatedDisclosure label="Equipment validation still needed">
                 <p>
-                  For onboard chartplotters including Garmin, Furuno, Simrad,
-                  Raymarine, and Lowrance. Bundles include sea surface
-                  temperature fronts, thermocline contours, and pelagic hotspot
-                  coordinates.
+                  No chartplotter model or import workflow has been verified.
+                  A file extension alone does not establish device support.
+                  Environmental layers and forecast horizons need validated data.
                 </p>
               </AnimatedDisclosure>
               <button
@@ -293,33 +293,31 @@ export function PricingContent() {
                 onClick={() => setExportOpen(true)}
               >
                 <Download size={14} />
-                Try the Geo-Pack exporter
+                Try the sample exporter
               </button>
             </article>
             <article className={styles.delivery} data-reveal>
               <Satellite size={24} />
-              <h3>Refresh during a longer voyage.</h3>
+              <h3>Satellite refreshes are planned.</h3>
               <p>
-                The low-bandwidth satellite add-on is designed for mid-voyage
-                hotspot refreshes over Starlink, Iridium, and Inmarsat
-                connections.
+                Mid-voyage satellite refreshes are roadmap work. No satellite
+                integration, provider agreement or supported device is established.
               </p>
               <div className={styles.deliveryNote}>
-                <strong>Compressed forecast updates.</strong>
+                <strong>Unvalidated concept.</strong>
                 <br />
-                An optional integration for commercial vessels operating beyond
-                cellular coverage.
+                Payload size, transmission costs and bandwidth savings have
+                not been measured for an operational integration.
               </div>
               <AnimatedDisclosure label="Satellite payload and integration details">
                 <p>
-                  The existing payload example compares a roughly 1.8 KB
-                  compressed binary refresh with a 15–25 MB web map/API stream
-                  (approximately 99.9% payload reduction). Actual transmission
-                  costs depend on the satellite service and integration.
+                  There is no verified binary payload or working satellite
+                  delivery path in this demo. Validation is needed before any
+                  size, savings or compatibility claim.
                 </p>
               </AnimatedDisclosure>
               <Link href="/about#fleet-planning" className={styles.secondaryButton}>
-                Review satellite setup
+                Review satellite proposal
                 <ArrowRight size={14} />
               </Link>
             </article>
@@ -329,9 +327,10 @@ export function PricingContent() {
           <div className={styles.sectionHeading}>
             <h2>How free access is funded</h2>
             <p>
-              The funding model keeps municipal access free through sponsorship,
-              web advertising, and proposed telecom subsidies. Safety
-              information keeps priority over commercial messages.
+              The proposal would fund free Standard access through approved
+              sponsorship, advertising and telecom subsidies. These examples
+              establish no revenue or partner agreement. Critical alerts and
+              enterprise messages are intended to remain ad-free.
             </p>
           </div>
           <div className={styles.funding} data-reveal-group>
@@ -352,9 +351,8 @@ export function PricingContent() {
                 <div>
                   <h3>Web display advertising</h3>
                   <p>
-                    Non-intrusive banner placements on the web portal help
-                    support municipal access. The existing advertising
-                    demonstration appears below.
+                    Sample web banners illustrate a possible funding source.
+                    No advertising revenue or sponsor agreement is established.
                   </p>
                 </div>
               </div>
@@ -435,32 +433,30 @@ export function PricingContent() {
             <h2>Questions before you register</h2>
             <AnimatedDisclosure label="How does the daily zone quota work?">
               <p>
-                Each single-vessel subscription unlocks one forecast zone per
-                24-hour cycle. Download that zone repeatedly in .GPX, .KML, or
-                .GeoJSON and at 24h, 48h, or 72h horizons without consuming
-                another unlock.
+                One zone per cycle is proposed. Calendar versus rolling resets,
+                expiry and re-download rules await agreement. Current exports
+                are local samples, not quota-controlled forecasts.
               </p>
             </AnimatedDisclosure>
             <AnimatedDisclosure label="Which tonnage class applies to my vessel?">
               <p>
-                Municipal craft at or below 3.0 GT receive free subsidized
-                access. Commercial classes are 3.1–20.0 GT, 20.1–150.0 GT, and
-                above 150.0 GT. Match your plan to the gross tonnage on your
-                vessel registration.
+                Standard municipal access is free. The displayed commercial
+                bands are provisional; exact boundaries, fractional tonnages,
+                verification and permitted marine areas require review. Selecting
+                a plan does not establish legal clearance.
               </p>
             </AnimatedDisclosure>
             <AnimatedDisclosure label="What is the satellite sync add-on?">
               <p>
-                An optional compressed binary forecast refresh for mid-voyage
-                use over satellite connections. See the offline and satellite
-                section for the payload example and integration inquiry.
+                A planned mid-voyage refresh concept, not an available add-on.
+                Provider, payload and device validation remain pending.
               </p>
             </AnimatedDisclosure>
             <AnimatedDisclosure label="How are sponsor messages kept separate?">
               <p>
-                Sponsor acknowledgments appear only on the final line of sample
-                advisories, with a 20–25 character target. Weather details, wave
-                heights, and navigation information keep priority.
+                Sample routine advisories may illustrate a separate sponsor
+                footer. Live sponsorship requires separate consent and approval;
+                critical alerts and enterprise messages are intended to be ad-free.
               </p>
             </AnimatedDisclosure>
           </div>

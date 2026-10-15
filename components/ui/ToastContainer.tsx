@@ -4,9 +4,10 @@ import React, { useEffect } from "react";
 import { useApp } from "../../context/AppContext";
 import { AlertCircle, CheckCircle2, Info, X } from "lucide-react";
 import { motion, AnimatePresence } from "motion/react";
+import { DASHBOARD_COPY } from '../dashboard/dashboard-copy';
 
 export const ToastContainer: React.FC = () => {
-  const { toast, hideToast } = useApp();
+  const { toast, hideToast, language } = useApp();
 
   useEffect(() => {
     if (toast) {
@@ -20,7 +21,7 @@ export const ToastContainer: React.FC = () => {
   return (
     <AnimatePresence>
       {toast && (
-        <div className="fixed bottom-20 md:bottom-8 right-4 md:right-8 z-55 max-w-sm w-full p-4 pointer-events-none">
+        <div className="fixed bottom-20 md:bottom-8 right-4 md:right-8 z-55 max-w-sm w-[calc(100%-2rem)] pointer-events-none">
           <motion.div
             initial={{ opacity: 0, y: 30, scale: 0.9 }}
             animate={{ opacity: 1, y: 0, scale: 1 }}
@@ -47,16 +48,18 @@ export const ToastContainer: React.FC = () => {
             </div>
 
             {/* Content */}
-            <div className="flex-1">
-              <p className="text-xs font-bold leading-relaxed text-gray-800 dark:text-[#F7FAF9]">
+            <div className="min-w-0 flex-1">
+              <p role={toast.type === 'error' ? 'alert' : 'status'} className="text-xs font-bold leading-relaxed text-gray-800 dark:text-[#F7FAF9] break-words">
                 {toast.message}
               </p>
             </div>
 
             {/* Dismiss button */}
             <button
+              type="button"
+              aria-label={DASHBOARD_COPY[language].close}
               onClick={hideToast}
-              className="shrink-0 text-gray-400 hover:text-gray-600 dark:hover:text-white p-1 rounded-full transition"
+              className="shrink-0 flex min-h-11 min-w-11 items-center justify-center text-gray-500 hover:text-gray-600 dark:hover:text-white rounded-full transition"
             >
               <X className="w-4 h-4" />
             </button>

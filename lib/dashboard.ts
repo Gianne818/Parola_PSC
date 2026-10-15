@@ -1,6 +1,7 @@
 import type { Hotspot, PhilippineRegion } from '@/types';
 import { isCoordinateInRegion } from '@/data/philippineRegions';
 import { calculateBearing, calculateDistance } from '@/utils/spatial';
+import { isClientCoordinate, isClientTargetCoordinate } from '@/lib/frontend/coordinates';
 
 export interface WeatherReading {
   value: number | null;
@@ -33,6 +34,7 @@ export function reusableAreaWeather(data: DashboardWeather, now = new Date()): b
 }
 
 export interface FishingArea extends Hotspot {
+  retrievedAt?: string;
   predictionDate: string | null;
   source: 'model' | 'sample';
   speciesAdjusted: boolean;
@@ -79,7 +81,8 @@ export function retainWeather(previous: DashboardWeather | null, next: Dashboard
 }
 
 export function nearbyAreas(areas: FishingArea[], region: PhilippineRegion, lat: number, lng: number, habitat: Hotspot['type']): FishingArea[] {
-  return areas.filter(area => Number.isFinite(area.lat) && Number.isFinite(area.lng)
+  if (!isClientCoordinate(lat, lng)) return [];
+  return areas.filter(area => isClientTargetCoordinate(area.lat, area.lng)
     && isCoordinateInRegion(area.lat, area.lng, region.id)
     && (habitat === 'both' || (area.habitatKnown && (area.type === habitat || area.type === 'both'))))
     .map(area => ({ ...area, distanceKm: calculateDistance(lat, lng, area.lat, area.lng), compassBearing: calculateBearing(lat, lng, area.lat, area.lng) }))

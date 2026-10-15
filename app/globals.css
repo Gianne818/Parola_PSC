@@ -35,6 +35,11 @@
     -moz-osx-font-smoothing: grayscale;
   }
 
+  :is(a, button, input, select, textarea, summary):focus-visible {
+    outline: 3px solid #087f5b;
+    outline-offset: 3px;
+  }
+
   h1,
   h2,
   h3,

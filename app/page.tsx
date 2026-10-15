@@ -24,7 +24,7 @@ import { useLandingMotion } from "@/components/landing/useLandingMotion";
 
 export default function LandingPage() {
 
-  // Interactive 2-Way SMS Command Engine Simulation
+  // Local outbound-message examples; internal keys also drive the existing animation.
   const [selectedCommand, setSelectedCommand] = useState<"ADVISORY" | "HOTSPOT" | "STATUS">("ADVISORY");
 
   // Interactive Safety Hold Threshold Simulator
@@ -33,16 +33,16 @@ export default function LandingPage() {
 
   const smsResponses: Record<"ADVISORY" | "HOTSPOT" | "STATUS", { query: string; response: string }> = {
     ADVISORY: {
-      query: "ADVISORY",
-      response: "PAROLA (Mercedes): Waves 0.8m, wind 9kts ENE. Zone 3 active for Tamban. Return harbor by 17:00 PHT.\nSample sponsored footer."
+      query: "Routine day",
+      response: "PAROLA SAMPLE: Selected routine day for Mercedes. Example waves 0.8m, wind 9kts ENE. Check current official warnings. Not current guidance."
     },
     HOTSPOT: {
-      query: "HOTSPOT",
-      response: "PAROLA: Zone 3 (14.128°N, 123.084°E) active. 12km ENE offshore. SST 28.2°C thermal front. Tamban prob 84%.\nSample sponsored footer."
+      query: "Area guidance",
+      response: "PAROLA SAMPLE: Fishing-area guidance would include the area, prediction date and available data. No live target or catch probability is provided by this demo."
     },
     STATUS: {
-      query: "STATUS",
-      response: "PAROLA: Sample vessel, Mercedes home port. Advisory status: no sample hold. Check current official port instructions.\nSample sponsored footer."
+      query: "Critical alert",
+      response: "PAROLA SAMPLE: Applicable critical alerts are planned for any day, including days without routine advisories. Follow current official warnings and port instructions."
     }
   };
 
@@ -91,7 +91,7 @@ export default function LandingPage() {
               href="/register"
               className="inline-flex items-center min-h-11 bg-[#087F5B] hover:bg-[#066B4C] text-white px-3 sm:px-5 py-2.5 rounded-full font-bold text-xs uppercase tracking-wider transition-all shadow-sm active:scale-[0.98]"
             >
-              Register Vessel
+              Create Account
             </Link>
           </div>
         </div>
@@ -118,11 +118,11 @@ export default function LandingPage() {
             </div>
 
             <h1 id="landing-heading" className="text-[2rem] min-[390px]:text-4xl sm:text-5xl lg:text-6xl font-display font-black tracking-tight text-[#12211E] leading-[1.05]">
-              Maritime safety and fish hotspots, delivered by <span data-sms-word className={styles.smsWord}>SMS<span data-sms-underline aria-hidden="true" className={styles.smsUnderline} /></span>.
+              Marine guidance, with planned <span data-sms-word className={styles.smsWord}>SMS<span data-sms-underline aria-hidden="true" className={styles.smsUnderline} /></span> advisories.
             </h1>
 
             <p data-hero-copy className="text-base md:text-lg text-[#12211E]/75 leading-relaxed font-normal max-w-xl">
-              Weather advisories and fishing hotspot guidance for Philippine coastal communities, delivered to basic mobile phones.
+              Explore marine weather and fishing-area guidance for Philippine coastal communities. Automatic selected-day SMS is planned; the portal currently offers manual weather requests.
             </p>
 
             <div className="flex flex-col sm:flex-row gap-3 pt-2">
@@ -130,7 +130,7 @@ export default function LandingPage() {
                 href="/register"
                 className="bg-[#087F5B] hover:bg-[#066B4C] text-white px-8 py-4 rounded-full font-bold text-xs uppercase tracking-wider transition-all shadow-sm active:scale-[0.98] text-center"
               >
-                Register Your Vessel
+              Create Your Account
               </Link>
               <Link
                 href="/guide"
@@ -141,7 +141,7 @@ export default function LandingPage() {
               </Link>
             </div>
             <p className={styles.startNote}>
-              <Link href="/pricing#municipal-access">Free access for municipal craft at or below 3.0 GT.</Link>
+              <Link href="/pricing#municipal-access">Standard municipal access is free; eligibility details await review.</Link>
               <span>Create an account first, then set your home port.</span>
             </p>
           </div>
@@ -162,10 +162,10 @@ export default function LandingPage() {
 
         <div className="max-w-3xl mb-12">
           <h2 className="text-2xl md:text-4xl font-display font-black text-[#12211E] tracking-tight leading-tight">
-            Built for the coast. Ready for a basic phone.
+            Built for the coast. Designed for a basic phone.
           </h2>
           <p className="text-sm md:text-base text-[#12211E]/75 leading-relaxed font-normal mt-3 max-w-2xl">
-            Marine weather, fishing hotspots, and safety alerts reach coastal communities without mobile data. Try the sample tools below.
+            Reading a delivered SMS needs no mobile data. Registration, portal use and future voluntary reporting need internet access. Try the local examples below.
           </p>
         </div>
 
@@ -180,17 +180,17 @@ export default function LandingPage() {
                 Marine advisories, without mobile data
               </h3>
               <p className="text-sm text-[#12211E]/75 leading-relaxed font-normal max-w-lg">
-                Read advisories on an SMS-capable phone without mobile data. Delivery still needs cellular signal and an active SMS service. Try the sample commands below.
+                Planned routine advisories cover up to five selected weekdays; critical alerts are separate and may arrive any day. Scheduling is not yet available. Delivery needs an enabled service and cellular signal and is not guaranteed.
               </p>
             </div>
 
             <div className="mt-6 pt-5 border-t border-[#DAE5E0] space-y-3">
               <div className="flex flex-wrap items-center justify-between gap-2 text-xs text-[#12211E]/70">
-                <span className="font-semibold">Try an SMS command</span>
-                <span>Demo · sample responses</span>
+                <span className="font-semibold">Explore outbound SMS examples</span>
+                <span>Local demo · nothing is sent</span>
               </div>
 
-              <div role="group" aria-label="Sample SMS commands" className="flex flex-wrap gap-2">
+              <div role="group" aria-label="Outbound SMS examples" className="flex flex-wrap gap-2">
                 {(["ADVISORY", "HOTSPOT", "STATUS"] as const).map((cmd) => (
                   <button
                     key={cmd}
@@ -204,7 +204,7 @@ export default function LandingPage() {
                         : "bg-white text-[#12211E]/70 hover:bg-[#E2EBE6] border border-[#DAE5E0]"
                     }`}
                   >
-                    {cmd}
+                    {smsResponses[cmd].query}
                   </button>
                 ))}
               </div>
@@ -214,7 +214,7 @@ export default function LandingPage() {
                 <MessageSquare data-message-packet className={styles.messagePacket} />
               </div>
               <div className={`${styles.smsConsole} text-xs font-mono space-y-3 bg-[#12211E] text-white p-4 rounded-xl`}>
-                <div className="text-[#C4D8CE]">You sent: {smsResponses[selectedCommand].query}</div>
+                <div className="text-[#C4D8CE]">Sample message: {smsResponses[selectedCommand].query}</div>
                 <div className={`${styles.smsResponse} text-[#A7F3D0] leading-relaxed`}>
 
                   {Object.entries(smsResponses).map(([command, sample]) => (
@@ -279,7 +279,7 @@ export default function LandingPage() {
                 {simulateGale ? (
                   <span className="flex items-start gap-2 text-rose-800">
                     <ShieldAlert aria-hidden="true" className="w-5 h-5 shrink-0 mt-0.5" />
-                    <span><strong className="block">Sample departure hold</strong>Rough seas detected. A hold notification is triggered.</span>
+                      <span><strong className="block">Sample departure hold</strong>This local example displays a warning. No notification is sent.</span>
                   </span>
                 ) : (
                   <span className="flex items-start gap-2">
@@ -308,7 +308,7 @@ export default function LandingPage() {
                 Ocean signals point to fishing hotspots
               </h3>
               <p className="text-sm text-[#12211E]/75 leading-relaxed font-normal">
-                Sea temperature and chlorophyll information help identify potential fishing areas for Tamban, Galunggong, and Tuna. Hotspots are guidance, not guaranteed catches.
+                Sea temperature and chlorophyll can support fishing-area models. Species support and data quality need validation; a displayed score is not a verified catch probability or a guarantee of catch or fuel savings.
               </p>
             </div>
 
@@ -335,10 +335,10 @@ export default function LandingPage() {
       >
         <div className="max-w-3xl mb-12">
           <h2 className="text-2xl md:text-4xl font-display font-black text-[#12211E] tracking-tight leading-tight">
-            From home port to daily guidance
+            From home port to available guidance
           </h2>
           <p className="text-sm md:text-base text-[#12211E]/75 leading-relaxed font-normal mt-3 max-w-2xl">
-            From vessel registration at the municipal dock to daily SMS marine bulletins and catch reports, Parola connects the entire fisheries workflow.
+            Create an account, set your home port and review available portal guidance. Selected-day advisories and structured voluntary trip reports remain planned.
           </p>
         </div>
 
@@ -348,22 +348,22 @@ export default function LandingPage() {
           {[
             {
               step: "Step 01",
-              title: "Port registration",
-              desc: "Register your vessel and home port to receive local bulletins and record emergency contacts.",
+              title: "Home-port setup",
+              desc: "Create an account and set your home-port reference. This does not verify vessel registration or enroll you in automatic SMS.",
               icon: Anchor,
               href: "/onboarding"
             },
             {
               step: "Step 02",
               title: "SMS advisories",
-              desc: "Review marine weather, wave heights, and fishing guidance. Dispatch timing depends on your advisory settings.",
+              desc: "Review the portal advisory and request a weather SMS manually when enabled. Automatic selected-day scheduling is planned.",
               icon: MessageSquare,
               href: "/guide"
             },
             {
               step: "Step 03",
-              title: "Catch feedback",
-              desc: "Rate the latest advisory against your trip using the dashboard's catch-accuracy feedback.",
+              title: "Voluntary reports (planned)",
+              desc: "Structured trip reports, including zero catch, are planned for the portal or authorized assistance. Reporting will be optional and need internet access.",
               icon: Fish,
               href: "/dashboard"
             },
@@ -426,14 +426,14 @@ export default function LandingPage() {
             Plans matched to your vessel
           </h2>
           <p className="text-sm md:text-base text-[#12211E]/75 leading-relaxed font-normal mt-3 max-w-2xl">
-            Municipal craft at or below 3.0 GT receive free subsidized access. Commercial plans are monthly, per vessel, and matched to registered gross tonnage.
+            Standard municipal access is free. Commercial prices and tonnage bands below are proposals, subject to verification and eligibility review; creating an account does not activate a paid plan or grant fishing permission.
           </p>
         </div>
 
         <div className={styles.municipalAccess}>
           <div>
             <h3>Municipal access, without a subscription.</h3>
-            <p>Start with your mobile number and home port. Read advisories on a basic phone when SMS delivery is enabled.</p>
+            <p>Start with your mobile number and home port. Manual SMS requests depend on service availability; automatic scheduling is planned.</p>
             <Link href="/pricing#municipal-access">Check eligibility and getting-started details <ArrowRight size={16} aria-hidden="true" /></Link>
           </div>
           <div className={styles.municipalPrice}>₱0<span>Municipal subscription</span></div>
@@ -453,36 +453,36 @@ export default function LandingPage() {
                 <h3 className="font-display font-black text-xl text-[#12211E]">
                   Small-Scale Commercial
                 </h3>
-                <div className="text-xs font-mono text-[#53665C]">Sec. 3(n)(1) RA 8550</div>
+                <div className="text-xs font-mono text-[#53665C]">Proposed class — eligibility review pending</div>
               </div>
               <div className="flex items-baseline gap-1">
                 <span className="text-3xl font-display font-black text-[#12211E]">₱799</span>
                 <span className="text-xs text-[#12211E]/55 font-medium">/ mo per vessel</span>
               </div>
               <p className="text-sm text-[#12211E]/75 leading-relaxed">
-                50 km radius from home port outside municipal waters, with multi-species target selection.
+                Proposed scope: within 50 km of home port outside municipal waters. Coverage and permission checks are pending.
               </p>
               <div className="py-3 border-t border-[#DAE5E0] text-xs space-y-1">
                 <span className="font-bold text-[#12211E] flex items-center gap-1">
                   <Lock className="w-3 h-3 text-[#087F5B]" />
-                  <span>Daily Download Quota:</span>
+                  <span>Proposed zone allowance:</span>
                 </span>
                 <span className="text-[#12211E]/75 block">
-                  1 locked zone / day (unlimited re-downloads of that same zone for 24 hours).
+                  One zone per cycle is proposed; reset and re-download rules await agreement. Demo downloads do not enforce an entitlement.
                 </span>
               </div>
               <ul className="space-y-2 text-xs text-[#12211E]/80 pt-2 border-t border-[#DAE5E0]">
                 <li className="flex items-center gap-2">
                   <CheckCircle2 className="w-3.5 h-3.5 text-[#087F5B] shrink-0" />
-                  <span>Daily 04:30 PHT morning SMS advisories</span>
+                  <span>Selected-day routine SMS planned; timing pending</span>
                 </li>
                 <li className="flex items-center gap-2">
                   <CheckCircle2 className="w-3.5 h-3.5 text-[#087F5B] shrink-0" />
-                  <span>Offline chartplotter Geo-Packs (.GPX, .KML)</span>
+                  <span>Sample .GPX and .KML exports; device imports unverified</span>
                 </li>
                 <li className="flex items-center gap-2">
                   <CheckCircle2 className="w-3.5 h-3.5 text-[#087F5B] shrink-0" />
-                  <span>PAGASA gale warnings & safety holds</span>
+                  <span>Any-day critical alerts planned; official warnings remain essential</span>
                 </li>
               </ul>
             </div>
@@ -507,40 +507,40 @@ export default function LandingPage() {
                 <h3 className="font-display font-black text-xl text-[#12211E]">
                   Medium-Scale Commercial
                 </h3>
-                <div className="text-xs font-mono text-[#53665C]">Sec. 3(n)(2) RA 8550</div>
+                <div className="text-xs font-mono text-[#53665C]">Proposed class — eligibility review pending</div>
               </div>
               <div className="flex items-baseline gap-1">
                 <span className="text-3xl font-display font-black text-[#12211E]">₱2,499</span>
                 <span className="text-xs text-[#12211E]/55 font-medium">/ mo per vessel</span>
               </div>
               <p className="text-sm text-[#12211E]/75 leading-relaxed">
-                Permits full coverage of 1 selected Fisheries Management Area (FMA) and multi-species target selection.
+                Proposed scope: one selected Fisheries Management Area (FMA). Full coverage and access are not established.
               </p>
               <div className="py-3 border-t border-[#DAE5E0] text-xs space-y-1">
                 <span className="font-bold text-[#12211E] flex items-center gap-1">
                   <Lock className="w-3 h-3 text-[#087F5B]" />
-                  <span>Daily Download Quota:</span>
+                  <span>Proposed zone allowance:</span>
                 </span>
                 <span className="text-[#12211E]/75 block">
-                  1 locked zone / day, unlimited re-downloads for 24h.
+                  Zone cycle and re-download policy pending; demo only.
                 </span>
               </div>
               <ul className="space-y-2 text-xs text-[#12211E]/80 pt-2 border-t border-[#DAE5E0]">
                 <li className="flex items-center gap-2">
                   <CheckCircle2 className="w-3.5 h-3.5 text-[#087F5B] shrink-0" />
-                  <span>Full coverage of 1 designated FMA</span>
+                  <span>Selected FMA coverage subject to validation</span>
                 </li>
                 <li className="flex items-center gap-2">
                   <CheckCircle2 className="w-3.5 h-3.5 text-[#087F5B] shrink-0" />
-                  <span>24–72h spatial forecast Geo-Packs (.GPX, .KML, .GeoJSON)</span>
+                  <span>24–72h forecast export options are demonstrations</span>
                 </li>
                 <li className="flex items-center gap-2">
                   <CheckCircle2 className="w-3.5 h-3.5 text-[#087F5B] shrink-0" />
-                  <span>Multi-zone SST thermal front mapping</span>
+                  <span>Multi-zone thermal front mapping planned</span>
                 </li>
                 <li className="flex items-center gap-2">
                   <CheckCircle2 className="w-3.5 h-3.5 text-[#087F5B] shrink-0" />
-                  <span>Priority harbor muster dispatch</span>
+                  <span>Harbor dispatch integration planned</span>
                 </li>
               </ul>
             </div>
@@ -549,7 +549,7 @@ export default function LandingPage() {
                 href="/pricing#vessel-subscriptions"
                 className="w-full block bg-[#087F5B] hover:bg-[#066B4C] text-white py-3 rounded-full font-bold text-xs uppercase tracking-wider text-center transition-all shadow-sm active:scale-[0.98]"
               >
-                Select Medium-Scale
+                View Medium-Scale Proposal
               </Link>
             </div>
           </div>
@@ -566,36 +566,36 @@ export default function LandingPage() {
                 <h3 className="font-display font-black text-xl text-[#12211E]">
                   Large-Scale Commercial
                 </h3>
-                <div className="text-xs font-mono text-[#53665C]">Sec. 3(n)(3) RA 8550</div>
+                <div className="text-xs font-mono text-[#53665C]">Proposed class — eligibility review pending</div>
               </div>
               <div className="flex items-baseline gap-1">
                 <span className="text-3xl font-display font-black text-[#12211E]">₱6,199</span>
                 <span className="text-xs text-[#12211E]/55 font-medium">/ mo per vessel</span>
               </div>
               <p className="text-sm text-[#12211E]/75 leading-relaxed">
-                Full Philippine EEZ access, multi-species target selection, and priority support.
+                Proposed EEZ scope, species selection and support. No unrestricted fishing access or verified nationwide coverage is established.
               </p>
               <div className="py-3 border-t border-[#DAE5E0] text-xs space-y-1">
                 <span className="font-bold text-[#12211E] flex items-center gap-1">
                   <Lock className="w-3 h-3 text-[#087F5B]" />
-                  <span>Daily Download Quota:</span>
+                  <span>Proposed zone allowance:</span>
                 </span>
                 <span className="text-[#12211E]/75 block">
-                  1 locked zone / day, unlimited re-downloads for 24h.
+                  Zone cycle and re-download policy pending; demo only.
                 </span>
               </div>
               <ul className="space-y-2 text-xs text-[#12211E]/80 pt-2 border-t border-[#DAE5E0]">
                 <li className="flex items-center gap-2">
                   <CheckCircle2 className="w-3.5 h-3.5 text-[#087F5B] shrink-0" />
-                  <span>Full nationwide Philippine EEZ coverage</span>
+                  <span>Nationwide EEZ coverage proposed; validation pending</span>
                 </li>
                 <li className="flex items-center gap-2">
                   <CheckCircle2 className="w-3.5 h-3.5 text-[#087F5B] shrink-0" />
-                  <span>Priority 24/7 dedicated support & direct API</span>
+                  <span>Dedicated support and API integration planned</span>
                 </li>
                 <li className="flex items-center gap-2">
                   <CheckCircle2 className="w-3.5 h-3.5 text-[#087F5B] shrink-0" />
-                  <span>Automated harvest reporting for BFAR compliance</span>
+                  <span>Harvest reporting planned; no compliance certification</span>
                 </li>
               </ul>
             </div>
@@ -620,7 +620,7 @@ export default function LandingPage() {
               Operating five or more vessels?
             </h4>
             <p className="text-sm text-[#12211E]/75 leading-relaxed">
-              Explore annual fleet licenses, shared dashboard views, and offshore satellite sync. View the full options and requirements on our pricing page.
+              Fleet licensing, shared views and satellite sync are roadmap proposals. Contracts, working integrations and device support have not been established.
             </p>
           </div>
 
@@ -635,7 +635,7 @@ export default function LandingPage() {
               href="/pricing#geopack-satellite"
               className="bg-white hover:bg-[#F2F6F4] text-[#12211E] border border-[#DAE5E0] px-6 py-3 rounded-full font-bold text-xs uppercase tracking-wider transition-all text-center shadow-2xs"
             >
-              Satellite Sync Add-on
+              Satellite Sync Proposal
             </Link>
           </div>
         </div>
@@ -652,7 +652,7 @@ export default function LandingPage() {
             A business model that supports coastal access
           </h2>
           <p className="text-sm md:text-base text-[#12211E]/75 leading-relaxed font-normal mt-3 max-w-2xl">
-            Commercial subscriptions, sponsored municipal advisories, and spatial data licensing support the service.
+            Proposed commercial subscriptions, eligible sponsored advisories and reviewed data licensing form the funding plan. Revenue and partner agreements are not established by this demo.
           </p>
         </div>
 
@@ -670,7 +670,7 @@ export default function LandingPage() {
                 </h3>
               </div>
               <p className="text-sm text-[#12211E]/75 leading-relaxed">
-                Monthly vessel subscriptions fund SMS advisories and offline chartplotter exports, with fleet plans for larger operators.
+                Proposed monthly subscriptions would support SMS advisories and validated exports. Subscription activation and fleet agreements remain pending.
               </p>
             </div>
             <div className="pt-2">
@@ -716,7 +716,7 @@ export default function LandingPage() {
                 </h3>
               </div>
               <p className="text-sm text-[#12211E]/75 leading-relaxed">
-                Anonymized fishing activity and environmental data for fisheries monitoring, coastal LGU planning, and marine conservation.
+                Institutional data products are planned, subject to consent, privacy review and validated aggregation. No institutional feed or contract is established here.
               </p>
             </div>
             <div className="pt-2">
@@ -751,7 +751,7 @@ export default function LandingPage() {
                 href="/register"
                 className="bg-white text-[#12211E] hover:bg-[#F2F6F4] border border-[#DAE5E0] px-8 py-3.5 rounded-full font-bold text-xs uppercase tracking-wider transition-all shadow-2xs active:scale-[0.98] text-center"
               >
-                Register Your Vessel
+                Create Your Account
               </Link>
             </div>
           </div>

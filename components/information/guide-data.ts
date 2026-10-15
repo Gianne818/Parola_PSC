@@ -29,7 +29,7 @@ export const STEPS: StepGuide[] = [
       "Open Registration and enter your Philippine mobile number.",
       "Create a password with at least six characters.",
       "Choose English, Tagalog, Cebuano, or Hiligaynon as your system language.",
-      "Select Register & Verify and follow the verification instructions shown on screen. The current verification screen is a preview; it does not confirm live SMS delivery.",
+      "Select Continue, then use the displayed demo code and Create account to continue. No verification SMS is sent; this does not verify phone ownership or enroll you in automatic advisories.",
     ],
     operationalTip:
       "Web registration needs internet access. Reading a delivered SMS needs an SMS-capable phone and cellular signal, without mobile data. A trusted person can help you use the web form.",
@@ -53,10 +53,10 @@ export const STEPS: StepGuide[] = [
       "Open onboarding after account creation or sign in before opening the setup page.",
       "Search for your home port or province, choose a listed port, or place a pin on the coastal map.",
       "Check the selected region and pinned location before confirming.",
-      "Select Confirm Port & Finish to open your dashboard. The current setup records a home port; it is not official vessel registration.",
+      "Select Confirm home port to open your dashboard. The current setup records a home port; it is not official vessel registration.",
     ],
     operationalTip:
-      "Municipal craft at or below 3.0 GT qualify for free subsidized access. Keep your actual vessel registration details available when reviewing commercial eligibility.",
+      "Standard municipal access is free. Home-port setup does not verify vessel eligibility, grant fishing permission or activate a commercial plan.",
     image: "/images/parola-onboarding-guide.png",
     imageAlt: "Parola home-port selection map",
     imageCaption:
@@ -66,12 +66,12 @@ export const STEPS: StepGuide[] = [
     id: "find-vessel",
     stepNumber: 3,
     category: "Vessel & Port",
-    title: "How to find your vessel on the fleet map",
+    title: "How to find your home port on the map",
     duration: "1 min",
     shortDesc:
       "Use the dashboard map to review your home-port anchor and nearby fishing guidance.",
     actionUrl: "/dashboard",
-    actionLabel: "Open Fleet Map",
+    actionLabel: "Open Home-Port Map",
     instructions: [
       "Open the dashboard after setting your home port.",
       "Locate your home-port anchor on the map. Zoom or move the map to explore the surrounding area.",
@@ -82,7 +82,7 @@ export const STEPS: StepGuide[] = [
       "Your home-port anchor is a reference location, not proof of your boat's current GPS position. Do not assume the map is tracking a moving vessel.",
     image: "/images/guide-fleet-map.png",
     imageAlt:
-      "Parola Fleet Map on Dashboard showing registered vessel and home anchorage",
+      "Dashboard map reference showing a home-port anchor, not live vessel tracking",
     imageCaption:
       "Dashboard map reference with coastal markers and home anchorage. Marker details depend on available data.",
   },
@@ -97,7 +97,7 @@ export const STEPS: StepGuide[] = [
     actionUrl: "/onboarding?from=profile",
     actionLabel: "Manage Home Port",
     instructions: [
-      "Open Manage Home Port, or use Edit Vessel Info from Settings to return to the port map.",
+      "Open Manage Home Port, or use Change home port from Settings to return to the port map.",
       "Search for your port or select a listed coastal location.",
       "If needed, move the pin to your actual home-port location and check the displayed region.",
       "Confirm the updated port and review the new reference location on your dashboard.",
@@ -119,12 +119,12 @@ export const STEPS: StepGuide[] = [
     shortDesc:
       "Read the location, weather values, and advisory status in a message or dashboard preview.",
     actionUrl: "/alerts",
-    actionLabel: "View Advisory Syntax",
+    actionLabel: "View Advisory Preview",
     instructions: [
       "Open Alerts to review the advisory preview, or read an SMS delivered by an enabled service.",
       "Check the location and message time before using the information.",
       "Read wave height, wind speed and units, and any fishing-zone guidance. Compare warnings with current official advisories.",
-      "ADVISORY, HOTSPOT, and STATUS are sample command examples in the public demo. Confirm the service number, enabled commands, and SMS charges before sending a text.",
+      "No inbound command or rating reply is required. Routine SMS for up to five selected weekdays and separate any-day critical alerts are planned; the current portal offers manual weather requests when enabled, not automatic enrollment.",
     ],
     operationalTip:
       "No mobile data is needed to read an SMS, but cellular signal is still required. An advisory status is not official departure clearance.",
@@ -144,9 +144,9 @@ export const STEPS: StepGuide[] = [
     actionUrl: "/dashboard",
     actionLabel: "View Catch Predictions",
     instructions: [
-      "Access the Species Hotspot module on the Dashboard or review the zone field in your morning SMS bulletin.",
-      "Choose a species or species group from the Fish & Species Finder.",
-      "Compare the displayed scores and distances rather than treating a percentage as a guaranteed catch.",
+      "Open Fishing Areas on the dashboard. A manual weather SMS does not establish fishing-zone delivery or a morning schedule.",
+      "Open Filter fish and choose an optional target fish. Unsupported adjustments are labelled; a selection is not evidence of fish presence.",
+      "Compare the displayed scores and distances. A percentage is not a field-validated catch probability, species sighting or guaranteed catch.",
       "Select a marker to review coordinates and bearing. Check weather conditions before planning a trip.",
     ],
     operationalTip:
@@ -155,30 +155,30 @@ export const STEPS: StepGuide[] = [
     imageAlt:
       "Parola Dashboard Hotspot Coordinates list with catch probabilities",
     imageCaption:
-      "Hotspot list reference showing prediction scores, depth, distance, and heading. Example percentages are not guaranteed outcomes.",
+      "Historical hotspot-list reference. The current list shows distance and habitat; area details show a model estimate only when supplied. Depth and species evidence may be unavailable.",
   },
   {
     id: "submit-catch-feedback",
     stepNumber: 7,
     category: "Advisories & At Sea",
-    title: "How to submit catch feedback",
+    title: "Voluntary trip reporting — planned",
     duration: "1 min",
     shortDesc:
-      "Rate how well the latest advisory matched your trip using the dashboard feedback controls.",
+      "Structured trip reports are planned; the current dashboard does not provide a trip-report form or catch-rating controls.",
     actionUrl: "/dashboard",
-    actionLabel: "Submit Harvest Log",
+    actionLabel: "Return to Dashboard",
     instructions: [
-      "After your trip, open the Municipal Advisor on the dashboard.",
-      "Find Cooperative Model Calibration and review the advisory referenced there.",
-      "Choose High Accuracy, Medium, or Low to describe how closely the guidance matched your trip.",
-      "Wait for the feedback confirmation shown on screen. The current controls collect an accuracy rating, not a catch-weight or fuel log.",
+      "The reporting proposal covers voluntary portal entry or authorized assistance; it requires internet access.",
+      "Planned reports include zero catch, approximate area, species, weight and effort; exact GPS is optional.",
+      "A report form, authorized-assistance flow and server-confirmed save are not available in the current dashboard.",
+      "No SMS reply or catch report is required to receive advisories. A historical rating example is not a submitted trip report or proof of model calibration.",
     ],
     operationalTip:
-      "Use the available rating controls. Do not send secret fishing coordinates or personal information to an unconfirmed SMS destination.",
+      "Reporting is optional. Do not treat a local preview, draft or historical screenshot as a submitted report.",
     image: "/images/guide-catch-feedback.png",
     imageAlt: "Cooperative Model Calibration catch feedback rating interface",
     imageCaption:
-      "Municipal Advisor catch feedback calibration module allowing fishers to rate AI prediction accuracy (High, Medium, Low) after landing.",
+      "Historical rating-screen reference only. These controls are absent from the current dashboard; ratings do not establish calibrated accuracy or a submitted catch report.",
   },
   {
     id: "respond-safety-hold",
@@ -215,18 +215,18 @@ export const STEPS: StepGuide[] = [
     actionUrl: "/dashboard",
     actionLabel: "Open Municipal Advisor",
     instructions: [
-      "Open the Municipal Advisor panel on the right side of the Dashboard (it can also be expanded or collapsed using the panel toggle).",
-      "In the Fish & Species Finder section, filter by Surface Water (Pelagic), Bottom & Reef (Demersal), or All Predictions.",
-      "Expand a species list, such as Tamban, Tulingan, or Lapu-lapu, to review prediction scores and map overlays.",
-      "Review wind speed, wave height, storm information, sea surface temperature, and tide values. Check the displayed source and freshness where available.",
-      "Review the weather broadcast preview before using a dispatch control. Confirm that SMS delivery is enabled for your registered phone; a preview alone does not establish delivery.",
+      "Open the dashboard. Use Areas on a small screen or tablet to read the available fishing areas.",
+      "Open Filter fish to choose a habitat or optional target fish. Clear filters to return to general areas.",
+      "Select an area from the list or map to review its coordinates, distance, prediction date and any supplied model estimate. Species adjustment is distinct from a recorded fish sighting.",
+      "Open Weather details or Advisories for wind, waves, air temperature and regional storm records. Read each source, forecast or record time, and unavailable state; this screen does not supply tide readings.",
+      "Use Weather by SMS only as a manual request for your saved number when current readings are available. A simulated preview sends nothing; accepted dispatch does not confirm delivery.",
     ],
     operationalTip:
-      "The dashboard combines weather and species information in one place. Review it alongside official guidance; predictions and screen status are decision support.",
+      "The dashboard combines weather and model-area information in one place. Review it alongside official guidance; predictions and screen status are decision support.",
     image: "/images/parola-dashboard-guide.png",
     imageAlt:
-      "Parola Dashboard showing Municipal Advisor with Fish Finder, Sea & Weather Metrics Grid, and PAGASA Weather Broadcast",
+      "Historical dashboard reference showing species filters, weather values and broadcast controls",
     imageCaption:
-      "Municipal Advisor console featuring target fish species selection (pelagic/demersal), real-time Sea & Weather Metrics Grid, and the instant PAGASA Weather Broadcast dispatch.",
+      "Historical dashboard reference, not live conditions. Current weather cards identify their actual source and forecast time; manual SMS requests do not confirm receipt or automatic scheduling.",
   },
 ];

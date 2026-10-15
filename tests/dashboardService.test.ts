@@ -3,6 +3,24 @@ import { loadFishingAreas, loadFishingAreaResult, loadDashboardWeather } from '@
 afterEach(() => vi.unstubAllGlobals());
 const signal = new AbortController().signal;
 describe('dashboard area loading', () => {
+  it('rejects invalid request coordinates before any request', async () => {
+    const fetchMock = vi.fn();
+    vi.stubGlobal('fetch', fetchMock);
+    await expect(loadFishingAreas(NaN, 123, '', signal)).rejects.toThrow('coordinates');
+    await expect(loadDashboardWeather(10, Infinity, 'reg-7', signal)).rejects.toThrow('coordinates');
+    expect(fetchMock).not.toHaveBeenCalled();
+  });
+  it('omits malformed, swapped, Null Island and out-of-extent targets without coercion', async () => {
+    const row = { grid_id: 1, model_type: 'pelagic', target_lat: 10.4, target_lon: 123.9 };
+    vi.stubGlobal('fetch', vi.fn(async () => Response.json({ hotspots: [row,
+      { ...row, target_lat: '10.4' }, { ...row, target_lat: null },
+      { ...row, target_lat: 123.9, target_lon: 10.4 }, { ...row, target_lat: 0, target_lon: 0 },
+      { ...row, target_lat: 90 },
+    ] })));
+    expect(await loadFishingAreas(10.3, 123.8, '', signal)).toHaveLength(1);
+    vi.stubGlobal('fetch', vi.fn(async () => Response.json({ hotspots: [{ ...row, target_lat: null }] })));
+    await expect(loadFishingAreas(10.3, 123.8, '', signal)).rejects.toThrow('coordinates');
+  });
   it('rejects malformed forecast locations before they reach the area details', async () => {
     const reading = { value: 1, source: 'forecast', observedAt: '2026-10-14T04:00:00Z' };
     const weather = { wind: reading, waves: reading, temperature: reading, stormSignal: reading,
@@ -45,5 +63,13 @@ describe('dashboard area loading', () => {
     expect(fetchMock.mock.calls[0][0]).toContain('species=Tamban');
     expect(area).toMatchObject({ predictionDate: '2026-10-13', species: [], source: 'model', speciesAdjusted: false });
     expect(area.catchProbability).toBeUndefined();
+  });
+  it('recognizes only explicit HSI adjustment evidence from existing response variants', async () => {
+    for (const [applied, expected] of [[true, true], ['Tamban', true], ['false', false], ['Other fish', false], [false, false]] as const) {
+      vi.stubGlobal('fetch', vi.fn(async () => Response.json({ hotspots: [{ grid_id: 23, target_lat: 10.4, target_lon: 123.9, model_type: 'pelagic' }], species_hsi_applied: applied })));
+      const [area] = await loadFishingAreas(10.3, 123.8, 'Tamban', signal);
+      expect(area.speciesAdjusted).toBe(expected);
+      expect(area.species).toEqual([]);
+    }
   });
 });

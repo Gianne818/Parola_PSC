@@ -3,7 +3,7 @@ import { PricingContent } from "@/components/information/PricingContent";
 export const metadata: Metadata = {
   title: "Pricing | Parola",
   description:
-    "Municipal free access and commercial vessel subscriptions, with coverage, daily download quotas, and fleet agreements.",
+    "Free Standard municipal access, proposed commercial pricing, sample exports and planned fleet capabilities.",
 };
 export default function PricingPage() {
   return <PricingContent />;

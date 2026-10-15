@@ -5,12 +5,16 @@ import { CircleHelp, RefreshCw, ShieldAlert, ShieldCheck, Waves, Wind } from 'lu
 import { isReadingCurrent, type AdvisoryState, type DashboardWeather } from '@/lib/dashboard';
 import type { DashboardCopy } from './dashboard-copy';
 import styles from './dashboard.module.css';
+import { GUIDANCE_COPY } from './guidance-copy';
+import { recordTimestamp } from '@/lib/frontend/timestamps';
+import WeatherCoverage from './WeatherCoverage';
 
 export function displayTime(value: string | null | undefined, language: string): string | null {
-  if (!value || !Number.isFinite(Date.parse(value))) return null;
+  const timestamp = recordTimestamp(value);
+  if (!timestamp) return null;
   return new Intl.DateTimeFormat(language === 'tl' ? 'fil' : language, {
-    timeZone: 'Asia/Manila', month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit',
-  }).format(new Date(value));
+    timeZone: 'Asia/Manila', year: 'numeric', month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit',
+  }).format(new Date(timestamp));
 }
 
 export default function Advisory({ data, state, loading, failed, refresh, openDetails, copy, language }: {
@@ -20,9 +24,11 @@ export default function Advisory({ data, state, loading, failed, refresh, openDe
   const Icon = state === 'hold' ? ShieldAlert : state === 'clear' ? ShieldCheck : CircleHelp;
   const title = state === 'hold' ? copy.hold : state === 'clear' ? copy.clear : copy.incomplete;
   const oldReadings = Boolean(data && [data.wind, data.waves, data.stormSignal].some(reading => !isReadingCurrent(reading)));
+  const received = displayTime(data?.receivedAt, language);
   return <section className={styles.advisory} data-state={state} aria-labelledby="advisory-title" aria-busy={loading}>
     <div className={styles.advisoryStatus}><Icon size={20} aria-hidden="true" /><div><h2 id="advisory-title" aria-live="polite">{title}</h2>
-      <p className={styles.timestamp}>{loading ? copy.refreshing : data ? `${failed || oldReadings ? copy.lastAvailable : copy.checked}: ${displayTime(data.receivedAt, language)} PHT` : copy.unknownTime}</p>
+      <p className={styles.timestamp}>{loading ? copy.refreshing : received ? `${GUIDANCE_COPY[language as keyof typeof GUIDANCE_COPY]?.retrieved || GUIDANCE_COPY.en.retrieved}: ${received} PHT` : copy.unknownTime}</p>
+      {(failed || oldReadings) && data && <p className={styles.timestamp}>{copy.lastAvailable}</p>}
     </div></div>
     <dl className={styles.readings}>
       <div><Wind size={18} aria-hidden="true" /><dt>{copy.wind}</dt><dd>{data?.wind.value != null ? `${data.wind.value.toFixed(1)} km/h` : copy.unavailable}</dd></div>
@@ -47,10 +53,13 @@ export function WeatherDetails({ data, state, copy, language }: { data: Dashboar
     <dl className={styles.sourceList}>{sources.map(({ label, reading, unit }) => <div key={label}><dt>{label}</dt>
       <dd className={styles.sourceValue}>{reading?.value != null ? `${reading.value} ${unit}` : copy.unavailable}</dd>
       <dd>{copy.source}: {reading?.source || copy.unavailable}</dd><dd>{copy.observed}: {displayTime(reading?.observedAt, language) || copy.unknownTime}</dd>
+      <dd lang="en">Valid until: {displayTime(reading?.validUntil, language) || 'Unavailable'}</dd>
+      <dd>{reading?.value == null ? copy.unavailable : reading.available === false ? copy.lastAvailable : !displayTime(reading.observedAt, language) ? copy.unknownTime : !isReadingCurrent(reading) ? GUIDANCE_COPY[language as keyof typeof GUIDANCE_COPY]?.outdated || GUIDANCE_COPY.en.outdated : null}</dd>
     </div>)}
       <div><dt>{copy.holdChecks}</dt><dd>{data?.hold.available ? copy.holdRecorded : copy.holdUnknown}</dd><dd>{displayTime(data?.hold.checkedAt, language) || copy.unknownTime}</dd>
         {data?.hold.active && data.hold.reason && <dd>{data.hold.reason}</dd>}
       </div>
     </dl>
+    <WeatherCoverage data={data} />
   </>;
 }

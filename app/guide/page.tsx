@@ -3,7 +3,7 @@ import { GuideContent } from "@/components/information/GuideContent";
 export const metadata: Metadata = {
   title: "System Guide | Parola",
   description:
-    "Nine practical lessons for using Parola: vessel registration, SMS advisories, fish hotspots, and safety alerts.",
+    "Nine lessons on account and home-port setup, current advisory controls, sample screens and planned voluntary reporting.",
 };
 export default function GuidePage() {
   return <GuideContent />;

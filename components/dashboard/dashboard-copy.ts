@@ -22,10 +22,10 @@ const en = {
   noMatches: 'No areas match these filters', noMatchesDescription: 'Clear the filters to see other areas in your advisory region.',
   areasFailed: 'We could not load fishing areas.', retry: 'Try again', reference: 'A hold is active. These areas are reference information, not a trip recommendation.',
   homePort: 'Home port', advisoryArea: 'Advisory area', mapNote: 'Home-port reference and model areas. This map does not track your boat.', mapFailed: 'Map tiles could not load. You can still use the list.', loadingMap: 'Loading map…',
-  smsTitle: 'Weather by SMS', smsDescription: 'Send this weather summary to your registered number. Reading a delivered SMS needs cellular signal, without mobile data.',
+  smsTitle: 'Weather by SMS', smsDescription: 'Manually request this weather summary for your saved number. This does not schedule automatic advisories or verify phone ownership. Delivery is not guaranteed. Reading a delivered SMS needs cellular signal, without mobile data; portal use needs internet.',
   sendSms: 'Send weather by SMS', sending: 'Sending request…', smsAccepted: 'Accepted for SMS dispatch. Delivery has not been confirmed.', smsSimulated: 'SMS preview simulated. No message was sent.', smsFailed: 'The SMS request failed. Please try again.',
   noPhone: 'Add a valid mobile number in your profile before sending an update.', smsUnavailable: 'Refresh the advisory to get current information before sending.',
-  guidanceHelp: 'Need help reading the guidance?', openGuide: 'Open the guide', footer: 'Local guidance from Parola. Follow current port instructions.', pageError: 'Your dashboard could not load', pageErrorDescription: 'Try loading the daily briefing again.',
+  guidanceHelp: 'Need help reading the guidance?', openGuide: 'Open the guide', footer: 'Local guidance from Parola. Follow current port instructions.', pageError: 'Your dashboard could not load', pageErrorDescription: 'Try loading the available guidance again.',
 };
 
 export type DashboardCopy = typeof en;
@@ -51,10 +51,10 @@ const tl: DashboardCopy = {
   noMatches: 'Walang lugar na tumutugma', noMatchesDescription: 'Alisin ang mga filter para makita ang ibang lugar sa iyong rehiyon.',
   areasFailed: 'Hindi makuha ang mga lugar ng pangingisda.', retry: 'Subukan muli', reference: 'May aktibong hold. Sanggunian lamang ang mga lugar, hindi rekomendasyon na bumiyahe.',
   homePort: 'Daungan', advisoryArea: 'Lugar ng abiso', mapNote: 'Sanggunian ng daungan at mga lugar ng modelo. Hindi sinusubaybayan ng mapa ang iyong bangka.', mapFailed: 'Hindi ma-load ang mapa. Magagamit pa rin ang listahan.', loadingMap: 'Nilo-load ang mapa…',
-  smsTitle: 'Panahon sa SMS', smsDescription: 'Ipadala ang buod ng panahon sa iyong rehistradong numero. Kailangan ng cellular signal, ngunit hindi ng mobile data, para basahin ang SMS.',
+  smsTitle: 'Panahon sa SMS', smsDescription: 'Manu-manong humiling ng buod ng panahon para sa naka-save na numero. Hindi ito awtomatikong iskedyul o pagberipika ng numero. Hindi garantisado ang pagdating. Kailangan ng cellular signal, hindi mobile data, para basahin ang SMS; kailangan ng internet sa portal.',
   sendSms: 'Ipadala sa SMS', sending: 'Ipinapadala ang kahilingan…', smsAccepted: 'Tinanggap para ipadala bilang SMS. Hindi pa kumpirmado ang pagdating.', smsSimulated: 'Simulasyon lamang ng SMS. Walang mensaheng ipinadala.', smsFailed: 'Hindi naipadala ang kahilingan sa SMS. Subukan muli.',
   noPhone: 'Maglagay ng wastong mobile number sa profile bago magpadala.', smsUnavailable: 'I-refresh ang abiso para makakuha ng kasalukuyang impormasyon bago magpadala.',
-  guidanceHelp: 'Kailangan ng tulong sa pagbabasa ng gabay?', openGuide: 'Buksan ang gabay', footer: 'Lokal na gabay mula sa Parola. Sundin ang kasalukuyang tagubilin ng daungan.', pageError: 'Hindi ma-load ang dashboard', pageErrorDescription: 'Subukang i-load muli ang pang-araw-araw na gabay.',
+  guidanceHelp: 'Kailangan ng tulong sa pagbabasa ng gabay?', openGuide: 'Buksan ang gabay', footer: 'Lokal na gabay mula sa Parola. Sundin ang kasalukuyang tagubilin ng daungan.', pageError: 'Hindi ma-load ang dashboard', pageErrorDescription: 'Subukang i-load muli ang available na gabay.',
 };
 
 const ceb: DashboardCopy = {
@@ -79,10 +79,10 @@ const ceb: DashboardCopy = {
   noMatches: 'Walay lugar nga motakdo sa mga filter', noMatchesDescription: 'Tangtanga ang mga filter aron makita ang ubang lugar sa imong rehiyon.',
   areasFailed: 'Dili makuha ang mga pangisdaanan.', retry: 'Sulayi pag-usab', reference: 'Aktibo ang hold. Kini nga mga lugar reperensiya lamang, dili rekomendasyon sa pagbiyahe.',
   homePort: 'Pantalan', advisoryArea: 'Lugar sa pahibalo', mapNote: 'Reperensiya sa pantalan ug mga lugar sa modelo. Dili kini mapa sa pagsubay sa imong bangka.', mapFailed: 'Dili ma-load ang mapa. Magamit gihapon ang lista.', loadingMap: 'Gi-load ang mapa…',
-  smsTitle: 'Panahon pinaagi sa SMS', smsDescription: 'Ipadala ang sumaryo sa panahon sa imong rehistradong numero. Kinahanglan og cellular signal, apan dili mobile data, sa pagbasa sa SMS.',
+  smsTitle: 'Panahon pinaagi sa SMS', smsDescription: 'Manwal nga hangyo sa sumaryo sa panahon para sa na-save nga numero. Dili kini awtomatikong iskedyul o pagverify sa numero. Dili garantiya ang pag-abot. Kinahanglan og cellular signal, dili mobile data, sa pagbasa sa SMS; kinahanglan og internet sa portal.',
   sendSms: 'Ipadala sa SMS', sending: 'Gipadala ang hangyo…', smsAccepted: 'Gidawat alang sa pagpadala og SMS. Wala pa makumpirma ang pag-abot.', smsSimulated: 'Simulasyon lamang sa SMS. Walay mensaheng gipadala.', smsFailed: 'Napakyas ang hangyo sa SMS. Sulayi pag-usab.',
   noPhone: 'Ibutang ang hustong mobile number sa profile sa dili pa magpadala.', smsUnavailable: 'I-refresh ang pahibalo aron makuha ang kasamtangang impormasyon sa dili pa magpadala.',
-  guidanceHelp: 'Kinahanglan og tabang sa pagbasa sa giya?', openGuide: 'Ablihi ang giya', footer: 'Lokal nga giya gikan sa Parola. Sunda ang kasamtangang mga sugo sa pantalan.', pageError: 'Dili ma-load ang dashboard', pageErrorDescription: 'Sulayi pag-load pag-usab ang adlaw-adlaw nga giya.',
+  guidanceHelp: 'Kinahanglan og tabang sa pagbasa sa giya?', openGuide: 'Ablihi ang giya', footer: 'Lokal nga giya gikan sa Parola. Sunda ang kasamtangang mga sugo sa pantalan.', pageError: 'Dili ma-load ang dashboard', pageErrorDescription: 'Sulayi pag-load pag-usab ang anaa nga giya.',
 };
 
 const hil: DashboardCopy = {
@@ -107,10 +107,10 @@ const hil: DashboardCopy = {
   noMatches: 'Wala sang lugar nga nagatugma', noMatchesDescription: 'Kuhaa ang mga filter para makita ang iban nga lugar sa imo rehiyon.',
   areasFailed: 'Indi makuha ang mga pangisdaan.', retry: 'Tilawi liwat', reference: 'Aktibo ang hold. Ini nga mga lugar reperensiya lang, indi rekomendasyon sa pagbiyahe.',
   homePort: 'Pantalan', advisoryArea: 'Lugar sang abiso', mapNote: 'Reperensiya sang pantalan kag mga lugar sang modelo. Indi ini mapa sa pagsubay sang imo sakayan.', mapFailed: 'Indi ma-load ang mapa. Magamit gihapon ang lista.', loadingMap: 'Gina-load ang mapa…',
-  smsTitle: 'Panahon paagi sa SMS', smsDescription: 'Ipadala ang sumaryo sang panahon sa imo rehistrado nga numero. Kinahanglan sang cellular signal, pero indi mobile data, sa pagbasa sang SMS.',
+  smsTitle: 'Panahon paagi sa SMS', smsDescription: 'Manwal nga pangabay sang sumaryo sang panahon para sa na-save nga numero. Indi ini awtomatiko nga iskedyul ukon pagverify sang numero. Indi garantiya ang pag-abot. Kinahanglan sang cellular signal, indi mobile data, sa pagbasa sang SMS; kinahanglan sang internet sa portal.',
   sendSms: 'Ipadala sa SMS', sending: 'Ginapadala ang pangabay…', smsAccepted: 'Ginbaton para ipadala bilang SMS. Wala pa makumpirma ang pag-abot.', smsSimulated: 'Simulasyon lang sang SMS. Wala sang mensahe nga ginpadala.', smsFailed: 'Napakyas ang pangabay sa SMS. Tilawi liwat.',
   noPhone: 'Ibutang ang husto nga mobile number sa profile antes magpadala.', smsUnavailable: 'I-refresh ang abiso para makuha ang kasamtangan nga impormasyon antes magpadala.',
-  guidanceHelp: 'Kinahanglan sang bulig sa pagbasa sang giya?', openGuide: 'Abrihi ang giya', footer: 'Lokal nga giya halin sa Parola. Sunda ang kasamtangan nga mga sugo sang pantalan.', pageError: 'Indi ma-load ang dashboard', pageErrorDescription: 'Tilawi i-load liwat ang adlaw-adlaw nga giya.',
+  guidanceHelp: 'Kinahanglan sang bulig sa pagbasa sang giya?', openGuide: 'Abrihi ang giya', footer: 'Lokal nga giya halin sa Parola. Sunda ang kasamtangan nga mga sugo sang pantalan.', pageError: 'Indi ma-load ang dashboard', pageErrorDescription: 'Tilawi i-load liwat ang available nga giya.',
 };
 
 export const DASHBOARD_COPY: Record<Language, DashboardCopy> = { en, tl, ceb, hil };

@@ -1,39 +1,18 @@
 "use client";
 
 import React, { createContext, useContext, useState, useEffect, useCallback } from "react";
-import { UserProfile, AlertNotification, WeatherTelemetry, Hotspot, FuelPool, PhilippineRegion } from "../types";
+import { UserProfile, AlertNotification, Hotspot, FuelPool, PhilippineRegion } from "../types";
 import { readUpdates } from '../lib/updates';
 import { APPLICATION_COPY } from '../components/application/application-copy';
 import { storageService } from "../services/storageService";
-import { fetchLiveWeather } from "../services/weatherService";
+import { fetchLiveWeather, UNAVAILABLE_WEATHER, type ClientWeatherTelemetry } from "../services/weatherService";
+import { isClientCoordinate, isClientTargetCoordinate } from '@/lib/frontend/coordinates';
 import { fetchHotspots } from "../services/supabaseHotspotService";
-import { fetchWeatherSafetyOverrides, fetchSupabaseWeatherData } from "../services/supabaseWeatherService";
+import { fetchWeatherSafetyOverrides } from "../services/supabaseWeatherService";
 import { createUserProfile } from "../services/profileService";
 import { authHeaders } from "../utils/auth-fetch";
 import { fetchWithTimeout } from "../utils/fetchWithTimeout";
-import { PHILIPPINE_REGIONS, detectPhilippineRegion, getHotspotsForRegion, isCoordinateInRegion } from "../data/philippineRegions";
-
-// Default pre-configured Philippine hotspots
-export const DEFAULT_HOTSPOTS: Hotspot[] = [
-  { id: "h1", name: "Apo-Mercedes Deep", type: "pelagic", species: ["Tamban (Clupeidae)", "Tulingan (Scombridae)", "Galunggong (Carangidae)"], lat: 14.25, lng: 123.15, depth: 450, catchProbability: 0.94, lastUpdated: "Today, 04:00" },
-  { id: "h2", name: "San Miguel Bay East", type: "demersal", species: ["Lapu-lapu (Serranidae)", "Maya-maya (Lutjanidae)", "Bisugo (Nemipteridae)"], lat: 13.92, lng: 123.32, depth: 45, catchProbability: 0.86, lastUpdated: "Today, 05:30" },
-  { id: "h3", name: "Apo Reef North", type: "both", species: ["Tulingan (Scombridae)", "Samaral (Siganidae)", "Maya-maya (Lutjanidae)"], lat: 12.69, lng: 120.42, depth: 120, catchProbability: 0.76, lastUpdated: "Yesterday, 18:20" },
-  { id: "h4", name: "Sulu Sea Basin", type: "pelagic", species: ["Tamban (Clupeidae)", "Dilis (Engraulidae)", "Bahi (Belonidae)"], lat: 9.50, lng: 121.20, depth: 800, catchProbability: 0.65, lastUpdated: "Today, 02:15" },
-  { id: "h5", name: "Celebes Trench Edge", type: "pelagic", species: ["Tulingan (Scombridae)", "Tamban (Clupeidae)"], lat: 5.80, lng: 124.50, depth: 1500, catchProbability: 0.91, lastUpdated: "Today, 01:10" },
-  { id: "h6", name: "Bohol Sea Ridge", type: "demersal", species: ["Lapu-lapu (Serranidae)", "Katambak (Lethrinidae)"], lat: 9.35, lng: 124.25, depth: 180, catchProbability: 0.83, lastUpdated: "Yesterday, 14:45" },
-  { id: "h7", name: "Camotes Sea Reef", type: "demersal", species: ["Samaral (Siganidae)", "Maya-maya (Lutjanidae)"], lat: 10.55, lng: 124.45, depth: 65, catchProbability: 0.72, lastUpdated: "Today, 06:10" },
-  { id: "h8", name: "Visayan Sea Hotspot", type: "both", species: ["Galunggong (Carangidae)", "Bisugo (Nemipteridae)", "Samaral (Siganidae)"], lat: 11.50, lng: 123.80, depth: 55, catchProbability: 0.68, lastUpdated: "Today, 03:00" },
-  { id: "h9", name: "San Bernardino Passage", type: "pelagic", species: ["Tulingan (Scombridae)", "Galunggong (Carangidae)"], lat: 12.55, lng: 124.15, depth: 320, catchProbability: 0.96, lastUpdated: "Today, 07:05" },
-  { id: "h10", name: "Lingayen Gulf Shelf", type: "demersal", species: ["Bisugo (Nemipteridae)", "Lapu-lapu (Serranidae)"], lat: 16.25, lng: 120.15, depth: 35, catchProbability: 0.88, lastUpdated: "Yesterday, 22:15" },
-  { id: "h11", name: "Lagonoy Gulf Basin", type: "pelagic", species: ["Tulingan (Scombridae)", "Tamban (Clupeidae)"], lat: 13.60, lng: 123.75, depth: 250, catchProbability: 0.75, lastUpdated: "Today, 05:00" },
-  { id: "h12", name: "Tayabas Bay Bank", type: "both", species: ["Maya-maya (Lutjanidae)", "Samaral (Siganidae)"], lat: 13.70, lng: 121.85, depth: 50, catchProbability: 0.64, lastUpdated: "Today, 04:30" },
-  { id: "h13", name: "Sibuyan Sea Center", type: "pelagic", species: ["Tamban (Clupeidae)", "Galunggong (Carangidae)"], lat: 12.40, lng: 122.50, depth: 190, catchProbability: 0.92, lastUpdated: "Yesterday, 19:30" },
-  { id: "h14", name: "Babuyan Upwelling Zone", type: "pelagic", species: ["Tulingan (Scombridae)", "Galunggong (Carangidae)"], lat: 19.10, lng: 121.60, depth: 600, catchProbability: 0.81, lastUpdated: "Today, 00:30" },
-  { id: "h15", name: "Sarangani Bay Shore", type: "demersal", species: ["Katambak (Lethrinidae)", "Lapu-lapu (Serranidae)"], lat: 6.05, lng: 125.15, depth: 75, catchProbability: 0.78, lastUpdated: "Today, 06:45" },
-  { id: "h16", name: "Cuyo Pass Bank", type: "both", species: ["Galunggong (Carangidae)", "Bisugo (Nemipteridae)", "Maya-maya (Lutjanidae)"], lat: 10.95, lng: 121.05, depth: 85, catchProbability: 0.67, lastUpdated: "Today, 02:45" },
-  { id: "h17", name: "Panay Gulf Ridge", type: "pelagic", species: ["Tulingan (Scombridae)", "Tamban (Clupeidae)"], lat: 10.25, lng: 122.40, depth: 280, catchProbability: 0.89, lastUpdated: "Yesterday, 23:00" },
-  { id: "h18", name: "Davao Gulf Base", type: "demersal", species: ["Lapu-lapu (Serranidae)", "Katambak (Lethrinidae)"], lat: 6.85, lng: 125.80, depth: 110, catchProbability: 0.95, lastUpdated: "Today, 05:15" }
-];
+import { PHILIPPINE_REGIONS, detectPhilippineRegion, isCoordinateInRegion } from "../data/philippineRegions";
 
 export const MUNICIPAL_PORTS = [
   { name: "Mercedes Fish Port", lat: 14.0122, lng: 123.0114, province: "Camarines Norte" },
@@ -104,7 +83,7 @@ interface AppContextType {
   theme: 'light' | 'dark';
   userProfile: UserProfile;
   notifications: AlertNotification[];
-  weather: WeatherTelemetry;
+  weather: ClientWeatherTelemetry;
   manualOverrideHold: boolean;
   fuelPools: FuelPool[];
   hotspots: Hotspot[];
@@ -187,20 +166,13 @@ const DEFAULT_PROFILE: UserProfile = {
   regionalBounds: [[11.70, 122.30], [14.65, 124.60]],
 };
 
-const DEFAULT_WEATHER: WeatherTelemetry = {
-  temp: 29.5,
-  windSpeed: 14.5,
-  windDirection: "NE",
-  waveHeight: 1.2,
-  tide: "Medium",
-  stormSignal: 0,
-};
+const DEFAULT_WEATHER: ClientWeatherTelemetry = UNAVAILABLE_WEATHER;
 
 // TTL cache + in-flight dedupe for telemetry/hotspot loads (fixes sequential waterfall)
 const TELEMETRY_TTL_MS = 60_000;
 interface TelemetryCacheEntry {
   timestamp: number;
-  weather: WeatherTelemetry;
+  weather: ClientWeatherTelemetry;
   hotspots: Hotspot[];
   hasActiveOverride: boolean;
 }
@@ -218,8 +190,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const [userProfile, setUserProfile] = useState<UserProfile>(DEFAULT_PROFILE);
   const [notifications, setNotifications] = useState<AlertNotification[]>(INITIAL_NOTIFICATIONS);
   const [fuelPools, setFuelPools] = useState<FuelPool[]>(DEFAULT_POOLS);
-  const [hotspots, setHotspots] = useState<Hotspot[]>(DEFAULT_HOTSPOTS);
-  const [weather, setWeather] = useState<WeatherTelemetry>(DEFAULT_WEATHER);
+  const [hotspots, setHotspots] = useState<Hotspot[]>([]);
+  const [weather, setWeather] = useState<ClientWeatherTelemetry>(DEFAULT_WEATHER);
   const [manualOverrideHold, setManualOverrideHold] = useState<boolean>(false);
   const [toast, setToast] = useState<{ message: string; type: "success" | "error" | "info" } | null>(null);
 
@@ -275,15 +247,21 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     let cancelled = false;
     const lat = userProfile.lat;
     const lng = userProfile.lng;
-    if (!lat || !lng) return;
+    if (!isClientCoordinate(lat, lng)) {
+      queueMicrotask(() => { if (!cancelled) setHotspots([]); });
+      return () => { cancelled = true; };
+    }
     const key = telemetryCacheKey(lat, lng);
 
     const loadTelemetryAndHotspots = async () => {
+      await Promise.resolve();
+      if (cancelled) return;
+      setHotspots([]);
       // Serve fresh TTL cache instantly
       const cached = telemetryCache.get(key);
       if (cached && Date.now() - cached.timestamp < TELEMETRY_TTL_MS) {
         setWeather(cached.weather);
-        setHotspots(cached.hotspots.length > 0 ? cached.hotspots : DEFAULT_HOTSPOTS);
+        setHotspots(cached.hotspots.filter(h => isClientTargetCoordinate(h.lat, h.lng)));
         if (cached.hasActiveOverride) setManualOverrideHold(true);
         return;
       }
@@ -292,14 +270,10 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       let inflight = telemetryInflight.get(key);
       if (!inflight) {
         inflight = (async (): Promise<TelemetryCacheEntry> => {
-          const [liveRes, sbWeatherRes, overridesRes, hotspotsRes] = await Promise.all([
+          const [liveRes, overridesRes, hotspotsRes] = await Promise.all([
             fetchLiveWeather(lat, lng).catch((weatherErr) => {
-              console.warn("Could not fetch live weather, fallback to default weather:", weatherErr);
+              console.warn("Could not fetch weather; readings remain unavailable:", weatherErr);
               return DEFAULT_WEATHER;
-            }),
-            fetchSupabaseWeatherData(lat, lng).catch((e) => {
-              console.warn("Could not load Supabase weather telemetry:", e);
-              return null;
             }),
             fetchWeatherSafetyOverrides().catch((e) => {
               console.warn("Could not load weather safety overrides:", e);
@@ -311,32 +285,22 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
             }),
           ]);
 
-          // Merge Supabase weather overlay onto live telemetry
-          const live: WeatherTelemetry = { ...liveRes };
-          const sbWeather = sbWeatherRes as any;
-          if (sbWeather) {
-            live.temp = sbWeather.temperature ?? sbWeather.temp ?? live.temp;
-            live.windSpeed = sbWeather.wind_speed ?? sbWeather.windSpeed ?? live.windSpeed;
-            live.waveHeight = sbWeather.wave_height ?? sbWeather.waveHeight ?? live.waveHeight;
-            live.stormSignal = sbWeather.storm_signal ?? sbWeather.stormSignal ?? live.stormSignal;
-          }
+          // An unlocated latest database row cannot establish weather at this port.
+          const live: ClientWeatherTelemetry = { ...liveRes };
 
           const overrides = (overridesRes ?? []) as { isActive: boolean; reason: string }[];
           const hasActiveOverride = overrides.some((o) => o.isActive);
 
           let mapped: Hotspot[];
           const sbHotspots = (hotspotsRes ?? []) as Hotspot[];
-          const activeReg = userProfile.regionId
-            ? PHILIPPINE_REGIONS.find((r) => r.id === userProfile.regionId)
-            : detectPhilippineRegion(lat, lng, userProfile.port);
 
           if (sbHotspots.length > 0) {
-            mapped = sbHotspots.map((h) => ({
+            mapped = sbHotspots.filter(h => isClientTargetCoordinate(h.lat, h.lng)).map((h) => ({
               ...h,
               type: (h.type === 'pelagic' || h.type === 'demersal' || h.type === 'both') ? h.type : 'both',
             })) as Hotspot[];
           } else {
-            mapped = activeReg ? getHotspotsForRegion(activeReg.id, DEFAULT_HOTSPOTS) : DEFAULT_HOTSPOTS;
+            mapped = [];
           }
 
           const entry: TelemetryCacheEntry = {
@@ -801,7 +765,9 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         hotspots: prev?.hotspots ?? [],
         hasActiveOverride: prev?.hasActiveOverride ?? false,
       });
-      showToast("Live PAGASA weather metrics refreshed.", "success");
+      const complete = live.temp !== null && live.windSpeed !== null && live.waveHeight !== null;
+      showToast(complete ? "Available Open-Meteo forecasts refreshed; tide and storm signal remain unavailable."
+        : "Some Open-Meteo forecasts are unavailable. No readings were generated.", complete ? "success" : "info");
     } catch (err) {
       console.warn("Failed to refresh weather metrics:", err);
       showToast("Could not refresh live weather metrics.", "error");

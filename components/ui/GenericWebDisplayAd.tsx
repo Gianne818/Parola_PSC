@@ -35,31 +35,31 @@ export function GenericWebDisplayAd({
   // Curated programmatic ad creative rotation
   const ads = [
     {
-      sponsor: "Petron Marine Fleet Fuel",
-      headline: "Power Your Commercial Fleet with Clean Marine Fuel",
-      subline: "Official diesel bunkering partner at 18 major Philippine fish ports.",
-      badge: "Sponsor",
-      cta: "Find Port Station",
+      sponsor: "Sample marine services advertiser",
+      headline: "Illustrative marine services placement",
+      subline: "Demonstration only; no sponsor, port coverage or partnership is established.",
+      badge: "Sample",
+      cta: "Sample placement",
       href: "#",
-      tagline: "Eco-Grade Marine Diesel"
+      tagline: "Illustrative only"
     },
     {
-      sponsor: "Smart Satellite SIM",
-      headline: "Affordable 2G/LTE Coastal Connectivity for Bancas",
-      subline: "Zero-rated Parola marine safety bulletins across all coastal provinces.",
-      badge: "Partner",
-      cta: "Learn More",
+      sponsor: "Sample connectivity advertiser",
+      headline: "Illustrative coastal connectivity placement",
+      subline: "No zero-rating, telecom agreement or nationwide coverage is established.",
+      badge: "Sample",
+      cta: "Sample placement",
       href: "#",
-      tagline: "CSR Zero-Rated"
+      tagline: "No provider agreement"
     },
     {
-      sponsor: "Furuno Marine Electronics",
-      headline: "Direct Chartplotter Geo-Pack Integration",
-      subline: "Compatible with Parola .GPX, .KML, and .GeoJSON spatial hotspot bundles.",
-      badge: "Supported Hardware",
-      cta: "View Models",
+      sponsor: "Sample marine electronics advertiser",
+      headline: "Illustrative marine electronics placement",
+      subline: "Device imports are unverified; sample file formats do not establish compatibility.",
+      badge: "Sample",
+      cta: "Sample placement",
       href: "#",
-      tagline: "Garmin · Furuno · Simrad"
+      tagline: "Device support unverified"
     }
   ];
 
@@ -69,13 +69,13 @@ export function GenericWebDisplayAd({
     return (
       <aside
         id={slotId}
-        aria-label="Sponsored Advertisement"
+        aria-label="Sample advertising placement"
         className={`w-full max-w-7xl mx-auto my-6 px-4 ${className}`}
       >
         <div className="bg-white/80 backdrop-blur-xs border border-[#DAE5E0] rounded-2xl p-3 sm:p-4 flex flex-col sm:flex-row items-center justify-between gap-4 shadow-2xs hover:border-[#00B37E]/30 transition-all">
           <div className="flex items-center gap-3">
             <span className="text-[9px] font-black uppercase tracking-wider px-2 py-0.5 rounded bg-gray-100 text-gray-500 border border-gray-200">
-              Advertisement
+              Sample advertisement
             </span>
             <div className="text-left">
               <div className="text-xs font-bold text-[#12211E] flex items-center gap-2">
@@ -116,13 +116,13 @@ export function GenericWebDisplayAd({
   return (
     <div
       id={slotId}
-      aria-label="Programmatic Web Display Ad"
+      aria-label="Sample web display advertisement"
       className={`bg-white border border-[#DAE5E0] rounded-2xl p-4 shadow-2xs relative group ${className}`}
     >
       <div className="flex items-center justify-between mb-2">
         <span className="text-[9px] font-bold uppercase tracking-wider text-gray-400 flex items-center gap-1">
           <Info className="w-3 h-3" />
-          <span>Sponsored Community Ad</span>
+          <span>Sample community ad</span>
         </span>
         <span className="text-[10px] font-semibold text-[#00B37E] bg-[#00B37E]/10 px-2 py-0.5 rounded-full">
           {currentAd.tagline}

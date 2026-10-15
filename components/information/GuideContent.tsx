@@ -44,11 +44,11 @@ const categories = [
 const lessonNames = [
   "Create your account",
   "Complete onboarding",
-  "Find your vessel",
+  "Find your home port",
   "Update your home port",
   "Read an SMS advisory",
   "Check fish predictions",
-  "Submit catch feedback",
+  "Trip reporting (planned)",
   "Respond to a safety hold",
   "Use the Municipal Advisor",
 ];
@@ -541,24 +541,25 @@ export function GuideContent() {
                 is a learning checklist, not a certification or departure
                 clearance.
               </p>
-              <h2>SMS commands</h2>
+              <h2>Outbound SMS — planned schedule</h2>
               <p>
-                Sample command examples. Use the Parola service details provided
-                to your community.
+                Routine SMS for up to five selected weekdays and separate any-day
+                critical alerts are planned. The current portal offers manual
+                weather requests when enabled; automatic scheduling is not available.
               </p>
               <ul>
                 <li>
-                  <strong>ADVISORY</strong> — request sea conditions.
+                  <strong>Routine day</strong> — a planned selected-day advisory.
                 </li>
                 <li>
-                  <strong>HOTSPOT</strong> — request fishing hotspot
-                  information.
+                  <strong>Critical alert</strong> — planned separately, including
+                  days without routine advisories.
                 </li>
                 <li>
-                  <strong>STATUS</strong> — check the current advisory status.
+                  <strong>Receipt</strong> — gateway acceptance does not confirm delivery.
                 </li>
               </ul>
-              <p>Sample command examples. Confirm the service number, supported commands, and SMS charges before sending.</p>
+              <p>No inbound commands or replies are required. Reading delivered SMS needs no mobile data; registration, portal use and future voluntary reporting need internet. Delivery depends on the service and cellular network.</p>
               <h2>Before departure</h2>
               <ul>
                 <li>Check your latest weather advisory and any safety hold.</li>
@@ -567,7 +568,7 @@ export function GuideContent() {
                 <li>
                   Review hotspot guidance alongside current sea conditions.
                 </li>
-                <li>After returning to port, submit catch feedback.</li>
+                <li>Voluntary trip reporting is planned; no report or rating reply is required to receive advisories.</li>
               </ul>
               <h2>Review a lesson</h2>
               <ul>

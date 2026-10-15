@@ -39,7 +39,7 @@ export default function HomePortOnboarding() {
 }
 
 export function OnboardingLoading() {
-  return <div className={`${styles.page} ${styles.loadingPage}`} role="status">Loading home-port setup…</div>;
+  return <div className={`${styles.page} ${styles.loadingPage}`} role="status" lang="en">Loading home-port setup…</div>;
 }
 
 function PortSelectionContent({ fromProfile }: { fromProfile: boolean }) {
@@ -244,14 +244,14 @@ function PortSelectionContent({ fromProfile }: { fromProfile: boolean }) {
   );
 
   return (
-    <div className={styles.page}>
+    <div className={styles.page} lang="en">
       <header className={styles.header}>
         <Link href="/" className={styles.brand} aria-label="Parola"><ParolaLogo iconOnly className="h-8 w-8" /><span>Parola</span></Link>
         <Link className={styles.back} href={fromProfile ? '/profile' : '/login'}><ArrowLeft size={15} aria-hidden="true" />{fromProfile ? 'Back to profile' : 'Back to account'}</Link>
       </header>
       <main className={styles.layout}>
         <section className={styles.panel} aria-labelledby="port-title">
-          {!fromProfile && <ol className={styles.steps} aria-label={copy.stepsLabel}>
+          {!fromProfile && <ol className={styles.steps} aria-label={copy.stepsLabel} lang={language === 'tl' ? 'fil' : language}>
             <li><Check size={13} aria-hidden="true" />{copy.accountStep}</li>
             <li><Check size={13} aria-hidden="true" />{copy.verifyStep}</li>
             <li aria-current="step"><span className={styles.stepDot}>3</span>{copy.portStep}</li>
@@ -288,6 +288,7 @@ function PortSelectionContent({ fromProfile }: { fromProfile: boolean }) {
             <button className={styles.confirm} type="button" disabled={!selection || resolving || saving} onClick={() => void savePort()}>{saving ? <LoaderCircle className={styles.spinner} size={17} aria-hidden="true" /> : <ArrowRight size={17} aria-hidden="true" />}<span aria-live="polite">{saving ? 'Saving home port…' : fromProfile ? 'Save home port' : 'Confirm home port'}</span></button>
             {(selection || resolving) && <button className={styles.clearPin} type="button" disabled={saving} onClick={clearSelection}>Clear selection</button>}
           </div>
+          <p className={styles.hint} lang="en">Home-port changes are kept on this device. This screen does not confirm a backend save, phone verification, automatic messaging or fishing permission.</p>
         </section>
         <section className={styles.mapArea} aria-label="Home-port selection map">
           <MapComponent hotspots={NO_HOTSPOTS} selectedHotspot={null} onSelectHotspot={ignoreHotspot} filterType="both" selectedSpecies={NO_SPECIES} hideSidebar hideLegend center={coordinates || undefined} onMapClick={(lat, lng) => { void resolvePin(lat, lng); }} activeRegion={selection?.region || null} showRegionBoundary={!!selection} showVesselMarkers={false} isolateRegion={false} viewMode={viewMode} boundaryMaskOpacity={0.18} minHeight={300} constrainToPhilippines />

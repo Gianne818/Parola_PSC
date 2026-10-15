@@ -33,6 +33,7 @@ export default function ResourcesHubPage() {
       </div>
       <section className={styles.reference} aria-labelledby="quick-reference-heading">
         <h2 id="quick-reference-heading">{copy.reference}</h2>
+        <p>{copy.referenceNote}</p>
         <dl>{references.map(({ icon: Icon, label, value }) => <div key={label}><dt><Icon size={18} aria-hidden="true" />{label}</dt><dd>{value}</dd></div>)}</dl>
       </section>
     </div>

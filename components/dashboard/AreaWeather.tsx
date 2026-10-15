@@ -1,7 +1,7 @@
 'use client';
 
 import { RefreshCw, Waves, Wind } from 'lucide-react';
-import type { DashboardWeather, FishingArea, ForecastCoordinates } from '@/lib/dashboard';
+import type { DashboardWeather, FishingArea } from '@/lib/dashboard';
 import { isReadingCurrent } from '@/lib/dashboard';
 import type { Language } from '@/types';
 import ForecastReading from './ForecastReading';
@@ -10,6 +10,7 @@ import { DASHBOARD_COPY } from './dashboard-copy';
 import { GUIDANCE_COPY } from './guidance-copy';
 import { useAreaWeather, useDashboardClock } from './use-dashboard-data';
 import styles from './dashboard.module.css';
+import WeatherCoverage from './WeatherCoverage';
 
 export default function AreaWeather({ area, regionId, cache, language }: {
   area: FishingArea; regionId: string; cache: Map<string, DashboardWeather>; language: Language;
@@ -21,7 +22,7 @@ export default function AreaWeather({ area, regionId, cache, language }: {
   const data = weather.data;
   const incomplete = data && [data.wind, data.waves].some(reading => !isReadingCurrent(reading, now));
   const warning = data && ((data.wind.value != null && data.wind.value / 1.852 >= 20) || (data.waves.value != null && data.waves.value >= 2));
-  const location = (value: ForecastCoordinates | null | undefined) => value ? `${value.lat.toFixed(4)}° N, ${value.lng.toFixed(4)}° E` : copy.unavailable;
+  const received = displayTime(data?.receivedAt, language);
   return <section className={styles.areaWeather} aria-busy={weather.loading} aria-labelledby="area-weather-title">
     <h3 id="area-weather-title">{text.areaWeather}</h3>
     <p className={styles.timestamp}>{text.forecast}</p>
@@ -33,12 +34,8 @@ export default function AreaWeather({ area, regionId, cache, language }: {
     </dl>
     {warning && <p className={styles.notice}>{text.zoneCaution}</p>}
     <p className={styles.panelDescription}>{text.gridNote}</p>
-    {data && <p className={styles.timestamp}>{text.retrieved}: {displayTime(data.receivedAt, language) || copy.unknownTime} PHT</p>}
+    {data && <p className={styles.timestamp}>{text.retrieved}: {received ? `${received} PHT` : copy.unknownTime}</p>}
     <button type="button" className={styles.textButton} onClick={weather.refresh} disabled={weather.loading}><RefreshCw size={16} aria-hidden="true" />{text.refreshWeather}</button>
-    <details className={styles.areaForecastLocations}><summary>{text.sourceLocations}</summary><dl>
-      <div><dt>{text.requested}</dt><dd>{location(data?.location?.requested || area)}</dd></div>
-      <div><dt>{text.windGrid}</dt><dd>{location(data?.location?.weatherGrid)}</dd></div>
-      <div><dt>{text.waveGrid}</dt><dd>{location(data?.location?.marineGrid)}</dd></div>
-    </dl></details>
+    <WeatherCoverage data={data} requested={area} />
   </section>;
 }

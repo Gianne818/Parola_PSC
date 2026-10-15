@@ -31,19 +31,19 @@ export const getFontScaleClass = (scale: number): string => {
 export const getBaseFontSize = (scale: number): string => {
   switch (scale) {
     case -2:
-      return "13px";
+      return "0.8125rem";
     case -1:
-      return "14px";
+      return "0.875rem";
     case 1:
-      return "17px";
+      return "1.0625rem";
     case 2:
-      return "18px";
+      return "1.125rem";
     case 3:
-      return "20px";
+      return "1.25rem";
     case 4:
-      return "23px";
+      return "1.4375rem";
     case 0:
     default:
-      return "16px";
+      return "1rem";
   }
 };

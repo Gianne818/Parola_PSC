@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { AuthLayout } from '@/components/layouts/AuthLayout';
 import { useApp } from '@/context/AppContext';
 import { fontScales } from '@/utils/fontScale';
+import { isClientCoordinate } from '@/lib/frontend/coordinates';
 import { DASHBOARD_COPY } from '@/components/dashboard/dashboard-copy';
 import { APPLICATION_COPY } from '@/components/application/application-copy';
 import type { Language } from '@/types';
@@ -32,7 +33,7 @@ export default function SettingsPage() {
       <section id="profile" className={styles.settingsSection} aria-labelledby="profile-heading">
         <div className={styles.panelHeading}><h2 id="profile-heading">{text.profilePort}</h2><Link href="/onboarding?from=profile" className={styles.link}>{copy.changePort}</Link></div><p className={styles.muted}>{text.savedDetails}</p>
         <dl className={`${styles.details} ${styles.profileDetails}`}>{rows.map(([label, value]) => <div key={label}><dt>{label}</dt><dd>{value?.trim() || text.notProvided}</dd></div>)}</dl>
-        <details className={styles.disclosure}><summary>{copy.coordinates}</summary><dl className={styles.details}><div><dt>{copy.homePort}</dt><dd>{Number.isFinite(userProfile.lat) && Number.isFinite(userProfile.lng) ? `${userProfile.lat.toFixed(6)}, ${userProfile.lng.toFixed(6)}` : text.notProvided}</dd></div>{userProfile.fmaZone && <div><dt>FMA</dt><dd>{userProfile.fmaZone}</dd></div>}</dl></details>
+        <details className={styles.disclosure}><summary>{copy.coordinates}</summary><dl className={styles.details}><div><dt>{copy.homePort}</dt><dd>{isClientCoordinate(userProfile.lat, userProfile.lng) ? `${userProfile.lat.toFixed(6)}, ${userProfile.lng.toFixed(6)}` : text.notProvided}</dd></div>{userProfile.fmaZone && <div><dt>FMA</dt><dd>{userProfile.fmaZone}</dd></div>}</dl></details>
       </section>
       <div className={styles.settingsTools}>
       <section id="preferences" className={styles.settingsSection} aria-labelledby="preferences-heading">

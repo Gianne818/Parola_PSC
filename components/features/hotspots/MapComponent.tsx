@@ -7,6 +7,7 @@ import { calculateDistance, calculateBearing } from "../../../utils/spatial";
 import { useApp } from "../../../context/AppContext";
 import { Anchor, Compass, Info, Navigation, ShieldCheck, MapPin } from "lucide-react";
 import { ALL_SPECIES_CONFIGS, GENERAL_PELAGIC_COLOR, GENERAL_DEMERSAL_COLOR, GENERAL_PELAGIC_SHADES, GENERAL_DEMERSAL_SHADES, getSpeciesConfig } from "../../../utils/speciesColors";
+import { isClientCoordinate, isClientTargetCoordinate } from '@/lib/frontend/coordinates';
 
 /** Prediction radius the ML model was trained on: 9 km */
 export const PREDICTION_RADIUS_KM = 9;
@@ -20,7 +21,7 @@ const MapInner = dynamic(() => import("./MapInner"), {
     <div className="w-full h-full bg-slate-50 dark:bg-[#0B1513] flex flex-col items-center justify-center space-y-4">
       <Compass className="w-12 h-12 text-brand-green animate-spin [animation-duration:3s]" />
       <span className="text-xs font-black uppercase tracking-widest text-gray-400">
-        Initializing ECDIS System...
+        Loading reference map…
       </span>
     </div>
   )
@@ -65,7 +66,7 @@ interface MapComponentProps {
 
 export const MapComponent: React.FC<MapComponentProps> = ({
   hotspots,
-  selectedHotspot,
+  selectedHotspot: candidate,
   onSelectHotspot,
   filterType,
   selectedSpecies,
@@ -88,6 +89,8 @@ export const MapComponent: React.FC<MapComponentProps> = ({
   const { userProfile, updateProfile, showToast, manualOverrideHold } = useApp();
   const [customWaypoint, setCustomWaypoint] = useState<{ lat: number; lng: number } | null>(null);
   const [currentZoom, setCurrentZoom] = useState<number>(10);
+  const selectedHotspot = candidate && isClientTargetCoordinate(candidate.lat, candidate.lng) ? candidate : null;
+  const validHome = isClientCoordinate(userProfile.lat, userProfile.lng);
 
   if (presentation === 'dashboard') return (
     <BriefingMapInner hotspots={hotspots} selectedHotspot={selectedHotspot} onSelectHotspot={onSelectHotspot}
@@ -136,7 +139,7 @@ export const MapComponent: React.FC<MapComponentProps> = ({
               Prediction Map Legend
             </span>
             <span className="text-[8px] font-black text-brand-green bg-emerald-50 dark:bg-emerald-950/60 px-1.5 py-0.5 rounded border border-emerald-200 dark:border-emerald-800 uppercase">
-              Live Gradient
+              Model score colors
             </span>
           </div>
 
@@ -198,7 +201,7 @@ export const MapComponent: React.FC<MapComponentProps> = ({
             {selectedSpecies && selectedSpecies.length > 0 && (
               <div className="pt-1 space-y-2">
                 <span className="text-[8.5px] font-black text-slate-800 dark:text-slate-200 uppercase block tracking-wider">
-                  Species Probability Palette:
+                  Selected-fish colors (not sightings):
                 </span>
                 {selectedSpecies.map((spName) => {
                   const cfg = getSpeciesConfig(spName);
@@ -249,7 +252,7 @@ export const MapComponent: React.FC<MapComponentProps> = ({
               {userProfile.port || "None Set"}
             </span>
             <span className="text-[10px] text-gray-500 font-bold block mt-0.5">
-              {userProfile.lat?.toFixed(4)}°N, {userProfile.lng?.toFixed(4)}°E
+              {validHome ? `${userProfile.lat.toFixed(4)}°N, ${userProfile.lng.toFixed(4)}°E` : 'Coordinates unavailable'}
             </span>
           </div>
         )}
@@ -261,7 +264,7 @@ export const MapComponent: React.FC<MapComponentProps> = ({
           <div>
             <h4 className="font-display font-black text-lg text-slate-900 dark:text-[#F7FAF9] border-b border-gray-100 dark:border-teal-950 pb-3 mb-4 flex items-center gap-2">
               <Compass className="w-5.5 h-5.5 text-brand-green" />
-              ECDIS Waypoint
+              Map reference
             </h4>
 
             {/* Selected Hotspot Details */}
@@ -286,10 +289,10 @@ export const MapComponent: React.FC<MapComponentProps> = ({
                 <div className="grid grid-cols-2 gap-3">
                   <div className="bg-[#EEF5F3] dark:bg-teal-950/25 p-3 rounded-2xl border border-teal-50 dark:border-teal-950/40">
                     <span className="text-[9px] font-bold text-gray-400 uppercase tracking-widest block">
-                      Vessel Range
+                      Home-port distance
                     </span>
                     <span className="text-xl font-black text-[#12211E] dark:text-white">
-                      {calculateDistance(userProfile.lat, userProfile.lng, selectedHotspot.lat, selectedHotspot.lng)} km
+                      {validHome ? `${calculateDistance(userProfile.lat, userProfile.lng, selectedHotspot.lat, selectedHotspot.lng)} km` : 'Unavailable'}
                     </span>
                   </div>
                   <div className="bg-[#EEF5F3] dark:bg-teal-950/25 p-3 rounded-2xl border border-teal-50 dark:border-teal-950/40">
@@ -298,7 +301,7 @@ export const MapComponent: React.FC<MapComponentProps> = ({
                     </span>
                     <span className="text-xl font-black text-[#12211E] dark:text-white flex items-center gap-1">
                       <Navigation className="w-4 h-4 text-brand-green rotate-45" />
-                      {calculateBearing(userProfile.lat, userProfile.lng, selectedHotspot.lat, selectedHotspot.lng)}
+                      {validHome ? calculateBearing(userProfile.lat, userProfile.lng, selectedHotspot.lat, selectedHotspot.lng) : 'Unavailable'}
                     </span>
                   </div>
                 </div>
@@ -313,11 +316,11 @@ export const MapComponent: React.FC<MapComponentProps> = ({
                   </div>
                   <div className="flex justify-between text-xs font-bold text-gray-500">
                     <span>Sea Depth:</span>
-                    <span className="text-gray-800 dark:text-white">{selectedHotspot.depth} meters</span>
+                    <span className="text-gray-800 dark:text-white">{Number.isFinite(selectedHotspot.depth) ? `${selectedHotspot.depth} meters` : 'Unavailable'}</span>
                   </div>
                   <div className="flex justify-between text-xs font-bold text-gray-500">
                     <span>Target Species:</span>
-                    <span className="text-brand-green font-extrabold">{selectedHotspot.species.join(", ")}</span>
+                    <span className="text-brand-green font-extrabold">{selectedHotspot.species.join(", ") || "Unavailable; no species evidence supplied"}</span>
                   </div>
                 </div>
               </div>
@@ -338,7 +341,7 @@ export const MapComponent: React.FC<MapComponentProps> = ({
                       Range
                     </span>
                     <span className="text-xl font-black text-[#12211E] dark:text-white">
-                      {calculateDistance(userProfile.lat, userProfile.lng, customWaypoint.lat, customWaypoint.lng)} km
+                      {validHome ? `${calculateDistance(userProfile.lat, userProfile.lng, customWaypoint.lat, customWaypoint.lng)} km` : 'Unavailable'}
                     </span>
                   </div>
                   <div className="bg-amber-50/40 dark:bg-amber-950/10 p-3 rounded-2xl border border-amber-100/30">
@@ -347,7 +350,7 @@ export const MapComponent: React.FC<MapComponentProps> = ({
                     </span>
                     <span className="text-xl font-black text-[#12211E] dark:text-white flex items-center gap-1">
                       <Navigation className="w-4 h-4 text-amber-500 rotate-45" />
-                      {calculateBearing(userProfile.lat, userProfile.lng, customWaypoint.lat, customWaypoint.lng)}
+                      {validHome ? calculateBearing(userProfile.lat, userProfile.lng, customWaypoint.lat, customWaypoint.lng) : 'Unavailable'}
                     </span>
                   </div>
                 </div>
@@ -365,7 +368,7 @@ export const MapComponent: React.FC<MapComponentProps> = ({
                     <span>Geofence Status:</span>
                     <span className="text-brand-green font-extrabold flex items-center gap-1">
                       <ShieldCheck className="w-4 h-4 text-brand-green" />
-                      Territorial Waters
+                      Inside display extent; permission unverified
                     </span>
                   </div>
                 </div>
