@@ -11,6 +11,7 @@ import { PHILIPPINE_REGIONS, detectPhilippineRegion, isCoordinateInRegion } from
 
 import { PREDICTION_RADIUS_KM, PREDICTION_RADIUS_METERS, type MapViewMode } from "./MapComponent";
 import { isClientCoordinate } from '@/lib/frontend/coordinates';
+import ModelEvidence from './ModelEvidence';
 
 const PHILIPPINE_NAVIGATION_BOUNDS: L.LatLngBoundsLiteral = [[4.5, 115.5], [21.5, 127.5]];
 
@@ -627,7 +628,6 @@ export default function MapInner({
           const type = spot.type || (spot.group === "pelagic" ? "pelagic" : "demersal");
           const name = spot.name || spot.label || "Unknown Spot";
           const species = spot.species || [spot.family || ""];
-          const depth = Number.isFinite(spot.depth) ? spot.depth : null;
 
           const isUnsafe = !isBriefing && (manualOverrideHold || spot.isUnsafe);
           const isSelected = selectedHotspot?.id === spot.id;
@@ -696,26 +696,10 @@ export default function MapInner({
                       </span>
                     </div>
                   <div className="text-[10px] font-bold text-gray-500 space-y-1">
-                    {spot.catchProbability !== undefined && (
-                      <div 
-                        className="font-extrabold text-xs px-2 py-1 rounded-lg border flex items-center justify-between shadow-xs"
-                        style={{
-                          backgroundColor: `${speciesColor}18`,
-                          borderColor: `${speciesColor}60`,
-                          color: speciesColor
-                        }}
-                      >
-                        <span>⚡ {(spot.catchProbability <= 1 ? spot.catchProbability * 100 : spot.catchProbability).toFixed(0)}% model score (unverified)</span>
-                      </div>
-                    )}
                     {spot.distanceKm !== undefined && (
                       <div>Haversine Distance: <span className="text-slate-900 font-extrabold">{spot.distanceKm.toFixed(1)} km ({spot.compassBearing})</span></div>
                     )}
-                    {spot.sst !== undefined && (
-                      <div>Sea Temp (SST): <span className="text-amber-600 font-extrabold">{spot.sst}°C</span></div>
-                    )}
-                    <div>Depth: <span className="text-brand-black font-extrabold">{depth === null ? 'Unavailable' : `${depth} m`}</span></div>
-                    <div>Species: <span className="text-brand-green font-extrabold">{species.filter(Boolean).join(", ") || "Unavailable; no species evidence supplied"}</span></div>
+                    <ModelEvidence area={spot} />
                   </div>
                   <p className="text-[10px] text-gray-400 font-medium leading-normal pt-1 border-t border-gray-100">
                     {spot.lastUpdated || "Record time unavailable."}

@@ -29,6 +29,7 @@ export default function DashboardPage() {
       <Advisory data={weather.data} state={state} loading={weather.loading} failed={weather.failed} refresh={weather.refresh} openDetails={() => setShowWeather(true)} copy={copy} language={language} />
       <DashboardWorkspace key={`${userProfile.lat},${userProfile.lng},${region.id}`} areas={localAreas} loading={areas.loading} failed={areas.failed} retry={areas.refresh}
         areaMetadata={areas.data?.metadata || null}
+        speciesFailure={areas.speciesFailure}
         region={region} lat={userProfile.lat} lng={userProfile.lng} habitat={filters.habitat} species={filters.species} setFilters={(habitat, species) => setFilters({ habitat, species })}
         state={state} weather={weather.data} weatherStale={weather.failed || weather.loading} phone={userProfile.phone} port={userProfile.port}
         copy={copy} language={language} showWeather={showWeather} closeWeather={() => setShowWeather(false)} />

@@ -1,6 +1,7 @@
 import type { DashboardWeather, FishingArea, FishingAreaResult, FishingAreaMetadata } from '@/lib/dashboard';
 import { isClientCoordinate, isClientTargetCoordinate } from '@/lib/frontend/coordinates';
 import { predictionDay, recordTimestamp } from '@/lib/frontend/timestamps';
+import { SpeciesRequestError, speciesProfileView } from '@/lib/frontend/species-contract';
 
 function isReading(value: unknown): boolean {
   if (!value || typeof value !== 'object') return false;
@@ -38,6 +39,9 @@ function isWeatherLocation(value: unknown): boolean {
 
 async function readResponse(response: Response): Promise<Record<string, unknown>> {
   const data = await response.json();
+  if (data?.code === 'species_unsupported' || data?.code === 'species_catalog_unavailable') {
+    throw new SpeciesRequestError(data.code);
+  }
   if (!response.ok || !data || typeof data !== 'object' || data.error) throw new Error('Dashboard information is unavailable.');
   return data;
 }
@@ -63,7 +67,12 @@ interface Prediction {
   catch_probability?: number;
   prediction_date?: string | null;
   created_at?: string | null;
-  sst?: number;
+  sst?: number | null;
+  chl_a?: number | null;
+  prediction_scope?: string;
+  species_hsi_status?: string;
+  environment_provenance?: string;
+  depth_status?: string;
 }
 
 function isPrediction(value: unknown): value is Prediction {
@@ -79,6 +88,8 @@ export async function loadFishingAreaResult(lat: number, lng: number, species: s
   if (regionId) params.set('region', regionId);
   if (species) params.set('species', species);
   const data = await readResponse(await fetch(`/api/advisories/nearest?${params}`, { signal, cache: 'no-store' }));
+  if (data.species_status === 'unsupported') throw new SpeciesRequestError('species_unsupported');
+  if (data.species_status === 'unavailable') throw new SpeciesRequestError('species_catalog_unavailable');
   if (!Array.isArray(data.hotspots)) throw new Error('Fishing-area response could not be read.');
   if (data.hotspots.length && !data.hotspots.some(isPrediction)) throw new Error('Fishing-area coordinates are unavailable or invalid.');
   const seen = new Set<string>();
@@ -96,10 +107,20 @@ export async function loadFishingAreaResult(lat: number, lng: number, species: s
       species: [], depth: Number.NaN, lastUpdated: recordTimestamp(item.created_at) || '', retrievedAt,
       catchProbability: typeof item.catch_probability === 'number' && Number.isFinite(item.catch_probability) ? item.catch_probability : undefined,
       predictionDate: predictionDay(item.prediction_date),
-      source: 'model', speciesAdjusted: data.species_hsi_applied === true
-        || (Boolean(species.trim()) && typeof data.species_hsi_applied === 'string' && data.species_hsi_applied === species),
+      // Current contract supplies habitat scores only. Legacy flags cannot establish validated HSI.
+      source: 'model', speciesAdjusted: false,
+      modelEvidence: {
+        scope: (item.prediction_scope ?? data.prediction_scope) === 'habitat_model' ? 'habitat_model' : 'unverified',
+        speciesStatus: data.species_status === 'resolved' ? 'resolved' : data.species_status === 'not_requested' ? 'not_requested' : 'unverified',
+        hsiStatus: (item.species_hsi_status ?? data.species_hsi_status) === 'not_requested' && !species.trim() ? 'not_requested' : 'unavailable',
+        depthStatus: item.depth_status === 'unavailable' ? 'unavailable' : 'unverified',
+        requestedSpecies: species.trim() || null,
+        profile: data.species_status === 'resolved' ? speciesProfileView(data.species_profile) : null,
+        environmentProvenance: item.environment_provenance === 'legacy_unverified' ? 'legacy_unverified' : 'unverified',
+      },
       habitatKnown: item.model_type_known !== false && ['pelagic', 'demersal', 'both'].includes(item.model_type),
       sst: typeof item.sst === 'number' && Number.isFinite(item.sst) ? item.sst : undefined, distanceKm: 0, compassBearing: '',
+      chlorophyll: typeof item.chl_a === 'number' && Number.isFinite(item.chl_a) ? item.chl_a : undefined,
     }));
   const metadata = data.metadata as Partial<FishingAreaMetadata> | undefined;
   return { areas, metadata: metadata && metadata.region === regionId

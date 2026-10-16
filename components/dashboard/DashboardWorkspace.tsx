@@ -17,10 +17,12 @@ import styles from './dashboard.module.css';
 import AreaWeather from './AreaWeather';
 import { GUIDANCE_COPY } from './guidance-copy';
 import { predictionDay } from '@/lib/frontend/timestamps';
+import type { SpeciesFailure } from '@/lib/frontend/species-contract';
 
 const DashboardMap = dynamic(() => import('./DashboardMap'), { ssr: false, loading: () => <div className={styles.mapLoading} aria-busy="true" /> });
 
 interface WorkspaceProps {
+  speciesFailure?: SpeciesFailure | null;
   areas: FishingArea[]; loading: boolean; failed: boolean; retry: () => void; region: PhilippineRegion; lat: number; lng: number;
   areaMetadata: FishingAreaMetadata | null;
   habitat: Hotspot['type']; species: string; setFilters: (habitat: Hotspot['type'], species: string) => void;
@@ -87,7 +89,7 @@ export default function DashboardWorkspace(props: WorkspaceProps) {
               {earlierPredictions && <p className={styles.predictionNotice}>{latestDate < (manilaDate(new Date()) || '') ? `${text.lastPredictions} · ${formattedPredictionDate}` : text.earlierDates}</p>}
               {props.areaMetadata?.capped && <p className={styles.panelDescription}>{text.capped.replace('{returned}', String(props.areaMetadata.returnedCount)).replace('{total}', String(props.areaMetadata.eligibleCount))}</p>}
               <FishingAreas areas={areas} loading={loading} failed={failed} retry={retry} limit={limit} showMore={() => setLimit(previous => previous === 3 ? 10 : previous + 10)}
-                select={select} filtered={filtered} clearFilters={() => updateFilters('both', '')} hold={state === 'hold'} speciesUnavailable={Boolean(species && areas.length && !areas.some(area => area.speciesAdjusted))} copy={copy} />
+                select={select} filtered={filtered} clearFilters={() => updateFilters('both', '')} hold={state === 'hold'} speciesUnavailable={Boolean(species && areas.length)} speciesFailure={props.speciesFailure} copy={copy} />
             </>}
       </div>
     </div>

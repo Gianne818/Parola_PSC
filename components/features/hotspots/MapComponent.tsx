@@ -8,6 +8,7 @@ import { useApp } from "../../../context/AppContext";
 import { Anchor, Compass, Info, Navigation, ShieldCheck, MapPin } from "lucide-react";
 import { ALL_SPECIES_CONFIGS, GENERAL_PELAGIC_COLOR, GENERAL_DEMERSAL_COLOR, GENERAL_PELAGIC_SHADES, GENERAL_DEMERSAL_SHADES, getSpeciesConfig } from "../../../utils/speciesColors";
 import { isClientCoordinate, isClientTargetCoordinate } from '@/lib/frontend/coordinates';
+import ModelEvidence from './ModelEvidence';
 
 /** Prediction radius the ML model was trained on: 9 km */
 export const PREDICTION_RADIUS_KM = 9;
@@ -314,14 +315,7 @@ export const MapComponent: React.FC<MapComponentProps> = ({
                       {selectedHotspot.lat}°N, {selectedHotspot.lng}°E
                     </span>
                   </div>
-                  <div className="flex justify-between text-xs font-bold text-gray-500">
-                    <span>Sea Depth:</span>
-                    <span className="text-gray-800 dark:text-white">{Number.isFinite(selectedHotspot.depth) ? `${selectedHotspot.depth} meters` : 'Unavailable'}</span>
-                  </div>
-                  <div className="flex justify-between text-xs font-bold text-gray-500">
-                    <span>Target Species:</span>
-                    <span className="text-brand-green font-extrabold">{selectedHotspot.species.join(", ") || "Unavailable; no species evidence supplied"}</span>
-                  </div>
+                  <ModelEvidence area={selectedHotspot} />
                 </div>
               </div>
             ) : customWaypoint ? (

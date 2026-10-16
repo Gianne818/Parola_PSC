@@ -135,9 +135,10 @@
 .areaDistance { display: flex; align-items: center; gap: 10px; margin: 20px 0 8px; color: var(--green); font-variant-numeric: tabular-nums; }
 .areaDistance strong { font-size: 1.5em; font-weight: 650; color: var(--ink); }
 .areaDistance span { color: var(--muted); font-size: .875em; }
-.areaDetails > dl { display: grid; gap: 17px; padding: 20px 0; margin: 14px 0; border-top: 1px solid var(--line); border-bottom: 1px solid var(--line); }
-.areaDetails > dl dt { font-size: .8125em; color: var(--muted); }
-.areaDetails > dl dd { font-size: .9375em; margin: 5px 0 0; overflow-wrap: anywhere; font-variant-numeric: tabular-nums; }
+.areaDetails dl { display: grid; gap: 17px; padding: 20px 0; margin: 14px 0; border-top: 1px solid var(--line); border-bottom: 1px solid var(--line); }
+.areaDetails dl dt { font-size: .8125em; color: var(--muted); }
+.areaDetails dl dd { font-size: .9375em; margin: 5px 0 0; overflow-wrap: anywhere; font-variant-numeric: tabular-nums; }
+.areaDetails [lang='en'] p { color: var(--muted); font-size: .8125em; line-height: 1.65; margin-bottom: 10px; }
 .sourceList { margin: 18px 0; }
 .sourceList > div { padding: 14px 0; border-top: 1px solid var(--line); }
 .sourceList dt { font-size: .875em; font-weight: 600; }

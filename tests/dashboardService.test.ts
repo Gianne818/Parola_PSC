@@ -64,11 +64,11 @@ describe('dashboard area loading', () => {
     expect(area).toMatchObject({ predictionDate: '2026-10-13', species: [], source: 'model', speciesAdjusted: false });
     expect(area.catchProbability).toBeUndefined();
   });
-  it('recognizes only explicit HSI adjustment evidence from existing response variants', async () => {
-    for (const [applied, expected] of [[true, true], ['Tamban', true], ['false', false], ['Other fish', false], [false, false]] as const) {
+  it('does not treat legacy adjustment flags as validated HSI or species presence', async () => {
+    for (const applied of [true, 'Tamban', 'false', 'Other fish', false]) {
       vi.stubGlobal('fetch', vi.fn(async () => Response.json({ hotspots: [{ grid_id: 23, target_lat: 10.4, target_lon: 123.9, model_type: 'pelagic' }], species_hsi_applied: applied })));
       const [area] = await loadFishingAreas(10.3, 123.8, 'Tamban', signal);
-      expect(area.speciesAdjusted).toBe(expected);
+      expect(area.speciesAdjusted).toBe(false);
       expect(area.species).toEqual([]);
     }
   });

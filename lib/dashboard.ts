@@ -2,6 +2,7 @@ import type { Hotspot, PhilippineRegion } from '@/types';
 import { isCoordinateInRegion } from '@/data/philippineRegions';
 import { calculateBearing, calculateDistance } from '@/utils/spatial';
 import { isClientCoordinate, isClientTargetCoordinate } from '@/lib/frontend/coordinates';
+import type { ModelEvidenceFields } from '@/lib/frontend/species-contract';
 
 export interface WeatherReading {
   value: number | null;
@@ -33,7 +34,7 @@ export function reusableAreaWeather(data: DashboardWeather, now = new Date()): b
   return [data.wind, data.waves].every(reading => isReadingCurrent(reading, now));
 }
 
-export interface FishingArea extends Hotspot {
+export interface FishingArea extends Hotspot, ModelEvidenceFields {
   retrievedAt?: string;
   predictionDate: string | null;
   source: 'model' | 'sample';

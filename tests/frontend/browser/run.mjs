@@ -1,4 +1,4 @@
-// Run: node tests/frontend/browser/run.mjs [--demo | --registration] [--zoom200] [--manual] [absolute Chromium executable]
+// Run: node tests/frontend/browser/run.mjs [--species | --demo | --registration] [--zoom200] [--manual] [absolute Chromium executable]
 // Uses only installed Vite, React and a local Chromium binary. No app server.
 import assert from 'node:assert/strict';
 import { spawn } from 'node:child_process';
@@ -20,7 +20,8 @@ let passedChecks = 0;
 const manual = process.argv.includes('--manual');
 const registrationMode = process.argv.includes('--registration');
 const demoMode = process.argv.includes('--demo');
-assert.ok(!(demoMode && registrationMode), 'Demo and real-registration verification are separate modes');
+const speciesMode = process.argv.includes('--species');
+assert.ok([demoMode, registrationMode, speciesMode].filter(Boolean).length <= 1, 'Browser verification modes must be separate');
 const zoom200 = process.argv.includes('--zoom200');
 const servedAssets = new Set();
 let demoEntryAssets;
@@ -103,7 +104,7 @@ try {
         }
         if (/(^|\/)context\/AppContext$/.test(id)) return stateModule;
         if (['next/navigation', 'next/link', 'next/dynamic'].includes(id)) return '\0offline:' + id;
-        if (/(^|\/)services\/(geocodingService|dashboardService)$/.test(id)) return '\0offline:' + id.split('/').at(-1);
+        if (/(^|\/)services\/geocodingService$/.test(id) || (!speciesMode && /(^|\/)services\/dashboardService$/.test(id))) return '\0offline:' + id.split('/').at(-1);
       },
       load(id) {
         if (id === '\0demo:navigation') return `export const usePathname=()=>window.demoPath||'/register';export const useRouter=()=>{throw new Error('Demo must not mount live routing/auth')};`;
@@ -120,7 +121,7 @@ try {
         if (id === '\0offline:geocodingService') return `export async function searchLocations(){return []} export async function reverseGeocode(){throw new Error('Offline fixture: no geocoder')}`;
         if (id === '\0offline:dashboardService') return `export async function loadDashboardWeather(){throw new Error('Offline fixture: no weather')} export async function loadFishingAreaResult(){throw new Error('Offline fixture: no predictions')} export async function requestWeatherSms(){throw new Error('Offline fixture: SMS disabled')}`;
       } }],
-    build: { write: false, minify: false, cssCodeSplit: false, sourcemap: false, rollupOptions: { input: path.join(directory, demoMode ? 'demo-fixture.tsx' : registrationMode ? 'registration-fixture.tsx' : 'fixture.tsx') } } });
+    build: { write: false, minify: false, cssCodeSplit: false, sourcemap: false, rollupOptions: { input: path.join(directory, speciesMode ? 'species-fixture.tsx' : demoMode ? 'demo-fixture.tsx' : registrationMode ? 'registration-fixture.tsx' : 'fixture.tsx') } } });
   for (const item of output.output) assets.set('/' + item.fileName, Buffer.from(item.type === 'chunk' ? item.code : item.source));
   const entry = output.output.find(item => item.type === 'chunk' && item.isEntry).fileName;
   if (demoMode) {
@@ -205,7 +206,7 @@ try {
     const click=HTMLAnchorElement.prototype.click;
     HTMLAnchorElement.prototype.click=function(){if(this.download){const blob=blobs.get(this.href);if(blob)blob.text().then(text=>window.samples.push({name:this.download,type:blob.type,text}));return;}return click.call(this)};
     navigator.sendBeacon=()=>false;window.open=()=>null;
-    if (${demoMode}) {
+    if (${demoMode || speciesMode}) {
       window.demoRequests=[];
       const denied=(kind,url)=>{window.demoRequests.push(kind+':'+url);throw new Error('Disconnected demo: '+kind+' disabled')};
       window.fetch=async url=>denied('fetch',url);
@@ -239,6 +240,11 @@ try {
     check('demo has no unexpected rejected resource requests', blocked.size===0 || (console.log([...blocked]),false));
     check('demo has no uncaught browser/driver exceptions', exceptions.length===0 || (console.log(exceptions),false));
     console.log(`${passedChecks} named disconnected demo checks passed. No authentication or backend integration claimed.`);
+  } else if (speciesMode) {
+    const { verifySpeciesUI } = await import('./species-checks.mjs');
+    await verifySpeciesUI({ evaluate, until, check, clickText, viewport, layout, key, send, session });
+    check('no uncaught species browser/driver exceptions', exceptions.length === 0 || (console.log(exceptions), false));
+    console.log(`${passedChecks} named disconnected species-contract browser checks passed.`);
   } else if (registrationMode) {
     const { verifyRegistrationUI } = await import('./registration-checks.mjs');
     await verifyRegistrationUI({ evaluate, until, check, clickText, viewport, layout, key, send, session });
