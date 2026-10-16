@@ -1,5 +1,5 @@
-import AuthPage from '@/components/auth/AuthPage';
+import RegistrationDemo from '@/components/demo/RegistrationDemo';
 
 export default function LoginPage() {
-  return <AuthPage mode="login" />;
+  return <RegistrationDemo initialMode="login" />;
 }

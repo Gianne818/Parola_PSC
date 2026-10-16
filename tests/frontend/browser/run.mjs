@@ -1,4 +1,4 @@
-// Run: node tests/frontend/browser/run.mjs [--registration] [--zoom200] [--manual] [absolute Chromium executable]
+// Run: node tests/frontend/browser/run.mjs [--demo | --registration] [--zoom200] [--manual] [absolute Chromium executable]
 // Uses only installed Vite, React and a local Chromium binary. No app server.
 import assert from 'node:assert/strict';
 import { spawn } from 'node:child_process';
@@ -19,7 +19,11 @@ const exceptions = [];
 let passedChecks = 0;
 const manual = process.argv.includes('--manual');
 const registrationMode = process.argv.includes('--registration');
+const demoMode = process.argv.includes('--demo');
+assert.ok(!(demoMode && registrationMode), 'Demo and real-registration verification are separate modes');
 const zoom200 = process.argv.includes('--zoom200');
+const servedAssets = new Set();
+let demoEntryAssets;
 let windowId;
 let zoomChrome = { x: 0, y: 0 };
 let browser;
@@ -85,6 +89,12 @@ try {
     resolve: { alias: { '@': root } }, esbuild: { jsx: 'automatic' },
     plugins: [{ name: 'offline-boundaries', enforce: 'pre',
       resolveId(id) {
+        if (demoMode) {
+          // Only the framework pathname primitive is substituted. No OTP,
+          // Supabase, application provider, API or transport success mocks.
+          if (id === 'next/navigation') return '\0demo:navigation';
+          return;
+        }
         if (registrationMode) {
           if (/(^|\/)lib\/supabase$/.test(id)) return directory + '/registration-mocks.ts';
           if (['next/navigation', 'next/link', 'next/dynamic', 'next/image'].includes(id)) return '\0registration:' + id;
@@ -96,6 +106,7 @@ try {
         if (/(^|\/)services\/(geocodingService|dashboardService)$/.test(id)) return '\0offline:' + id.split('/').at(-1);
       },
       load(id) {
+        if (id === '\0demo:navigation') return `export const usePathname=()=>window.demoPath||'/register';export const useRouter=()=>{throw new Error('Demo must not mount live routing/auth')};`;
         if (id === '\0registration:next/link') return `import React from 'react';export default function Link({href,children,...props}){return React.createElement('a',{...props,href,onClick:e=>{e.preventDefault();window.fixtureNavigation=href}},children)}`;
         if (id === '\0registration:next/navigation') return `const router={push:href=>{window.fixtureNavigation=href},replace:href=>{window.fixtureNavigation=href}};export const useRouter=()=>router;export const usePathname=()=>'/dashboard';`;
         if (id === '\0registration:next/dynamic') return `export default function dynamic(){return ()=>null}`;
@@ -109,9 +120,21 @@ try {
         if (id === '\0offline:geocodingService') return `export async function searchLocations(){return []} export async function reverseGeocode(){throw new Error('Offline fixture: no geocoder')}`;
         if (id === '\0offline:dashboardService') return `export async function loadDashboardWeather(){throw new Error('Offline fixture: no weather')} export async function loadFishingAreaResult(){throw new Error('Offline fixture: no predictions')} export async function requestWeatherSms(){throw new Error('Offline fixture: SMS disabled')}`;
       } }],
-    build: { write: false, minify: false, cssCodeSplit: false, sourcemap: false, rollupOptions: { input: path.join(directory, registrationMode ? 'registration-fixture.tsx' : 'fixture.tsx') } } });
+    build: { write: false, minify: false, cssCodeSplit: false, sourcemap: false, rollupOptions: { input: path.join(directory, demoMode ? 'demo-fixture.tsx' : registrationMode ? 'registration-fixture.tsx' : 'fixture.tsx') } } });
   for (const item of output.output) assets.set('/' + item.fileName, Buffer.from(item.type === 'chunk' ? item.code : item.source));
   const entry = output.output.find(item => item.type === 'chunk' && item.isEntry).fileName;
+  if (demoMode) {
+    const chunks = new Map(output.output.filter(item=>item.type==='chunk').map(item=>[item.fileName,item]));
+    const eager = new Set();
+    const visit = name => { if(eager.has(name)) return; eager.add(name); chunks.get(name)?.imports.forEach(visit); };
+    visit(entry);
+    const modules = [...eager].flatMap(name=>Object.keys(chunks.get(name)?.modules || {}));
+    check('demo eager module graph excludes live auth, provider, SDK and services', !modules.some(id=>/[/\\](?:services|context|hooks)[/\\]|[/\\]lib[/\\]supabase|[/\\]@supabase[/\\]|[/\\]LiveApplication\./.test(id)));
+    check('demo graph is independent of backend OTP previews and their code', !modules.some(id=>/[/\\]app[/\\]api[/\\]|[/\\]lib[/\\](?:sms-mode|registration)\./.test(id)));
+    check('demo graph includes actual login/register routes and their application boundary', ['app/login/page.tsx','app/register/page.tsx','components/application/ApplicationBoundary.tsx'].every(part=>modules.some(id=>id.replaceAll('\\','/').endsWith(part))));
+    // Even the separately compiled live chunk cannot be loaded by this demo.
+    demoEntryAssets = new Set(['/', ...[...eager].map(name=>'/'+name), ...output.output.filter(item=>item.fileName.endsWith('.css')).map(item=>'/'+item.fileName)]);
+  }
   const css = output.output.filter(item => item.fileName.endsWith('.css')).map(item => `<link rel="stylesheet" href="/${item.fileName}">`).join('');
   assets.set('/', Buffer.from(`<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Offline frontend verification</title>${css}</head><body><div id="root"></div><script type="module" src="/${entry}"></script></body></html>`));
   console.log('Fixture compiled in memory; starting isolated browser with deny proxy.');
@@ -138,8 +161,9 @@ try {
     if (zoom200 && ['chrome:', 'chrome-untrusted:'].includes(url.protocol)) {
       await send('Fetch.continueRequest', { requestId: params.requestId }, sessionId); return;
     }
-    const asset = url.origin === origin && assets.get(url.pathname);
+    const asset = url.origin === origin && (!demoMode || demoEntryAssets.has(url.pathname)) && assets.get(url.pathname);
     if (!asset) { blocked.add(url.origin); await send('Fetch.failRequest', { requestId: params.requestId, errorReason: 'BlockedByClient' }, sessionId); return; }
+    servedAssets.add(url.pathname);
     const type = url.pathname.endsWith('.css') ? 'text/css' : url.pathname.endsWith('.js') ? 'text/javascript' : url.pathname === '/' ? 'text/html' : 'application/octet-stream';
     await send('Fetch.fulfillRequest', { requestId: params.requestId, responseCode: 200, responseHeaders: [{ name: 'Content-Type', value: type },
       { name: 'Content-Security-Policy', value: "default-src 'none'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src data: blob:; connect-src 'none'; font-src 'none'; object-src 'none'; frame-src 'none'; form-action 'none'; base-uri 'none'" }], body: asset.toString('base64') }, sessionId);
@@ -181,6 +205,15 @@ try {
     const click=HTMLAnchorElement.prototype.click;
     HTMLAnchorElement.prototype.click=function(){if(this.download){const blob=blobs.get(this.href);if(blob)blob.text().then(text=>window.samples.push({name:this.download,type:blob.type,text}));return;}return click.call(this)};
     navigator.sendBeacon=()=>false;window.open=()=>null;
+    if (${demoMode}) {
+      window.demoRequests=[];
+      const denied=(kind,url)=>{window.demoRequests.push(kind+':'+url);throw new Error('Disconnected demo: '+kind+' disabled')};
+      window.fetch=async url=>denied('fetch',url);
+      XMLHttpRequest.prototype.open=function(method,url){denied('xhr',url)};
+      window.WebSocket=class{constructor(url){denied('websocket',url)}};
+      window.EventSource=class{constructor(url){denied('eventsource',url)}};
+      navigator.sendBeacon=url=>{denied('beacon',url)};
+    }
   ` }, session);
   await viewport(1280);
   await send('Page.navigate', { url: origin + '/' }, session);
@@ -191,7 +224,7 @@ try {
     check('actual 200% browser zoom doubles DPR and halves layout width without pinch/CSS scaling', metrics.dpr === 2 && Math.abs(metrics.outerWidth / metrics.innerWidth - 2) < 0.03 && metrics.scale === 1 && metrics.root === '16px');
     zoomChrome = await evaluate(`({x:outerWidth-innerWidth*2,y:outerHeight-innerHeight*2})`);
   }
-  check('external fetch is rejected under fixture CSP', await evaluate(`fetch('https://example.invalid/offline-canary').then(()=>false,()=>true)`));
+  check('external fetch is rejected by fixture network guards', await evaluate(`fetch('https://example.invalid/offline-canary').then(()=>false,()=>true)`));
   check('same-origin API is also rejected', await evaluate(`fetch('/api/offline-canary').then(()=>false,()=>true)`));
   if (manual) {
     await send('Emulation.clearDeviceMetricsOverride', {}, session);
@@ -199,6 +232,13 @@ try {
     const terminal = createInterface({ input: process.stdin, output: process.stdout });
     try { await terminal.question('Network-blocked manual fixture ready. Use its fixture controls. Press Enter here when finished: '); }
     finally { terminal.close(); }
+  } else if (demoMode) {
+    const { verifyDemoUI } = await import('./demo-checks.mjs');
+    await verifyDemoUI({ evaluate, until, check, clickText, viewport, layout, key, send, session });
+    check('demo never loads the separate live application chunk', [...servedAssets].every(name=>demoEntryAssets.has(name)) && ![...servedAssets].some(name=>name.includes('LiveApplication')));
+    check('demo has no unexpected rejected resource requests', blocked.size===0 || (console.log([...blocked]),false));
+    check('demo has no uncaught browser/driver exceptions', exceptions.length===0 || (console.log(exceptions),false));
+    console.log(`${passedChecks} named disconnected demo checks passed. No authentication or backend integration claimed.`);
   } else if (registrationMode) {
     const { verifyRegistrationUI } = await import('./registration-checks.mjs');
     await verifyRegistrationUI({ evaluate, until, check, clickText, viewport, layout, key, send, session });

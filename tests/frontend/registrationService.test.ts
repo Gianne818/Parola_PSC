@@ -61,6 +61,16 @@ describe('OTP and Supabase session contract (all transports mocked)', () => {
     await expect(verifyRegistrationCode(input.phone_number, '012345')).rejects.toThrow('matching');
     expect(sdk.setSession).not.toHaveBeenCalled();
   });
+  it('never treats backend demo previews as real verification or an owner session', async () => {
+    // Son's API preview is a separate mode, not a transport for the UI demo.
+    reply({ status: 'demo_code_requested', mode: 'MOCK_DRY_RUN', demo_code: '482910', simulated: true, contact_verified: false, creditsUsed: 0 }, 202);
+    await expect(requestRegistrationCode(input.phone_number)).rejects.toThrow('not confirmed');
+    reply({ status: 'demo_code_checked', mode: 'MOCK_DRY_RUN', simulated: true, contact_verified: false, session: null, creditsUsed: 0 });
+    await expect(verifyRegistrationCode(input.phone_number, '012345')).rejects.toThrow('matching owner session');
+    expect(sdk.setSession).not.toHaveBeenCalled();
+    expect(sdk.from).not.toHaveBeenCalled();
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+  });
   it.each(['failed session', 'wrong owner', 'unconfirmed owner', 'missing SDK method'])('fails closed for %s', async kind => {
     reply({ status: 'phone_verified', user: { id: owner.id, phone_number: '+639171234567' }, session: { access_token: 'access', refresh_token: 'refresh' } });
     if (kind === 'failed session') sdk.setSession.mockResolvedValue({ data: { session: null, user: null }, error: new Error('rejected') });

@@ -19,26 +19,26 @@ export const STEPS: StepGuide[] = [
     id: "create-account",
     stepNumber: 1,
     category: "Account & Onboarding",
-    title: "How to create your first account",
+    title: "Try the registration demonstration",
     duration: "1 min",
     shortDesc:
-      "Verify your mobile number with an SMS code, then choose your home port and messaging consent.",
+      "Use synthetic accounts and a displayed demo code. No real verification or account is created.",
     actionUrl: "/register",
-    actionLabel: "Open Registration",
+    actionLabel: "Open Registration Demo",
     instructions: [
-      "Open Registration and enter your Philippine mobile number.",
-      "Select Request SMS code. Acceptance does not confirm handset delivery. Enter the received six-digit code and select Verify code; no demo code or password is used.",
-      "The surrounding interface supports English, Tagalog, Cebuano and Hiligaynon. Phone verification and consent currently use an English fallback.",
-      "Enter your full name and choose a home port, or enter another port with numeric coordinates. Read the current SMS consent text and explicitly agree or decline; either choice permits account creation.",
-      "Select Create account and wait for server confirmation. If saving fails, your entries are unsaved; check the saved account before retrying. No offline account is created. Consent does not confirm scheduling or SMS delivery.",
+      "Open Registration Demo or the sign-in demo. Select a synthetic account; do not enter real personal details.",
+      "Select Show demo code. Enter the displayed 012345 and select Simulate verification. No phone is verified, SMS sent or authentication session established.",
+      "This demonstration uses English copy. Regional translations and spoken accessibility checks remain pending.",
+      "Choose a sample port and explicitly agree or decline the example messaging consent. Either choice allows a simulated save; no real permission or enrollment changes.",
+      "Select Simulate saving registration. A simulated save keeps the sample in memory only. Try Simulate a save failure and demo consent withdrawal. Reload or reset discards all choices. No offline account is created and protected backend data is unavailable.",
     ],
     operationalTip:
-      "Web registration needs internet access and an available OTP service. Reading a delivered SMS needs an SMS-capable phone and cellular signal, without mobile data. Assisted access is disabled; verify only your own number. Withdraw messaging consent in Settings without deleting your account.",
+      "Demo-only registration is the current budget scope. Real OTP/session integration is retained separately for later review. Assisted access and REG-01 scheduling remain unavailable in the demo. The disconnected local demo runner does not contact application services.",
     image: "/images/guide-registration-current.png",
     imageAlt:
       "Historical Parola registration form with mobile number, password, and language selection",
     imageCaption:
-      "Historical password-form reference. The current flow uses an SMS code, a Supabase owner session, home-port details and explicit messaging consent; this image does not demonstrate the current flow.",
+      "Historical password-form reference. It does not show the current synthetic demo or prove real verification, authentication or saves.",
   },
   {
     id: "complete-onboarding",

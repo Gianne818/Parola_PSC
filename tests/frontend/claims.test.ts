@@ -5,7 +5,7 @@ import { DASHBOARD_COPY } from '@/components/dashboard/dashboard-copy';
 describe('current journey instructions', () => {
   it('uses existing registration, port and dashboard controls', () => {
     const instructions = STEPS.flatMap(step => step.instructions).join(' ');
-    expect(instructions).toContain('Select Request SMS code');
+    expect(instructions).toContain('Select Show demo code');
     expect(instructions).toContain('Confirm home port');
     expect(instructions).toContain('Change home port');
     expect(instructions).toContain(DASHBOARD_COPY.en.filterFish);
@@ -13,9 +13,11 @@ describe('current journey instructions', () => {
     expect(instructions).not.toContain('Edit Vessel Info');
     expect(instructions).not.toContain('Expand a species list');
   });
-  it('keeps verified registration, manual messaging and historical images explicit', () => {
+  it('keeps demo registration, manual messaging and historical images explicit', () => {
     const account = STEPS.find(step => step.id === 'create-account')!;
-    expect(account.instructions.join(' ')).toContain('no demo code or password');
+    expect(account.instructions.join(' ')).toContain('No phone is verified');
+    expect(account.instructions.join(' ')).toContain('memory only');
+    expect(account.operationalTip).toContain('Real OTP/session integration is retained separately');
     expect(account.instructions.join(' ')).toContain('No offline account');
     expect(account.imageCaption).toContain('Historical');
     expect(DASHBOARD_COPY.en.smsDescription).toContain('does not schedule automatic advisories');

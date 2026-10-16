@@ -1,0 +1,21 @@
+.page { min-height: 100svh; background: #fafbf8; color: #12211e; font-family: var(--font-parola-body, sans-serif); line-height: 1.6; padding: 1.5rem; }
+.page *, .page *::before, .page *::after { box-sizing: border-box; }
+.content { max-width: 36rem; margin-inline: auto; overflow-wrap: anywhere; }
+.banner { border: 2px solid #087f5b; padding: 1rem; background: #eaf1ec; }
+.banner p { margin-bottom: 0; }
+.actions { display: flex; flex-wrap: wrap; gap: .75rem; margin-block: 1.25rem; }
+.page h1 { font-size: clamp(1.75rem, 5vw, 2.5rem); line-height: 1.2; }
+.page form { display: grid; gap: .75rem; }
+.page :is(button, select, input[type=text]) { min-height: 48px; max-width: 100%; min-width: 0; border: 1px solid #87988e; border-radius: .4rem; padding: .75rem; background: white; color: inherit; font: inherit; }
+.page button { cursor: pointer; white-space: normal; }
+.page :is(button, select, input):focus-visible, .page h1:focus { outline: 3px solid #087f5b; outline-offset: 3px; }
+.page fieldset { min-width: 0; padding: 1rem; border: 1px solid #87988e; }
+.choice { display: flex; align-items: center; gap: .75rem; min-height: 48px; padding-block: .5rem; cursor: pointer; }
+.choice input { flex-shrink: 0; width: 1.25rem; height: 1.25rem; accent-color: #087f5b; }
+.page .primary { background: #087f5b; border-color: #087f5b; color: white; }
+.code { display: block; font-family: monospace; font-size: 2rem; letter-spacing: .15em; }
+.error { color: #a12b26; border-left: 3px solid currentColor; padding-inline: .75rem; }
+.page dt { font-weight: bold; }
+.page dd { margin: 0 0 1rem; }
+.page footer { border-top: 1px solid #87988e; padding-top: 1rem; margin-top: 1.5rem; font-size: .875rem; }
+@media (max-width: 380px) { .page { padding: 1rem; } }
