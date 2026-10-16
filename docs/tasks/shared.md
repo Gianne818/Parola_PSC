@@ -1,6 +1,6 @@
 # Team ownership, interfaces and release gates
 
-Updated October 15, 2026. [Hub](../../fixplan.md) | [Tier](tier.md) | [Son](son.md) | [Toby](toby.md) | [Detailed reference](../reference/fixplan-detail.md)
+Updated October 17, 2026. [Hub](../../fixplan.md) | [Tier](tier.md) | [Son](son.md) | [Toby](toby.md) | [Detailed reference](../reference/fixplan-detail.md)
 
 ## Identity and selected scope
 
@@ -26,14 +26,14 @@ Most-specific path wins. New files use the matching scope; any unlisted/ambiguou
 | Toby: scientific legacy modules | Within `StarIsdaData/backend/`: `download.py`, `model_layers.py`, `weather.py`, `ocean_data.py`, `ocean_temperature.py`, `ocean_salinity.py`, `ocean_currents.py`, `ocean_chlorophyll.py`; `tests/test_download.py` and `tests/test_model_layers.py`. |
 | Toby: HSI | `parola-api-service/hsi_calculator.py`, `parola-api-service/tests/test_hsi_calculator.py`. API callers/schemas stay Son's; interface changes require handoff. |
 | Son: legacy integration | Remaining `StarIsdaData/backend/**`, including `main.py`, `database.py`, `config.py` and their tests; remaining `backend/**` excluding Toby's inference/science scopes. |
-| Son: shared integration | `types/index.ts` and other shared types; all dependency manifests/lockfiles (including Python requirements), root configuration, `middleware.ts`, deployment scripts, CI/hooks and integration-test configuration. Son coordinates these changes; Tier/Toby submit requests rather than changing them via install/codegen side effects. |
+| Son: shared integration | `types/index.ts` and other shared types; all dependency manifests/lockfiles (including Python requirements), root configuration, `middleware.ts`, deployment scripts, CI/hooks and integration-test configuration. Son coordinates these shared changes; Tier/Toby submit requests rather than changing them via install/codegen side effects. Tier-local models/types/adapters in owned frontend paths are explicitly Tier-owned; they do not redefine the shared wire schema. |
 | Documentation | Each member owns their own task-file statuses/handoffs. Son maintains hub/shared rules/reference/team-wide instructions and other integration docs after coordination. Tier owns frontend user guides/copy; Toby scientific documentation in owned directories. Explicit user-requested team-document maintenance is the stated exception. |
 
 File-group names in member checklists are shorthand for this table, never broader permissions. In particular, Tier's `lib/dashboard.ts` ownership permits consuming the server decision, not inventing separate production safety thresholds. Toby supplies scientifically validated rule/input recommendations; Son owns shared operational safety contracts and enforcement. Coordinate new common helpers before adding them.
 
-## Interface handoffs (all Pending; no API changes implemented)
+## Interface reference categories (C01–C08)
 
-Son records each approved interface and example in this section after consulting producer/consumer owners. This document selects responsibilities, not final database/wire shapes. Existing product decisions remain unresolved below; agents must not invent defaults to clear a gate.
+These categories classify integration concerns, not prerequisites for every member task. Use existing verified responses now; isolated owned work may use explicitly provisional local fixtures. Son records approved shared contracts/examples after producer/consumer consultation. Historical Pending entries require rechecking against the selected baseline; preserve later published agreements and do not invent policy.
 
 | Gate | Coordinator / consultation | Agreement required before dependent integration |
 | --- | --- | --- |
@@ -46,9 +46,9 @@ Son records each approved interface and example in this section after consulting
 | C07: enterprise / exports | Son; Toby supplies forecasts, Tier consumes | Verified vessel/plan/operator scope, trial/payment activation, zone identity/cycle/expiry/re-download rules, supported horizon/format/device evidence and safe authorized artifact delivery. |
 | C08: evaluation / privacy | Son; Toby scientific metrics, Tier presentation | Approved de-identification, reviewed-data export/retention/access, reproducible metrics/sample sizes/limits, operational outcomes versus targets and allowed institutional aggregation. |
 
-A gate is satisfied by a written agreed contract and representative examples/errors, not by assuming a feature is deployed. Son owns schema/contract/dependency edits; Toby implements producer-side adapters/tests; Tier implements client consumption/tests after agreement. If runtime implementation is not yet available, isolated fixtures/tests may use the agreed contract, but cannot be connected to live guidance or advertised as working.
+Actual dependent integration requires an agreed contract and representative success/error examples. Shared wire schemas remain Son-owned. Tier independently owns frontend-local models/types/adapters and fixtures in its existing paths; those are not approved API contracts. Toby independently owns scientific evaluation with isolated inputs. Neither fixtures nor code inspection prove live readiness.
 
-## Product decisions (all Pending)
+## Product decision reference (D01–D10)
 
 The coordinators must record the actual decision, consulted members, evidence/date and affected gates. No name here grants legal approval or authority to choose unsupported scientific policy.
 
@@ -67,38 +67,38 @@ The coordinators must record the actual decision, consulted members, evidence/da
 
 ## All 31 parent tasks and member assignments
 
-Priority/status are inherited from the detailed plan; none is complete. A named owner appears only once for each member-specific ID. The full parent acceptance criteria and source evidence remain binding in the linked reference. This matrix is a dependency map, not permission to execute another member's IDs.
+Priority/status below are inherited historical labels, not a fresh audit of completion. A named owner appears only once for each member-specific ID. The full parent acceptance criteria and source evidence remain binding in the linked reference. This matrix is a dependency map, not permission to execute another member's IDs.
 
 | Parent | Priority / inherited status | Tier | Son | Toby |
 | --- | --- | --- | --- | --- |
-| [REG-01](../reference/fixplan-detail.md#reg-01) | P1 / Partial | [REG-01-TIER](tier.md#reg-01-tier) | [REG-01-SON](son.md#reg-01-son) | - |
-| [REG-02](../reference/fixplan-detail.md#reg-02) | P0 / Partial | [REG-02-TIER](tier.md#reg-02-tier) | [REG-02-SON](son.md#reg-02-son) | - |
-| [SMS-01](../reference/fixplan-detail.md#sms-01) | P1 / Partial | [SMS-01-TIER](tier.md#sms-01-tier) | [SMS-01-SON](son.md#sms-01-son) | - |
-| [SMS-02](../reference/fixplan-detail.md#sms-02) | P0 / Partial | [SMS-02-TIER](tier.md#sms-02-tier) | [SMS-02-SON](son.md#sms-02-son) | - |
-| [SMS-03](../reference/fixplan-detail.md#sms-03) | P1 / Partial | [SMS-03-TIER](tier.md#sms-03-tier) | [SMS-03-SON](son.md#sms-03-son) | - |
-| [SAFE-01](../reference/fixplan-detail.md#safe-01) | P0 / Partial | [SAFE-01-TIER](tier.md#safe-01-tier) | [SAFE-01-SON](son.md#safe-01-son) | [SAFE-01-TOBY](toby.md#safe-01-toby) |
-| [SAFE-02](../reference/fixplan-detail.md#safe-02) | P0 / Partial | [SAFE-02-TIER](tier.md#safe-02-tier) | [SAFE-02-SON](son.md#safe-02-son) | [SAFE-02-TOBY](toby.md#safe-02-toby) |
-| [SAFE-03](../reference/fixplan-detail.md#safe-03) | P0 / Partial | [SAFE-03-TIER](tier.md#safe-03-tier) | [SAFE-03-SON](son.md#safe-03-son) | [SAFE-03-TOBY](toby.md#safe-03-toby) |
-| [DATA-01](../reference/fixplan-detail.md#data-01) | P0 / Planned | [DATA-01-TIER](tier.md#data-01-tier) | [DATA-01-SON](son.md#data-01-son) | [DATA-01-TOBY](toby.md#data-01-toby) |
-| [DATA-02](../reference/fixplan-detail.md#data-02) | P0 / Planned | [DATA-02-TIER](tier.md#data-02-tier) | [DATA-02-SON](son.md#data-02-son) | [DATA-02-TOBY](toby.md#data-02-toby) |
-| [DATA-03](../reference/fixplan-detail.md#data-03) | P0 / Planned | [DATA-03-TIER](tier.md#data-03-tier) | [DATA-03-SON](son.md#data-03-son) | [DATA-03-TOBY](toby.md#data-03-toby) |
-| [DATA-04](../reference/fixplan-detail.md#data-04) | P1 / Planned | [DATA-04-TIER](tier.md#data-04-tier) | [DATA-04-SON](son.md#data-04-son) | [DATA-04-TOBY](toby.md#data-04-toby) |
-| [MAP-01](../reference/fixplan-detail.md#map-01) | P0 / Partial | [MAP-01-TIER](tier.md#map-01-tier) | [MAP-01-SON](son.md#map-01-son) | - |
-| [MAP-02](../reference/fixplan-detail.md#map-02) | P1 / Partial | [MAP-02-TIER](tier.md#map-02-tier) | [MAP-02-SON](son.md#map-02-son) | [MAP-02-TOBY](toby.md#map-02-toby) |
-| [MAP-03](../reference/fixplan-detail.md#map-03) | P1 / Partial | [MAP-03-TIER](tier.md#map-03-tier) | [MAP-03-SON](son.md#map-03-son) | [MAP-03-TOBY](toby.md#map-03-toby) |
-| [OPS-01](../reference/fixplan-detail.md#ops-01) | P1 / Partial | [OPS-01-TIER](tier.md#ops-01-tier) | [OPS-01-SON](son.md#ops-01-son) | [OPS-01-TOBY](toby.md#ops-01-toby) |
-| [REPORT-01](../reference/fixplan-detail.md#report-01) | P1 / Planned | [REPORT-01-TIER](tier.md#report-01-tier) | [REPORT-01-SON](son.md#report-01-son) | - |
-| [REPORT-02](../reference/fixplan-detail.md#report-02) | P1 / Planned | [REPORT-02-TIER](tier.md#report-02-tier) | [REPORT-02-SON](son.md#report-02-son) | [REPORT-02-TOBY](toby.md#report-02-toby) |
-| [EVAL-01](../reference/fixplan-detail.md#eval-01) | P1 / Planned | [EVAL-01-TIER](tier.md#eval-01-tier) | [EVAL-01-SON](son.md#eval-01-son) | [EVAL-01-TOBY](toby.md#eval-01-toby) |
-| [GEO-01](../reference/fixplan-detail.md#geo-01) | P0 / Planned | [GEO-01-TIER](tier.md#geo-01-tier) | [GEO-01-SON](son.md#geo-01-son) | - |
-| [GEO-02](../reference/fixplan-detail.md#geo-02) | P1 / Planned | [GEO-02-TIER](tier.md#geo-02-tier) | [GEO-02-SON](son.md#geo-02-son) | - |
-| [GEO-03](../reference/fixplan-detail.md#geo-03) | P1 / Planned | [GEO-03-TIER](tier.md#geo-03-tier) | [GEO-03-SON](son.md#geo-03-son) | [GEO-03-TOBY](toby.md#geo-03-toby) |
-| [ENT-01](../reference/fixplan-detail.md#ent-01) | P2 / Planned | [ENT-01-TIER](tier.md#ent-01-tier) | [ENT-01-SON](son.md#ent-01-son) | - |
-| [ENT-02](../reference/fixplan-detail.md#ent-02) | P2 / Partial | [ENT-02-TIER](tier.md#ent-02-tier) | [ENT-02-SON](son.md#ent-02-son) | [ENT-02-TOBY](toby.md#ent-02-toby) |
+| [REG-01](../reference/fixplan-detail.md#reg-01) | P1 / Partial | [REG-01-TIER → TIER-01](tier.md#reg-01-tier) | [REG-01-SON → SON-01](son.md#reg-01-son) | - |
+| [REG-02](../reference/fixplan-detail.md#reg-02) | P0 / Partial | [REG-02-TIER → TIER-01](tier.md#reg-02-tier) | [REG-02-SON → SON-01](son.md#reg-02-son) | - |
+| [SMS-01](../reference/fixplan-detail.md#sms-01) | P1 / Partial | [SMS-01-TIER → TIER-03](tier.md#sms-01-tier) | [SMS-01-SON → SON-02](son.md#sms-01-son) | - |
+| [SMS-02](../reference/fixplan-detail.md#sms-02) | P0 / Partial | [SMS-02-TIER → TIER-03](tier.md#sms-02-tier) | [SMS-02-SON → SON-02](son.md#sms-02-son) | - |
+| [SMS-03](../reference/fixplan-detail.md#sms-03) | P1 / Partial | [SMS-03-TIER → TIER-03](tier.md#sms-03-tier) | [SMS-03-SON → SON-02](son.md#sms-03-son) | - |
+| [SAFE-01](../reference/fixplan-detail.md#safe-01) | P0 / Partial | [SAFE-01-TIER → TIER-03](tier.md#safe-01-tier) | [SAFE-01-SON → SON-03](son.md#safe-01-son) | [SAFE-01-TOBY → TOBY-04](toby.md#safe-01-toby) |
+| [SAFE-02](../reference/fixplan-detail.md#safe-02) | P0 / Partial | [SAFE-02-TIER → TIER-03](tier.md#safe-02-tier) | [SAFE-02-SON → SON-03](son.md#safe-02-son) | [SAFE-02-TOBY → TOBY-04](toby.md#safe-02-toby) |
+| [SAFE-03](../reference/fixplan-detail.md#safe-03) | P0 / Partial | [SAFE-03-TIER → TIER-03](tier.md#safe-03-tier) | [SAFE-03-SON → SON-03](son.md#safe-03-son) | [SAFE-03-TOBY → TOBY-04](toby.md#safe-03-toby) |
+| [DATA-01](../reference/fixplan-detail.md#data-01) | P0 / Planned | [DATA-01-TIER → TIER-02](tier.md#data-01-tier) | [DATA-01-SON → SON-04](son.md#data-01-son) | [DATA-01-TOBY → TOBY-01](toby.md#data-01-toby) |
+| [DATA-02](../reference/fixplan-detail.md#data-02) | P0 / Planned | [DATA-02-TIER → TIER-02](tier.md#data-02-tier) | [DATA-02-SON → SON-04](son.md#data-02-son) | [DATA-02-TOBY → TOBY-03](toby.md#data-02-toby) |
+| [DATA-03](../reference/fixplan-detail.md#data-03) | P0 / Planned | [DATA-03-TIER → TIER-02](tier.md#data-03-tier) | [DATA-03-SON → SON-04](son.md#data-03-son) | [DATA-03-TOBY → TOBY-02](toby.md#data-03-toby) |
+| [DATA-04](../reference/fixplan-detail.md#data-04) | P1 / Planned | [DATA-04-TIER → TIER-02](tier.md#data-04-tier) | [DATA-04-SON → SON-04](son.md#data-04-son) | [DATA-04-TOBY → TOBY-05](toby.md#data-04-toby) |
+| [MAP-01](../reference/fixplan-detail.md#map-01) | P0 / Partial | [MAP-01-TIER → TIER-02](tier.md#map-01-tier) | [MAP-01-SON → SON-04](son.md#map-01-son) | - |
+| [MAP-02](../reference/fixplan-detail.md#map-02) | P1 / Partial | [MAP-02-TIER → TIER-02](tier.md#map-02-tier) | [MAP-02-SON → SON-04](son.md#map-02-son) | [MAP-02-TOBY → TOBY-05](toby.md#map-02-toby) |
+| [MAP-03](../reference/fixplan-detail.md#map-03) | P1 / Partial | [MAP-03-TIER → TIER-02](tier.md#map-03-tier) | [MAP-03-SON → SON-04](son.md#map-03-son) | [MAP-03-TOBY → TOBY-02](toby.md#map-03-toby) |
+| [OPS-01](../reference/fixplan-detail.md#ops-01) | P1 / Partial | [OPS-01-TIER → TIER-02](tier.md#ops-01-tier) | [OPS-01-SON → SON-04](son.md#ops-01-son) | [OPS-01-TOBY → TOBY-03](toby.md#ops-01-toby) |
+| [REPORT-01](../reference/fixplan-detail.md#report-01) | P1 / Planned | [REPORT-01-TIER → TIER-04](tier.md#report-01-tier) | [REPORT-01-SON → SON-05](son.md#report-01-son) | - |
+| [REPORT-02](../reference/fixplan-detail.md#report-02) | P1 / Planned | [REPORT-02-TIER → TIER-04](tier.md#report-02-tier) | [REPORT-02-SON → SON-05](son.md#report-02-son) | [REPORT-02-TOBY → TOBY-06](toby.md#report-02-toby) |
+| [EVAL-01](../reference/fixplan-detail.md#eval-01) | P1 / Planned | [EVAL-01-TIER → TIER-06](tier.md#eval-01-tier) | [EVAL-01-SON → SON-05](son.md#eval-01-son) | [EVAL-01-TOBY → TOBY-06](toby.md#eval-01-toby) |
+| [GEO-01](../reference/fixplan-detail.md#geo-01) | P0 / Planned | [GEO-01-TIER → TIER-05](tier.md#geo-01-tier) | [GEO-01-SON → SON-04](son.md#geo-01-son) | - |
+| [GEO-02](../reference/fixplan-detail.md#geo-02) | P1 / Planned | [GEO-02-TIER → TIER-05](tier.md#geo-02-tier) | [GEO-02-SON → SON-04](son.md#geo-02-son) | - |
+| [GEO-03](../reference/fixplan-detail.md#geo-03) | P1 / Planned | [GEO-03-TIER → TIER-02](tier.md#geo-03-tier) | [GEO-03-SON → SON-04](son.md#geo-03-son) | [GEO-03-TOBY → TOBY-05](toby.md#geo-03-toby) |
+| [ENT-01](../reference/fixplan-detail.md#ent-01) | P2 / Planned | [ENT-01-TIER → TIER-05](tier.md#ent-01-tier) | [ENT-01-SON → SON-06](son.md#ent-01-son) | - |
+| [ENT-02](../reference/fixplan-detail.md#ent-02) | P2 / Partial | [ENT-02-TIER → TIER-05](tier.md#ent-02-tier) | [ENT-02-SON → SON-06](son.md#ent-02-son) | [ENT-02-TOBY → TOBY-06](toby.md#ent-02-toby) |
 | [ROAD-01](../reference/fixplan-detail.md#road-01) | P2 / Deferred | [ROAD-01-TIER](tier.md#road-01-tier) | [ROAD-01-SON](son.md#road-01-son) | [ROAD-01-TOBY](toby.md#road-01-toby) |
-| [UI-01](../reference/fixplan-detail.md#ui-01) | P1 / Partial | [UI-01-TIER](tier.md#ui-01-tier) | [UI-01-SON](son.md#ui-01-son) | - |
-| [UI-02](../reference/fixplan-detail.md#ui-02) | P1 / Partial | [UI-02-TIER](tier.md#ui-02-tier) | [UI-02-SON](son.md#ui-02-son) | - |
-| [PRIV-01](../reference/fixplan-detail.md#priv-01) | P1 / Partial | [PRIV-01-TIER](tier.md#priv-01-tier) | [PRIV-01-SON](son.md#priv-01-son) | [PRIV-01-TOBY](toby.md#priv-01-toby) |
+| [UI-01](../reference/fixplan-detail.md#ui-01) | P1 / Partial | [UI-01-TIER → TIER-06](tier.md#ui-01-tier) | [UI-01-SON → SON-06](son.md#ui-01-son) | - |
+| [UI-02](../reference/fixplan-detail.md#ui-02) | P1 / Partial | [UI-02-TIER → TIER-06](tier.md#ui-02-tier) | [UI-02-SON → SON-06](son.md#ui-02-son) | - |
+| [PRIV-01](../reference/fixplan-detail.md#priv-01) | P1 / Partial | [PRIV-01-TIER → TIER-06](tier.md#priv-01-tier) | [PRIV-01-SON → SON-01](son.md#priv-01-son) | [PRIV-01-TOBY → TOBY-06](toby.md#priv-01-toby) |
 | [UX-01](../reference/fixplan-detail.md#ux-01) | P2 / Deferred | [UX-01-TIER](tier.md#ux-01-tier) | [UX-01-SON](son.md#ux-01-son) | [UX-01-TOBY](toby.md#ux-01-toby) |
 | [LEG-01](../reference/fixplan-detail.md#leg-01) | P2 / Superseded | - | [LEG-01-SON](son.md#leg-01-son) | - |
 | [LEG-02](../reference/fixplan-detail.md#leg-02) | P2 / Deferred | [LEG-02-TIER](tier.md#leg-02-tier) | [LEG-02-SON](son.md#leg-02-son) | - |
@@ -107,14 +107,16 @@ Historical H01-H22 findings and their resolutions remain in [reference section 3
 
 ## Branch, dependency and completion workflow
 
-- Separate checkout/branch per member/task: `codex/tier/<task>`, `codex/son/<task>`, `codex/toby/<task>`. No branch, deployment, migration, model run or live SMS is created by this documentation update.
-- Establish the selected owned ID, allowed files and pending gates before edits. Shared-file requests go to Son; a Son integration request that needs frontend/scientific code goes back to its owner. Son does not take over their implementation.
-- Record handoffs in the requesting member's own plan: from-ID, recipient, exact requested file/contract change, example/acceptance, dependent work and status. The recipient updates their own records; Son updates agreed shared decisions. Summarizing in chat is enough; do not message external apps/teammates without explicit authorization.
-- Merge agreed contracts first, then each producer/backend/client implementation in dependency order. Son coordinates review/integration; merging/publishing still requires the user's authorized workflow. Never stage, revert or format another member's changes as incidental cleanup.
-- Keep existing parent priorities; the P0 foundation precedes pilot live release, while independent honest-copy work can proceed. Deferred ROAD-01/UX-01/LEG-02 and superseded LEG-01 remain outside active work unless explicitly reprioritized.
-- The original plan includes cross-feature release dependencies that can look circular. Separate contract agreement, isolated implementation and release: e.g. feature extraction can be built/tested before sufficient reviewed catch data exists, but cannot claim calibrated validation or publish unsupported guidance.
-- Check off only your own assignment after its focused acceptance checks pass and report proof plus unmet dependencies. Partial/Deferred/Superseded labels must not silently become completed. A parent completes only after all its active required member portions and integration gates pass; each role's approval/test evidence is required.
-- Son records parent integration evidence in this document when requested; Tier/Toby completion alone never completes the backend or full parent feature. Read-only review of another role is allowed; resulting fixes remain theirs.
+- Keep identity and selected scope explicit. A legacy ID selects only its mapped portion. Use `codex/<member>/<package>` branches and focused PRs; several PRs may deliver one package.
+- Inspect current code and reuse proven work. PR #2 is this checkout's baseline. Later branch-only work is recoverable history and needs review before reuse; do not assume reverted work is present.
+- Complete independent owned work using existing responses or isolated fixtures; do not require all C01–C08 contracts before UI/science/service implementation.
+- Record one handoff per actual missing interface: requesting package/portion, producer → consumer, exact example/change, dependent integration and evidence/status. Do not send external messages without authorization.
+- Agreement is required before dependent live integration, not before every isolated delivery. Merge shared changes and dependent consumers in the needed order; independent PRs need not wait.
+- Delivery statuses: planned, in progress, needs verification, complete. Integration statuses: not required for this portion, pending contract, pending runtime, needs verification, verified. Each completion cites its scoped automated/manual evidence.
+- A frontend delivery may be complete while persistence/model/dispatch integration is explicitly pending. A narrow portion's completion does not complete its whole package automatically.
+- Full parent acceptance needs every required active member portion and real integration checks. Son coordinates evidence without taking over another member's implementation or completion.
+- Keep original priorities; a package takes its highest unresolved priority. Lower-priority grouped work need not delay a focused P0 PR. Deferred/superseded work requires separate prioritization.
+- Do not stage, revert, reset or format unrelated work. Commit/push/merge/deployment require the authorized workflow.
 
 ## Release checks
 
@@ -129,11 +131,29 @@ Run appropriate focused checks in each owned area, then relevant integration/bui
 
 ## Identity/scope walkthroughs
 
-| Request | Agent behavior |
+| Request or dependency | Agent behavior |
 | --- | --- |
-| New chat: "implement the next fix" without a name | Ask the exact identity question and wait; then propose one ready owned ID and establish selection. |
-| "I'm Tier; implement REG-01-TIER" | Load Tier/shared plans, check C03 readiness and edit only Tier files; missing Son contract becomes a handoff. |
-| Tier requests REG-01-SON | Explain Son ownership; do not switch or implement it without an explicit recorded user reassignment. |
-| Toby needs a migration or Python dependency | Request Son's schema/manifest change; do not edit it via inference work or install side effects. |
-| Son completes an API portion | Mark only the SON ID; request corresponding Tier/Toby work rather than complete or merge it implicitly. |
-| User requests this team-document reorganization | Edit agreed documents/ignore entry only; it does not select any application assignment. |
+| Unknown identity asks to implement next work | Ask the exact identity question and wait, then establish a ready owned selection. |
+| Tier selects TIER-04 without a report API | Finish owned form/state/fixture checks and PR frontend delivery; record SON-05 persistence integration separately. Never claim a real saved report. |
+| Tier selects REG-01-TIER | Work only that TIER-01 portion. Missing new persistence creates a C03 handoff; independent form work can proceed. |
+| Tier requests REG-01-SON | Do not implement without explicit recorded reassignment. Local adapter ownership does not grant backend authority. |
+| Toby needs a migration or dependency | Request the exact Son-owned change; continue independent evaluation using available dependencies. |
+| Son completes an API portion | Mark only Son's delivery and publish examples; request consumer acceptance rather than mark Tier/Toby complete. |
+| User requests documentation reorganization | Edit agreed documents only; preserve application files, untracked work and generated Next.js instructions. |
+
+## Preservation and authentication baseline
+
+- Preserve branded login/register layout, artwork/mascot, onboarding/home-port flow, dashboard/navigation, accessibility fixes and pelagic/demersal/both semantics unless explicitly asked to change them. A package selection is not a redesign request.
+- Agreed direction: [Son PR #11](https://github.com/Gianne818/Parola_PSC/pull/11), source-reviewed at 0642034ee537a0b9c883698bb652983d575bcfe8 on October 17, 2026. It was open/unmerged at inspection; this checkout remains PR #2 (c91a3f2). Do not claim it is installed, merged, deployed or runtime-verified here.
+- In PR #11 demo mode, registration accepts any 1–6 digit code without OTP request/verification/provider calls. A successful real account save establishes the application's signed HttpOnly cookie, then navigates to onboarding. Later phone/password sign-in needs no OTP and proceeds to dashboard; logout expires the cookie and reload reads the server profile.
+- Accounts persist in public.users, not a synthetic account selector or a Supabase Auth identity. Contact remains unverified and ineligible for live SMS. Do not manufacture Supabase sessions, grant live permissions or fake a successful save.
+- PR #11 requires a functioning database and a server-only demo-session secret; missing configuration or failed writes must remain errors. Do not copy secrets into documents. Real browser/database behavior and hosted SMS configuration were not verified by source review.
+- Before auth-related code changes, verify the accepted PR #11 head/current target and retain its behavior. This reorganization does not merge it, change configuration, perform migrations or resolve review findings.
+- New fixtures live only in tests or explicit development previews. Never replace default login/onboarding/dashboard routes with a plain demo interface or silently convert working data services to sample data.
+- Actual route acceptance must cover registration → demo code → onboarding → dashboard → sign-out → password sign-in → dashboard, refresh/account persistence and home-port/habitat retention. Mocked tests alone cannot certify this real journey.
+
+## Historical evidence and package mapping
+
+The 31-row matrix above maps every active original member assignment to its package. Old anchors remain available in member plans. Full checklists, criteria/evidence and logs remain in [Tier history](tier-history.md), [Son history](son-history.md) and [Toby history](toby-history.md). Current rules supersede archived execution restrictions. H01–H22 and concept-note references remain unchanged in the detailed proposal.
+
+PR #2 contains Tier's frontend-independent batch and Toby's initial ocean-mask evaluation. These portions are preserved, not reassigned from scratch. Manual review, operational publication and missing integrations stay separate. This reorganization asserts no new implementation completion.
