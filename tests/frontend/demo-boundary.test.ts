@@ -9,7 +9,7 @@ vi.mock('@/components/application/LiveApplication', () => ({ default: ({ childre
 afterEach(() => { vi.unstubAllGlobals(); vi.resetModules(); });
 
 describe('registration demo application boundary', () => {
-  it.each(['/register', '/register/', '/login', '/login/'])('renders %s without initializing a live provider', async pathname => {
+  it.each(['/register', '/register/', '/login', '/login/', '/demo/advisory-preferences', '/demo/advisory-preferences/'])('renders %s without initializing a live provider', async pathname => {
     route.pathname = pathname;
     const { default: Boundary } = await import('@/components/application/ApplicationBoundary');
     expect(renderToString(React.createElement(Boundary, null, React.createElement('p', null, 'DEMO CONTROLS')))).toBe('<p>DEMO CONTROLS</p>');
@@ -21,7 +21,7 @@ describe('registration demo application boundary', () => {
     expect(renderToString(React.createElement(Boundary, null, 'NO CONTROLS'))).toBe('');
   });
 
-  it.each(['/', '/dashboard'])('preserves the live application boundary for %s and requires a fresh document before demo entry', async pathname => {
+  it.each([['/', '/register'], ['/dashboard', '/demo/advisory-preferences']])('preserves the live application boundary for %s and requires a fresh document before %s entry', async (pathname, demoPath) => {
     vi.stubGlobal('window', {});
     route.pathname = pathname;
     const { default: Boundary } = await import('@/components/application/ApplicationBoundary');
@@ -29,9 +29,9 @@ describe('registration demo application boundary', () => {
     renderToString(React.createElement(Boundary, null, 'EXISTING FRONTEND'));
     await vi.dynamicImportSettled();
     expect(renderToString(React.createElement(Boundary, null, 'EXISTING FRONTEND'))).toContain('LIVE APP');
-    route.pathname = '/register';
+    route.pathname = demoPath;
     const html = renderToString(React.createElement(Boundary, null, 'DEMO CONTROLS'));
-    expect(html).toContain('Opening the isolated registration demo');
+    expect(html).toContain('Opening the isolated frontend demo');
     expect(html).not.toContain('DEMO CONTROLS');
     expect(html).not.toContain('LIVE APP');
   });

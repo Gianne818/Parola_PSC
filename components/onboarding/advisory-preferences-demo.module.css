@@ -1,0 +1,23 @@
+.page { min-height: 100svh; padding: 1.5rem; background: #fafbf8; color: #12211e; font-family: var(--font-parola-body, sans-serif); line-height: 1.6; }
+.page *, .page *::before, .page *::after { box-sizing: border-box; }
+.content { max-width: 42rem; margin-inline: auto; overflow-wrap: anywhere; }
+.eyebrow { font-size: .875rem; font-weight: 700; letter-spacing: .04em; }
+.page h1 { font-size: clamp(1.75rem, 5vw, 2.5rem); line-height: 1.2; }
+.banner { padding: 1rem; border: 2px solid #087f5b; background: #eaf1ec; margin-block: 1rem; }
+.banner p:last-child { margin-bottom: 0; }
+.page form { display: grid; gap: .5rem; }
+.page fieldset { min-width: 0; padding: 1rem; border: 1px solid #87988e; }
+.page legend, .page form > label { font-weight: 600; }
+.days { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: .25rem .75rem; margin-bottom: .75rem; }
+.choice { display: flex; align-items: center; gap: .75rem; min-height: 48px; padding-block: .5rem; cursor: pointer; }
+.choice input { width: 1.25rem; height: 1.25rem; flex-shrink: 0; accent-color: #087f5b; }
+.page :is(button, select, input[type=time]) { min-height: 48px; min-width: 0; max-width: 100%; padding: .75rem; border: 1px solid #87988e; border-radius: .4rem; background: white; color: inherit; font: inherit; }
+.page button { cursor: pointer; white-space: normal; }
+.page :is(button, select, input):focus-visible, .page h2:focus { outline: 3px solid #087f5b; outline-offset: 3px; }
+.actions { display: flex; flex-wrap: wrap; gap: .75rem; margin-block: .75rem; }
+.page .primary { color: white; background: #087f5b; border-color: #087f5b; }
+.error:empty { margin: 0; }
+.error:not(:empty) { color: #a12b26; border-left: 3px solid currentColor; padding-inline: .75rem; }
+.page dt { font-weight: bold; }
+.page dd { margin: 0 0 1rem; }
+@media (max-width: 400px) { .page { padding: 1rem; } .days { grid-template-columns: 1fr; } }

@@ -1,4 +1,4 @@
-// Run: node tests/frontend/browser/run.mjs [--demo | --registration] [--zoom200] [--manual] [absolute Chromium executable]
+// Run: node tests/frontend/browser/run.mjs [--preferences | --demo | --registration] [--zoom200] [--manual] [absolute Chromium executable]
 // Uses only installed Vite, React and a local Chromium binary. No app server.
 import assert from 'node:assert/strict';
 import { spawn } from 'node:child_process';
@@ -20,7 +20,9 @@ let passedChecks = 0;
 const manual = process.argv.includes('--manual');
 const registrationMode = process.argv.includes('--registration');
 const demoMode = process.argv.includes('--demo');
-assert.ok(!(demoMode && registrationMode), 'Demo and real-registration verification are separate modes');
+const preferencesMode = process.argv.includes('--preferences');
+const isolatedDemoMode = demoMode || preferencesMode;
+assert.ok([demoMode, preferencesMode, registrationMode].filter(Boolean).length <= 1, 'Demo and real-registration verification are separate modes');
 const zoom200 = process.argv.includes('--zoom200');
 const servedAssets = new Set();
 let demoEntryAssets;
@@ -89,7 +91,7 @@ try {
     resolve: { alias: { '@': root } }, esbuild: { jsx: 'automatic' },
     plugins: [{ name: 'offline-boundaries', enforce: 'pre',
       resolveId(id) {
-        if (demoMode) {
+        if (isolatedDemoMode) {
           // Only the framework pathname primitive is substituted. No OTP,
           // Supabase, application provider, API or transport success mocks.
           if (id === 'next/navigation') return '\0demo:navigation';
@@ -120,10 +122,10 @@ try {
         if (id === '\0offline:geocodingService') return `export async function searchLocations(){return []} export async function reverseGeocode(){throw new Error('Offline fixture: no geocoder')}`;
         if (id === '\0offline:dashboardService') return `export async function loadDashboardWeather(){throw new Error('Offline fixture: no weather')} export async function loadFishingAreaResult(){throw new Error('Offline fixture: no predictions')} export async function requestWeatherSms(){throw new Error('Offline fixture: SMS disabled')}`;
       } }],
-    build: { write: false, minify: false, cssCodeSplit: false, sourcemap: false, rollupOptions: { input: path.join(directory, demoMode ? 'demo-fixture.tsx' : registrationMode ? 'registration-fixture.tsx' : 'fixture.tsx') } } });
+    build: { write: false, minify: false, cssCodeSplit: false, sourcemap: false, rollupOptions: { input: path.join(directory, preferencesMode ? 'preferences-fixture.tsx' : demoMode ? 'demo-fixture.tsx' : registrationMode ? 'registration-fixture.tsx' : 'fixture.tsx') } } });
   for (const item of output.output) assets.set('/' + item.fileName, Buffer.from(item.type === 'chunk' ? item.code : item.source));
   const entry = output.output.find(item => item.type === 'chunk' && item.isEntry).fileName;
-  if (demoMode) {
+  if (isolatedDemoMode) {
     const chunks = new Map(output.output.filter(item=>item.type==='chunk').map(item=>[item.fileName,item]));
     const eager = new Set();
     const visit = name => { if(eager.has(name)) return; eager.add(name); chunks.get(name)?.imports.forEach(visit); };
@@ -131,7 +133,8 @@ try {
     const modules = [...eager].flatMap(name=>Object.keys(chunks.get(name)?.modules || {}));
     check('demo eager module graph excludes live auth, provider, SDK and services', !modules.some(id=>/[/\\](?:services|context|hooks)[/\\]|[/\\]lib[/\\]supabase|[/\\]@supabase[/\\]|[/\\]LiveApplication\./.test(id)));
     check('demo graph is independent of backend OTP previews and their code', !modules.some(id=>/[/\\]app[/\\]api[/\\]|[/\\]lib[/\\](?:sms-mode|registration)\./.test(id)));
-    check('demo graph includes actual login/register routes and their application boundary', ['app/login/page.tsx','app/register/page.tsx','components/application/ApplicationBoundary.tsx'].every(part=>modules.some(id=>id.replaceAll('\\','/').endsWith(part))));
+    const expectedRoutes = preferencesMode ? ['app/demo/advisory-preferences/page.tsx'] : ['app/login/page.tsx', 'app/register/page.tsx'];
+    check('demo graph includes actual routes and their application boundary', [...expectedRoutes, 'components/application/ApplicationBoundary.tsx'].every(part=>modules.some(id=>id.replaceAll('\\','/').endsWith(part))));
     // Even the separately compiled live chunk cannot be loaded by this demo.
     demoEntryAssets = new Set(['/', ...[...eager].map(name=>'/'+name), ...output.output.filter(item=>item.fileName.endsWith('.css')).map(item=>'/'+item.fileName)]);
   }
@@ -161,7 +164,7 @@ try {
     if (zoom200 && ['chrome:', 'chrome-untrusted:'].includes(url.protocol)) {
       await send('Fetch.continueRequest', { requestId: params.requestId }, sessionId); return;
     }
-    const asset = url.origin === origin && (!demoMode || demoEntryAssets.has(url.pathname)) && assets.get(url.pathname);
+    const asset = url.origin === origin && (!isolatedDemoMode || demoEntryAssets.has(url.pathname)) && assets.get(url.pathname);
     if (!asset) { blocked.add(url.origin); await send('Fetch.failRequest', { requestId: params.requestId, errorReason: 'BlockedByClient' }, sessionId); return; }
     servedAssets.add(url.pathname);
     const type = url.pathname.endsWith('.css') ? 'text/css' : url.pathname.endsWith('.js') ? 'text/javascript' : url.pathname === '/' ? 'text/html' : 'application/octet-stream';
@@ -205,7 +208,7 @@ try {
     const click=HTMLAnchorElement.prototype.click;
     HTMLAnchorElement.prototype.click=function(){if(this.download){const blob=blobs.get(this.href);if(blob)blob.text().then(text=>window.samples.push({name:this.download,type:blob.type,text}));return;}return click.call(this)};
     navigator.sendBeacon=()=>false;window.open=()=>null;
-    if (${demoMode}) {
+    if (${isolatedDemoMode}) {
       window.demoRequests=[];
       const denied=(kind,url)=>{window.demoRequests.push(kind+':'+url);throw new Error('Disconnected demo: '+kind+' disabled')};
       window.fetch=async url=>denied('fetch',url);
@@ -232,9 +235,14 @@ try {
     const terminal = createInterface({ input: process.stdin, output: process.stdout });
     try { await terminal.question('Network-blocked manual fixture ready. Use its fixture controls. Press Enter here when finished: '); }
     finally { terminal.close(); }
-  } else if (demoMode) {
-    const { verifyDemoUI } = await import('./demo-checks.mjs');
-    await verifyDemoUI({ evaluate, until, check, clickText, viewport, layout, key, send, session });
+  } else if (isolatedDemoMode) {
+    if (preferencesMode) {
+      const { verifyPreferencesUI } = await import('./preferences-checks.mjs');
+      await verifyPreferencesUI({ evaluate, until, check, clickText, viewport, layout, key, send, session });
+    } else {
+      const { verifyDemoUI } = await import('./demo-checks.mjs');
+      await verifyDemoUI({ evaluate, until, check, clickText, viewport, layout, key, send, session });
+    }
     check('demo never loads the separate live application chunk', [...servedAssets].every(name=>demoEntryAssets.has(name)) && ![...servedAssets].some(name=>name.includes('LiveApplication')));
     check('demo has no unexpected rejected resource requests', blocked.size===0 || (console.log([...blocked]),false));
     check('demo has no uncaught browser/driver exceptions', exceptions.length===0 || (console.log(exceptions),false));

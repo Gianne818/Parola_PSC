@@ -14,7 +14,7 @@ function FreshDemoDocument() {
   // Unmounting a provider alone does not destroy a previously loaded SDK's
   // refresh timers. Discard that document before mounting any demo controls.
   useEffect(() => { window.location.reload(); }, []);
-  return <p role="status">Opening the isolated registration demo…</p>;
+  return <p role="status">Opening the isolated frontend demo…</p>;
 }
 
 export default function ApplicationBoundary({ children }: { children: ReactNode }) {
@@ -22,7 +22,7 @@ export default function ApplicationBoundary({ children }: { children: ReactNode 
   const path = pathname?.replace(/\/$/, '') || '/';
   // Fail closed while the router is unavailable. Demo routes have no app context.
   if (pathname == null) return null;
-  if (path === '/register' || path === '/login') {
+  if (path === '/register' || path === '/login' || path === '/demo/advisory-preferences') {
     if (liveApplicationLoadedInBrowser) return <FreshDemoDocument />;
     return <>{children}</>;
   }
