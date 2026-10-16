@@ -1,4 +1,6 @@
 'use client';
+import type { AuthMode } from '@/lib/auth-mode';
+import { accountRequest, requestRegistrationOtp, validRegistrationCode, verifyRegistrationOtp } from '@/lib/frontend/registration-client';
 
 import { useEffect, useRef, useState, type FormEvent } from 'react';
 import Link from 'next/link';
@@ -9,7 +11,7 @@ import { ArrowLeft, ArrowRight, Check, ChevronDown, Eye, EyeOff, Globe, Info, Lo
 import { useApp } from '@/context/AppContext';
 import { ParolaLogo } from '@/components/ui/ParolaLogo';
 import type { MascotOutcome } from '@/components/ui/GalunggongMascot';
-import { AUTH_COPY, AUTH_LANGUAGES, type AuthLanguage } from './auth-copy';
+import { registrationCopy, AUTH_LANGUAGES, type AuthLanguage } from './auth-copy';
 import { canEnterPhilippineMobile, isValidPhilippineMobile } from '@/lib/philippine-mobile';
 import styles from './auth.module.css';
 
@@ -51,7 +53,7 @@ function CoastalScene({ mobile = false, showMascot, focusedField, outcome }: {
 type FieldErrors = { phone?: 'phoneInvalid'; password?: 'passwordRequired' | 'passwordInvalid'; code?: 'codeInvalid' };
 type AuthErrorKey = 'loginFailed' | 'registerFailed' | 'wrongPassword' | 'accountMissing' | 'duplicateAccount';
 type FormError = { key: AuthErrorKey } | { message: string } | null;
-const DEMO_CODE = '482910';
+
 const AUTH_ERROR_KEYS: Record<string, AuthErrorKey> = {
   'Incorrect password. Please try again.': 'wrongPassword',
   'Account not found for this phone number. Please register first.': 'accountMissing',
@@ -65,10 +67,10 @@ function authError(message: string | undefined, fallback: AuthErrorKey): FormErr
   return key ? { key } : { message };
 }
 
-export default function AuthPage({ mode }: { mode: 'login' | 'register' }) {
+export default function AuthPage({ mode, registrationMode = 'demo' }: { mode: 'login' | 'register'; registrationMode?: AuthMode }) {
   const router = useRouter();
   const { isInitialized, isAuthenticated, userProfile, logout, language, changeLanguage, login, register } = useApp();
-  const copy = AUTH_COPY[language] ?? AUTH_COPY.en;
+  const copy = registrationCopy(language, registrationMode);
   const isRegistration = mode === 'register';
   const [phone, setPhone] = useState('');
   const [password, setPassword] = useState('');
@@ -87,6 +89,9 @@ export default function AuthPage({ mode }: { mode: 'login' | 'register' }) {
   const codeRef = useRef<HTMLInputElement>(null);
   const previousStep = useRef(step);
   const submitPending = useRef(false);
+  const verifiedSession = useRef<{ access_token: string; refresh_token: string } | null>(null);
+  const [consentInfo, setConsentInfo] = useState<{ consent_text: string; consent_version: string } | null>(null);
+  const [consentChoice, setConsentChoice] = useState<boolean | null>(null);
   const showSession = isInitialized && isAuthenticated && !leaving;
 
   // Mount one canvas in the visible scene, and honor reduced-motion preferences.
@@ -133,9 +138,19 @@ export default function AuthPage({ mode }: { mode: 'login' | 'register' }) {
       return;
     }
     if (isRegistration) {
-      reactToOutcome('success');
-      setCode('');
-      setStep('verify');
+      submitPending.current = true;
+      setBusy(true);
+      try {
+        await requestRegistrationOtp(registrationMode, phone.trim());
+        reactToOutcome('success');
+        setCode('');
+        setStep('verify');
+      } catch (error) {
+        setFormError({ message: error instanceof Error ? error.message : 'Unable to request a code.' });
+      } finally {
+        submitPending.current = false;
+        setBusy(false);
+      }
       return;
     }
     submitPending.current = true;
@@ -163,8 +178,8 @@ export default function AuthPage({ mode }: { mode: 'login' | 'register' }) {
     event.preventDefault();
     if (submitPending.current || leaving) return;
     setFormError(null);
-    // This is the existing preview flow, not verification of phone ownership.
-    if (code !== DEMO_CODE) {
+    // Demo skips OTP services; live mode must establish real phone ownership.
+    if (!validRegistrationCode(code, registrationMode)) {
       reactToOutcome('failure');
       setFieldErrors({ code: 'codeInvalid' });
       codeRef.current?.focus();
@@ -172,13 +187,24 @@ export default function AuthPage({ mode }: { mode: 'login' | 'register' }) {
     }
     submitPending.current = true;
     setBusy(true);
-    setLeaving(true);
     try {
+      const session = verifiedSession.current ?? await verifyRegistrationOtp(registrationMode, phone.trim(), code);
+      if (registrationMode === 'live') {
+        verifiedSession.current = session;
+        if (!consentInfo) {
+          setConsentInfo(await accountRequest('/api/users/consent', undefined, session!.access_token));
+          return;
+        }
+        if (consentChoice === null) throw new Error('Choose whether to receive SMS advisories before creating your account.');
+      }
       const result = await register({
         phone: phone.trim(), vesselName: phone.trim(),
         licenseNo: `FL-2026-${Math.floor(1000 + Math.random() * 9000)}`,
-      }, password);
+      }, password, { mode: registrationMode, session,
+        ...(registrationMode === 'live' && consentInfo ? { consent: { messaging_consent: consentChoice!, consent_version: consentInfo.consent_version } } : {}),
+      });
       if (result.ok) {
+        setLeaving(true);
         reactToOutcome('success');
         sessionStorage.setItem('just-registered', 'true');
         router.push('/onboarding');
@@ -187,10 +213,10 @@ export default function AuthPage({ mode }: { mode: 'login' | 'register' }) {
         setLeaving(false);
         setFormError(authError(result.error, 'registerFailed'));
       }
-    } catch {
+    } catch (error) {
       reactToOutcome('failure');
       setLeaving(false);
-      setFormError({ key: 'registerFailed' });
+      setFormError(error instanceof Error ? { message: error.message } : { key: 'registerFailed' });
     } finally {
       submitPending.current = false;
       setBusy(false);
@@ -198,6 +224,7 @@ export default function AuthPage({ mode }: { mode: 'login' | 'register' }) {
   };
 
   const editAccount = () => {
+    verifiedSession.current = null; setConsentInfo(null); setConsentChoice(null);
     setStep('account'); setCode(''); setFieldErrors({}); setFormError(null);
   };
   const isVerification = isRegistration && step === 'verify';
@@ -255,15 +282,20 @@ export default function AuthPage({ mode }: { mode: 'login' | 'register' }) {
                   <p>{isVerification ? copy.verifyDescription : isRegistration ? copy.registerDescription : copy.loginDescription}</p>
                 </div>
                 {isVerification ? (
-                  <form className={styles.form} onSubmit={handleVerificationSubmit} noValidate aria-labelledby="auth-title" aria-busy={pending}>
-                    <div className={styles.demoNote}><Info size={16} aria-hidden="true" /><div><strong>{copy.demoLabel}</strong>{copy.demoNotice}<code className={styles.demoCode}>{DEMO_CODE}</code></div></div>
+                  <form lang={language === 'tl' ? 'fil' : language} className={styles.form} onSubmit={handleVerificationSubmit} noValidate aria-labelledby="auth-title" aria-busy={pending}>
+                    {registrationMode === 'demo' && <div className={styles.demoNote}><Info size={16} aria-hidden="true" /><div><strong>{copy.verifyStep}</strong>{copy.modeNotice}</div></div>}
                     <div className={styles.field}>
                       <label className={styles.label} htmlFor="auth-code">{copy.code}</label>
-                      <input ref={codeRef} id="auth-code" name="code" className={`${styles.input} ${styles.codeInput}`} type="text" inputMode="numeric" autoComplete="one-time-code" maxLength={6} value={code} disabled={pending} aria-invalid={!!fieldErrors.code} aria-describedby={fieldErrors.code ? 'code-hint code-error' : 'code-hint'} onChange={(event) => { setCode(event.target.value.replace(/\D/g, '').slice(0, 6)); clearError('code'); }} />
+                      <input ref={codeRef} id="auth-code" name="code" className={`${styles.input} ${styles.codeInput}`} type="text" inputMode="numeric" autoComplete="one-time-code" maxLength={6} value={code} disabled={pending || !!consentInfo} aria-invalid={!!fieldErrors.code} aria-describedby={fieldErrors.code ? 'code-hint code-error' : 'code-hint'} onChange={(event) => { setCode(event.target.value.replace(/\D/g, '').slice(0, 6)); clearError('code'); }} />
                       <p id="code-hint" className={styles.hint}>{copy.codeHint}</p>
                       {fieldErrors.code && <p id="code-error" className={styles.fieldError} role="alert">{copy[fieldErrors.code]}</p>}
                     </div>
                     {errorMessage && <p className={styles.formError} role="alert">{errorMessage}</p>}
+                    {consentInfo && <fieldset lang="en"><legend>SMS advisories (optional)</legend>
+                      <p>{consentInfo.consent_text}</p>
+                      <label><input type="radio" name="sms-consent" checked={consentChoice === true} onChange={() => setConsentChoice(true)} disabled={pending} /> I agree</label>
+                      <label><input type="radio" name="sms-consent" checked={consentChoice === false} onChange={() => setConsentChoice(false)} disabled={pending} /> No SMS advisories</label>
+                    </fieldset>}
                     <button className={styles.primary} type="submit" disabled={pending}>
                       {pending ? <LoaderCircle className={styles.spinner} size={17} aria-hidden="true" /> : <ArrowRight size={17} aria-hidden="true" />}
                       <span aria-live="polite">{pending ? copy.verifying : copy.createAccount}</span>
@@ -288,7 +320,7 @@ export default function AuthPage({ mode }: { mode: 'login' | 'register' }) {
                       {isRegistration && <p id="password-hint" className={styles.hint}>{copy.passwordHint}</p>}
                       {fieldErrors.password && <p id="password-error" className={styles.fieldError} role="alert">{copy[fieldErrors.password]}</p>}
                     </div>
-                    {isRegistration && <div className={styles.demoNote}><Info size={16} aria-hidden="true" /><div><strong>{copy.demoLabel}</strong>{copy.demoNotice}</div></div>}
+                    {isRegistration && <div className={styles.demoNote}><Info size={16} aria-hidden="true" /><div><strong>{copy.verifyStep}</strong>{copy.modeNotice}</div></div>}
                     {errorMessage && <p className={styles.formError} role="alert">{errorMessage}</p>}
                     <button className={styles.primary} type="submit" disabled={pending}>
                       <span aria-live="polite">{pending ? copy.signingIn : isRegistration ? copy.continue : copy.signIn}</span>

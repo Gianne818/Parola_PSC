@@ -1,3 +1,5 @@
+import { checkSameOrigin, demoOwner, DEMO_OWNER_CONDITION, hasDemoCookie } from '@/lib/demo-account';
+import { getAuthMode } from '@/lib/auth-mode';
 import { phoneE164, registrationBody, registrationJson, registrationOwner, registrationResponse, registryDb, RegistrationError } from '@/lib/registration';
 import { ADVISORY_PREFERENCE_FIELDS, advisoryPreferenceInput, withAdvisorySchedule } from '@/lib/advisory-preferences';
 
@@ -11,17 +13,20 @@ const ownerCondition = `u.auth_user_id = $1 AND a.id = u.auth_user_id
 
 export async function GET(request: Request) {
   return registrationResponse(async () => {
-    const owner = await registrationOwner(request);
+    const demo = hasDemoCookie(request) && getAuthMode() === 'demo' && !request.headers.has('authorization');
+    const owner = demo ? demoOwner(request) : await registrationOwner(request);
     const result = await registryDb().query(`SELECT ${profileColumns} FROM public.users u
-      JOIN auth.users a ON a.id = u.auth_user_id WHERE ${ownerCondition};`, [owner.id, phoneE164(owner.phone)]);
+      ${demo ? '' : 'JOIN auth.users a ON a.id = u.auth_user_id'} WHERE ${demo ? DEMO_OWNER_CONDITION : ownerCondition};`, [owner.id, phoneE164(owner.phone)]);
     if (!result.rows[0]) throw new RegistrationError(404, 'Verified registration not found.');
-    return registrationJson(withAdvisorySchedule(result.rows[0]));
+    return registrationJson(withAdvisorySchedule({ ...result.rows[0], ...(demo ? { auth_mode: 'demo', contact_verified: false, messaging_eligible: false } : {}) }));
   });
 }
 
 export async function PUT(request: Request) {
   return registrationResponse(async () => {
-    const owner = await registrationOwner(request);
+    const demo = hasDemoCookie(request) && getAuthMode() === 'demo' && !request.headers.has('authorization');
+    const owner = demo ? demoOwner(request) : await registrationOwner(request);
+    if (demo) checkSameOrigin(request);
     const body = await registrationBody(request, ['phone_number', 'full_name', 'home_port_name', 'latitude', 'longitude', ...ADVISORY_PREFERENCE_FIELDS]);
     const phone = phoneE164(body.phone_number);
     if (phone !== phoneE164(owner.phone)) throw new RegistrationError(403, 'You can only edit your own profile.');
@@ -43,12 +48,12 @@ export async function PUT(request: Request) {
         advisory_days = COALESCE($8::smallint[], u.advisory_days),
         preferred_language = COALESCE($9::text, u.preferred_language),
         habitat_preference = COALESCE($10::text, u.habitat_preference), updated_at = NOW()
-      FROM auth.users a WHERE ${ownerCondition}
+      ${demo ? '' : 'FROM auth.users a'} WHERE ${demo ? DEMO_OWNER_CONDITION : ownerCondition}
       RETURNING ${profileColumns};`,
     [owner.id, phone, (body.full_name as string | undefined)?.trim() ?? null, (body.home_port_name as string | undefined)?.trim() ?? null,
       body.longitude ?? null, body.latitude ?? null, preferences.preferred_advisory_time ?? null,
       preferences.advisory_days ?? null, preferences.preferred_language ?? null, preferences.habitat_preference ?? null]);
     if (!result.rows[0]) throw new RegistrationError(404, 'Verified registration not found.');
-    return registrationJson(withAdvisorySchedule(result.rows[0]));
+    return registrationJson(withAdvisorySchedule({ ...result.rows[0], ...(demo ? { auth_mode: 'demo', contact_verified: false, messaging_eligible: false } : {}) }));
   });
 }

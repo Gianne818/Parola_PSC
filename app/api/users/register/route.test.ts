@@ -14,13 +14,14 @@ const valid = { phone_number: '09171234567', full_name: 'Test Fisher', home_port
 function request(body: unknown) { return new Request('http://localhost/api/users/register', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) }); }
 beforeEach(() => {
   vi.resetAllMocks();
+  vi.stubEnv('PAROLA_AUTH_MODE', 'live');
   vi.mocked(getSupabaseUser).mockResolvedValue(owner);
   vi.mocked(getDbPool).mockReturnValue({ query } as never);
   vi.mocked(checkRateLimit).mockResolvedValue({ allowed: true } as never);
   query.mockResolvedValue({ rows: [{ ...defaults, id: owner.id, phone_number: owner.phone, messaging_consent: true, messaging_eligible: true }] });
   vi.stubGlobal('fetch', vi.fn().mockRejectedValue(new Error('Unexpected external fallback')));
 });
-afterEach(() => vi.unstubAllGlobals());
+afterEach(() => { vi.unstubAllGlobals(); vi.unstubAllEnvs(); });
 
 describe('verified registration', () => {
   it('registers only the verified actor with explicit consent and no provider tokens in the response', async () => {
@@ -28,7 +29,7 @@ describe('verified registration', () => {
     expect(response.status).toBe(201);
     expect(response.headers.get('cache-control')).toBe('no-store');
     expect(await response.json()).toMatchObject({ id: owner.id, contact_verified: true, status: 'registered', messaging_consent: true });
-    expect(query.mock.calls[0][1]).toEqual([owner.id, '+639171234567', 'Test Fisher', 'Mercedes Fish Port', 122.9, 14.1, '05:00:00', true, 'messaging-v1', [], 'en', 'both']);
+    expect(query.mock.calls[0][1]).toEqual([owner.id, '+639171234567', 'Test Fisher', 'Mercedes Fish Port', 122.9, 14.1, '05:00:00', true, 'messaging-v1', [], 'en', 'both', null]);
     expect(fetch).not.toHaveBeenCalled();
   });
   it.each(['09171234567', '+639171234567', '+63 (917) 123-4567'])('normalizes the same verified phone: %s', async phone => {
@@ -57,7 +58,7 @@ describe('verified registration', () => {
     expect((await POST(request({ ...valid, phone_number: '09170000000' }))).status).toBe(403);
     expect(query).not.toHaveBeenCalled();
   });
-  it.each([{ actor_id: owner.id }, { assisted_by: owner.id }, { role: 'admin' }, { phone_verified_at: '2026-10-15' }, { password: 'secret123' }])('rejects overposted or helper fields: %j', async extra => {
+  it.each([{ actor_id: owner.id }, { assisted_by: owner.id }, { role: 'admin' }, { phone_verified_at: '2026-10-15' }, { password_hash: 'forged' }])('rejects overposted or helper fields: %j', async extra => {
     expect((await POST(request({ ...valid, ...extra }))).status).toBe(400);
     expect(query).not.toHaveBeenCalled();
   });
@@ -86,7 +87,7 @@ describe('verified registration', () => {
     const response = await POST(request({ ...valid, ...preferences, advisory_days: [5, 3, 1, 4, 2] }));
     expect(response.status).toBe(201);
     expect(await response.json()).toMatchObject({ ...preferences, routine_paused: false, advisory_timezone: 'Asia/Manila' });
-    expect(query.mock.calls[0][1]).toEqual([owner.id, owner.phone, 'Test Fisher', 'Mercedes Fish Port', 122.9, 14.1, '04:30:15', true, 'messaging-v1', [1, 2, 3, 4, 5], 'ceb', 'demersal']);
+    expect(query.mock.calls[0][1]).toEqual([owner.id, owner.phone, 'Test Fisher', 'Mercedes Fish Port', 122.9, 14.1, '04:30:15', true, 'messaging-v1', [1, 2, 3, 4, 5], 'ceb', 'demersal', null]);
   });
   it.each([[1, 1], [1, 2, 3, 4, 5, 6], [0], [8], [true], ['1'], null].map(advisory_days => ({ advisory_days })))('rejects invalid weekdays without persistence: $advisory_days', async ({ advisory_days }) => {
     expect((await POST(request({ ...valid, advisory_days }))).status).toBe(400);

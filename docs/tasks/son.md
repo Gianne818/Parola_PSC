@@ -1,5 +1,17 @@
 # Son's task plan
 
+**User-selected follow-up, October 16, 2026: registration demo/live mode.**
+Same screen and existing users table; any numeric demo code skips OTP, while
+live mode retains real verification. Scope includes the explicitly requested
+frontend account integration; Tier's other work and the cancelled fixplan
+reorganization remain excluded. See [operating instructions](../registration-demo-mode.md).
+No new table/migration, remote settings, production DB operation or SMS test.
+Validation: 334 broad network-denied tests, then 107 affected tests after review
+fixes; full TypeScript, script syntax and whitespace checks passed. Independent spec/standards reviews found no remaining blocker. Reload
+initialization and accurate localized live/demo notices were corrected. ESLint
+is blocked at startup by a truncated installed lodash.merge dependency; no install.
+
+
 Owner: **Son only**. Updated October 15, 2026. [Hub](../../fixplan.md) | [Shared rules, files and gates](shared.md) | [Full reference](../reference/fixplan-detail.md)
 
 Son asked to retain the plain task list for future requests: [saved 27-task list](son-backlog.md).

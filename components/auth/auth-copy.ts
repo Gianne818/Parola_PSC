@@ -154,3 +154,27 @@ export const AUTH_COPY: Record<AuthLanguage, AuthCopy> = {
     dashboard: 'Magpadayon sa dashboard', switchAccount: 'Gamita ang iban nga account', guide: 'Giya sa paggamit', about: 'Parte sa Parola',
   },
 };
+
+// Mode-specific copy follows the existing languages; pilot terminology review remains separate.
+export function registrationCopy(language: AuthLanguage, mode: 'demo' | 'live') {
+  const text = {
+    en: {
+      demo: ['Demo code', 'Continue with a demo code', 'Use any 1-6 digit number. Your account will be saved without phone verification.', 'Demo code', 'Any 1-6 digit number works, including 1234.', 'Enter any 1-6 digit number.', 'No verification SMS will be sent. Phone ownership remains unverified.'],
+      live: ['SMS verification', 'Verify your phone', 'Enter the six-digit code sent to your phone.', 'SMS verification code', 'Enter all six digits, including leading zeros.', 'Enter the six-digit SMS code.', 'Continuing requests a real SMS verification code.'],
+    },
+    tl: {
+      demo: ['Demo code', 'Magpatuloy gamit ang demo code', 'Gumamit ng anumang 1-6 na digit. Mase-save ang account nang walang phone verification.', 'Demo code', 'Puwede ang anumang 1-6 na digit, tulad ng 1234.', 'Ilagay ang anumang 1-6 na digit.', 'Walang ipapadalang verification SMS. Hindi pa beripikado ang numero.'],
+      live: ['SMS verification', 'Beripikahin ang numero', 'Ilagay ang anim na digit na ipinadala sa iyong numero.', 'SMS verification code', 'Ilagay ang lahat ng anim na digit, kasama ang zero sa simula.', 'Ilagay ang anim na digit na SMS code.', 'Magpapadala ng totoong SMS verification code kapag nagpatuloy.'],
+    },
+    ceb: {
+      demo: ['Demo code', 'Padayon gamit ang demo code', 'Gamita ang bisan unsang 1-6 ka digit. Ma-save ang account nga walay phone verification.', 'Demo code', 'Bisan unsang 1-6 ka digit, sama sa 1234.', 'Ibutang ang bisan unsang 1-6 ka digit.', 'Walay ipadala nga verification SMS. Wala pa ma-verify ang numero.'],
+      live: ['SMS verification', 'I-verify ang numero', 'Ibutang ang unom ka digit nga gipadala sa imong numero.', 'SMS verification code', 'Ibutang ang tanang unom ka digit, apil ang zero sa sinugdanan.', 'Ibutang ang unom ka digit nga SMS code.', 'Magpadala og tinuod nga SMS verification code kon mopadayon.'],
+    },
+    hil: {
+      demo: ['Demo code', 'Magpadayon gamit ang demo code', 'Gamita ang bisan ano nga 1-6 ka digit. Ma-save ang account nga wala sang phone verification.', 'Demo code', 'Bisan ano nga 1-6 ka digit, pareho sang 1234.', 'Ibutang ang bisan ano nga 1-6 ka digit.', 'Wala sang ipadala nga verification SMS. Wala pa ma-verify ang numero.'],
+      live: ['SMS verification', 'I-verify ang numero', 'Ibutang ang anom ka digit nga ginpadala sa imo numero.', 'SMS verification code', 'Ibutang ang tanan nga anom ka digit, upod ang zero sa umpisa.', 'Ibutang ang anom ka digit nga SMS code.', 'Magapadala sang matuod nga SMS verification code kon magpadayon.'],
+    },
+  }[language][mode];
+  return { ...AUTH_COPY[language], verifyStep: text[0], verifyTitle: text[1], verifyDescription: text[2],
+    code: text[3], codeHint: text[4], codeInvalid: text[5], modeNotice: text[6] };
+}

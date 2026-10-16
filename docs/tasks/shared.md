@@ -13,6 +13,13 @@ Updated October 15, 2026. [Hub](../../fixplan.md) | [Tier](tier.md) | [Son](son.
 
 ## Exact file ownership
 
+**User-selected registration demo integration, October 16, 2026:** Son is
+authorized to change the existing registration/login screen, its copy and account
+context/client helpers and root provider mode wiring only as needed for demo/live registration. Demo signup
+uses the existing users table, skips OTP and preserves unverified-phone status;
+live signup retains real verification. This narrow exception does not assign
+Tier's remaining frontend backlog to Son. No remote database changes or SMS tests.
+
 Most-specific path wins. New files use the matching scope; any unlisted/ambiguous integration path needs Son to record its owner before edits. Ownership grants no authority beyond the selected assignment. Existing user changes must be preserved.
 
 | Owner | Owned paths / exceptions |

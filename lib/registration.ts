@@ -1,3 +1,4 @@
+import { getAuthMode } from '@/lib/auth-mode';
 import { createClient } from '@supabase/supabase-js';
 import { getSupabaseUser, type AuthUser } from '@/lib/route-auth';
 import { getDbPool } from '@/lib/db';
@@ -47,6 +48,7 @@ export function consentInput(body: Record<string, unknown>): boolean {
 }
 
 export function phoneAuthClient() {
+  if (getAuthMode() === 'demo') throw new RegistrationError(409, 'OTP requests are disabled in demo mode.', 'demo_mode');
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL || '';
   const key = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || '';
   if (process.env.PAROLA_PHONE_AUTH_ENABLED !== 'true' || !url.startsWith('https://') || !key) {
@@ -78,13 +80,20 @@ export const REGISTER_VERIFIED_USER_SQL = `
     id, auth_user_id, phone_number, full_name, home_port_name, home_port_geom,
     preferred_advisory_time, phone_verified_at, messaging_consent,
     messaging_consent_version, messaging_consent_at, messaging_consent_actor_id,
-    advisory_days, preferred_language, habitat_preference
+    advisory_days, preferred_language, habitat_preference, password_hash
   )
   SELECT a.id, a.id, $2, $3, $4, ST_SetSRID(ST_MakePoint($5, $6), 4326), $7,
-    NOW(), $8, $9, NOW(), a.id, $10::smallint[], $11, $12
+    NOW(), $8, $9, NOW(), a.id, $10::smallint[], $11, $12, $13
   FROM auth.users a
   WHERE a.id = $1 AND a.phone_confirmed_at IS NOT NULL
     AND public.parola_phone_e164(a.phone) = $2
+  ON CONFLICT (phone_e164) DO UPDATE SET
+    auth_user_id = EXCLUDED.auth_user_id, phone_verified_at = EXCLUDED.phone_verified_at,
+    messaging_consent = EXCLUDED.messaging_consent, messaging_consent_version = EXCLUDED.messaging_consent_version,
+    messaging_consent_at = EXCLUDED.messaging_consent_at, messaging_consent_actor_id = EXCLUDED.messaging_consent_actor_id,
+    password_hash = COALESCE(EXCLUDED.password_hash, public.users.password_hash), updated_at = NOW()
+  WHERE public.users.auth_user_id IS NULL AND public.users.phone_verified_at IS NULL
+    AND public.users.messaging_consent IS FALSE AND public.users.password_hash IS NOT NULL
   RETURNING id, phone_number, full_name, home_port_name, created_at,
     messaging_consent, messaging_consent_version, messaging_consent_at,
     advisory_days, preferred_advisory_time::text, preferred_language, habitat_preference,

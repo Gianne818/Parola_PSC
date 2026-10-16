@@ -16,6 +16,12 @@ for (const file of ['.env.local', '.env']) {
   }
 }
 
+// Demo mode must not spend credits through the standalone helper either.
+if (process.env.PAROLA_AUTH_MODE !== 'live' || process.env.IPROG_MOCK_MODE !== 'false') {
+  console.log('Demo/mock mode: no OTP requested. Live testing requires PAROLA_AUTH_MODE=live and IPROG_MOCK_MODE=false.');
+  process.exit(0);
+}
+
 const terminal = createInterface({ input: stdin, output: stdout });
 try {
   const project = new URL(process.env.NEXT_PUBLIC_SUPABASE_URL || '');
