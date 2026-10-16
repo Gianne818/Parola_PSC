@@ -1,4 +1,4 @@
-# Son's task plan
+# Son's six work packages
 
 **Current selection, October 17, 2026: Batch 1, independent MAP-01/OPS-01 slice.**
 Branch `codex/son/api-foundations`. Prediction ingestion now requires finite
