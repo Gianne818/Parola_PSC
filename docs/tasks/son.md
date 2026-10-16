@@ -1,4 +1,4 @@
-# Son's task plan
+# Son's six work packages
 
 **User-selected follow-up, October 16, 2026: registration demo/live mode.**
 Same screen and existing users table; any numeric demo code skips OTP, while
