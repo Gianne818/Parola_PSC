@@ -1,58 +1,52 @@
-# Parola: team task hub
+# Parola: compact team backlog
 
-Updated October 15, 2026. This is the starting point for the unimplemented backlog, not a request to execute every task.
+Updated October 17, 2026. Six work packages per member; all original requirements remain traceable. This is a task entry point, not authorization to execute the backlog.
 
-## 1. Identify the member before coding
+## Identity and selection
 
-If the user has not explicitly identified themselves in the current chat, ask:
-
+Use the identity explicitly stated in the current chat. Otherwise ask exactly:
 > Who are you working as: Tier, Son, or Toby?
 
-**Wait for their answer.** Do not infer identity from a branch, account or another chat. Tier already identified themselves in the originating chat; teammates do not inherit that identity.
+Wait for the answer. Read this hub, [shared ownership/rules](docs/tasks/shared.md) and that member's checklist. Select an owned package or portion before coding; for a general continue request, propose a ready portion and establish selection.
 
-| Member | Responsibility | Open only your task checklist |
+| Member | Responsibility | Six packages |
 | --- | --- | --- |
-| Tier | UI screens/interactions, accessibility, translations and client integration | [Tier's tasks](docs/tasks/tier.md) |
-| Son | APIs, database, auth, SMS, permissions and shared integration contracts | [Son's tasks](docs/tasks/son.md) |
-| Toby | Datasets, inference, models, clustering and scientific evaluation | [Toby's tasks](docs/tasks/toby.md) |
+| Tier | Frontend screens, interactions, local adapters, accessibility and client integration | [TIER-01–06](docs/tasks/tier.md) |
+| Son | APIs, persistence, auth, SMS, permissions and shared contracts | [SON-01–06](docs/tasks/son.md) |
+| Toby | Datasets, models, inference and scientific evaluation | [TOBY-01–06](docs/tasks/toby.md) |
 
-## 2. Select and respect the assignment
+## Work independently, integrate explicitly
 
-1. Read [shared ownership/contracts](docs/tasks/shared.md) and the identified member's checklist.
-2. An explicitly requested owned assignment selects that task. For a general "continue", propose one ready owned ID and establish selection before coding.
-3. Edit only that assignment's owner-approved files. Reading other code is allowed; implementing another member's portion is not.
-4. If a contract/file belongs to someone else, record a handoff in your own plan and summarize it in chat. Continue only independent selected work; never impersonate another member or use a subagent to bypass ownership.
-5. Report the assignment, files changed, checks, remaining dependencies and requested handoffs. Check off only your own completed portion.
+- Each package lists owned files, acceptance checks and actual integration needs. Completed portions are reused, not restarted.
+- Tier may finish frontend delivery with existing services, frontend-local models/adapters and isolated fixtures. An unavailable API does not block all UI work.
+- Fixtures stay in tests or explicit development previews; they never replace normal app routes or simulate successful real saves.
+- Son and Toby may likewise test owned boundaries in isolation. Shared schemas, operational permissions and scientific validity retain their owners.
+- **Member delivery:** scoped owned implementation and required checks pass. **Integrated acceptance:** real producer/consumer behavior is verified. Track these separately.
+- A member delivery can be complete while integration is pending. A full proposal feature still needs all required portions and integration evidence.
+- Use one handoff per actual missing interface. C01–C08 classify integration needs; they are not blanket gates for isolated development.
+- Branches remain `codex/<member>/<package>`; use focused PRs, review and authorized merge workflows. Several PRs may deliver one package.
 
-Shared types, database contracts, dependency manifests/config and integration docs belong to Son. Explicit frontend/scientific exceptions are listed in the shared file map. Son coordinates integration without taking over Tier/Toby code. Explicit user-requested assignment changes must be recorded before code work.
+## Protect the working application
 
-These are agent workflow instructions, not filesystem security restrictions. User-requested documentation maintenance does not authorize application implementation.
+Preserve established branded login/register screens, artwork/mascot, onboarding, dashboard/navigation, accessibility fixes and pelagic/demersal/both behavior unless explicitly asked to change them.
 
-## 3. Begin with a small owned task
+Preserve [PR #11](https://github.com/Gianne818/Parola_PSC/pull/11)'s agreed demo behavior: registration accepts a 1–6 digit demo code without OTP/provider calls, then saves the account and proceeds to onboarding; later phone/password sign-in needs no OTP. Account/profile persistence is real, not a synthetic-account selector or fake local success. See [baseline and limits](docs/tasks/shared.md#preservation-and-authentication-baseline).
 
-| Member | First candidate, after explicit task selection |
-| --- | --- |
-| Tier | UI-01-TIER: qualify incorrect public/demo claims using current behavior; feature wiring waits for agreed APIs. |
-| Son | REG-02-SON: start C03/D02 contact/consent/assistance agreement and tests before live verification. |
-| Toby | DATA-01-TOBY: validate mask sources/fixtures before production publication or database changes. |
+This checkout is at PR #2 (c91a3f2). PR #11 was source-reviewed at 0642034, open/unmerged at inspection; its real runtime journey remains unverified. This update neither installs nor approves merging it.
 
-Use separate task branches/checkouts: `codex/tier/<task>`, `codex/son/<task>`, `codex/toby/<task>`. No branches or application changes are created by this split.
+## Delivery phases and first steps
 
-## 4. Preserve the proposal and release order
+- A: trust/safety foundation; B: municipal pilot and scoped trials; C: verified enterprise exports; D: separately validated roadmap.
+- Free routine advisories use up to five selected weekdays; critical alerts remain independent and any-day. Budgets never cap safety warnings.
+- Hazard/unreliable essential inputs withhold fishing guidance; independently valid official warnings remain eligible.
+- Preserve voluntary zero-catch reporting, privacy/access controls, authoritative marine restrictions and truthful measured outcomes. No fabricated operational data.
+- ROAD-01, UX-01 and LEG-02 remain deferred; LEG-01 remains superseded. Fuel pooling stays outside the core proposal.
+- Inspect the chosen package and current code first. Separate remaining owned work from integration; do not repeat PR #2's completed portions.
 
-- Free Standard advisories: up to five selected weekdays; critical alerts are separate and may arrive any day.
-- Hazard/unreliable essential inputs withhold actionable fishing guidance; independently valid official warnings remain eligible.
-- Catch reporting is voluntary portal/authorized-assisted entry, including zero catch; no inbound SMS command/parser is a core requirement.
-- No fabricated operational model/environment data, implied guaranteed delivery/catch, or unverified savings/accuracy/device claim.
-- Marine entitlements, privacy, consent and reviewed catch/model data apply before live operation.
-- A: trust/safety foundation; B: municipal pilot and scoped commercial trials; C: verified enterprise exports; D: separately validated roadmap.
-- ROAD-01/UX-01/LEG-02 remain deferred; LEG-01 is superseded. Fuel pooling is outside the core proposal.
-- Member checklists record proven completed portions (REG-01-SON backend and REG-02-SON's approved self-service backend are complete). A parent remains "Partial" until every active member portion and integration acceptance is complete.
+## Reference and progress
 
-## 5. References, decisions and sharing
-
-- [Shared file map, all 31 parent mappings, C01-C08 contracts and D01-D10 pending decisions](docs/tasks/shared.md).
-- [Detailed preserved plan, concept-note page references, H01-H22 findings and full acceptance cases](docs/reference/fixplan-detail.md). Consult the relevant parent only; the archive never authorizes other members' work.
-- The external concept PDF and some local audits are not bundled. Essential requirements/attributed findings remain in the reference; do not add private files or credentials.
-- The hub and new Markdown documents are intended for Git sharing. Commit/push only through an explicitly authorized workflow; never include unrelated changes.
-- This reorganization changes only documentation and the hub's ignore entry. It does not implement features, send SMS, modify data, deploy, or start the backlog.
+- [Exact ownership, interfaces, decisions and all 31 parent mappings](docs/tasks/shared.md).
+- [Original proposal detail, concept-note references and H01–H22 findings](docs/reference/fixplan-detail.md).
+- Complete historical plans: [Tier](docs/tasks/tier-history.md), [Son](docs/tasks/son-history.md), [Toby](docs/tasks/toby-history.md). Reference only; current rules override historical instructions.
+- Unproven packages remain unchecked. Distinguish source inspection, automated checks, manual acceptance and real integration.
+- This reorganization authorizes no application edits, installs, live SMS, database operations, resets, commits, pushes or deployments.
