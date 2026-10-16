@@ -1,156 +1,139 @@
-# Son's task plan
+# Son's six work packages
 
-Owner: **Son only**. Updated October 15, 2026. [Hub](../../fixplan.md) | [Shared rules, files and gates](shared.md) | [Full reference](../reference/fixplan-detail.md)
+Owner: **Son only**. Updated October 17, 2026. [Hub](../../fixplan.md) | [Shared rules](shared.md) | [Historical checklist/progress](son-history.md)
 
-## Before coding
+## Start here
 
-- Confirm identity from this chat; otherwise ask "Who are you working as: Tier, Son, or Toby?" and wait. Never infer it from a branch, username or last session.
-- Work on one explicitly selected `-SON` assignment. For a general "continue", propose your next ready assignment and wait for selection. A specific matching assignment in the user's request already establishes the task.
-- Only edit owned files listed below and their assigned tests; read other areas for context. Request the owning member's change when a shared dependency is missing. Never finish their portion yourself.
-- C01-C08 are interface gates and D01-D10 are unresolved decisions in the shared rules. Pending prerequisites block dependent integration/live behavior; isolated evaluation/tests may proceed only where an assignment explicitly allows it.
-- Parent statuses describe existing code, not completion. All boxes remain unchecked. Deferred/superseded items are not the next task without explicit separate prioritization.
+- Use identity explicitly stated in this chat; otherwise ask **Who are you working as: Tier, Son, or Toby?** and wait.
+- Select one package or requested portion. A legacy ID selects only its mapped portion. For general continue requests, propose a ready owned portion and establish selection before coding.
+- Read current code first and reuse completed work. This checkout is PR #2 (c91a3f2); later branch-only work is historical/recoverable, not assumed present.
+- Missing producer runtime does not block owned fixture-tested implementation. Record the exact integration need; never edit another owner to unblock yourself.
+- Preserve branded screens, onboarding/navigation, habitats and the [PR #11 authentication baseline](shared.md#preservation-and-authentication-baseline). A task is not permission to redesign auth.
+- Use `codex/son/<package>` branches and focused PRs. A package can span several PRs. No installs, paid services, real SMS or deployments without explicit authorization.
 
 ## Allowed files
 
-| File group | Allowed scope |
-| --- | --- |
-| API | `app/api/**` and its tests; `parola-api-service/**` except Toby's HSI file/test listed in shared rules. |
-| DB / AUTH / GEO | `backend/migrations/**`, `lib/**` except Tier's listed helpers/tests; `data/**`, `utils/spatial.ts`, `utils/hotspotCalculator.ts`; matching backend tests. |
-| DISPATCH | `backend/sms-dispatch/**`, `backend/safety-dispatch/**`, `services/iprogSmsService.ts`, `services/smsServiceInstance.ts`, `templates/**`; SMS/backend test suites. |
-| SHARED / DOC | Dependency manifests/lockfiles, shared config/types, other integration paths and shared documents as enumerated in shared rules; your checklist. Never edit Tier/Toby implementation just to integrate it. |
+**API:** app/api/** and parola-api-service/** except Toby's HSI files. **DB/AUTH/GEO:** owned lib/**, migrations, data and spatial helpers. **DISPATCH:** owned SMS/safety services and templates. **SHARED:** schemas, dependencies, configuration and integration documents. Exact exceptions in shared rules.
 
-**First candidate:** REG-02-SON, beginning with C03/D02 contact/consent/assistance contract and tests. Live verification waits for an agreed real verification process; no provider capability is presumed.
+## Packages
 
-## Assignments
+All packages remain unchecked: reorganization is not implementation evidence. **Member delivery** and **integrated acceptance** are tracked separately. Original priorities, acceptance criteria and concept-note evidence remain binding in the references. Acceptance scenarios can use isolated fixtures for owned delivery; real account/database/provider/model behavior belongs to integrated acceptance. State what was actually checked. Each package includes its own accessibility where applicable; no package waits for TIER-06 common practices.
 
-- [ ] <a id="reg-01-son"></a>**REG-01-SON | P1 | Partial** - [Persist selected-day preferences.](../reference/fixplan-detail.md#reg-01)
-  - **Files:** API, DB. **Work:** Persist validated preferences consistently across Next.js/FastAPI/types; preserve them on unrelated edits.
-  - **Needs:** C03; D01. **Done when:** Distinct-day limits, time/language/habitat persistence and migration behavior pass API tests.
+<a id="son-01"></a>
+### SON-01: Accounts, profiles, consent and permissions
 
-- [ ] <a id="reg-02-son"></a>**REG-02-SON | P0 | Partial** - [Verify contacts, consent and assisted authority.](../reference/fixplan-detail.md#reg-02)
-  - **Files:** API, DB, AUTH. **Work:** Implement verified contact/consent eligibility and scoped assisted changes with actor provenance.
-  - **Needs:** C03; D02. **Done when:** Demo verification cannot enroll live recipients; unauthorized cross-user edits fail and assisted edits are attributable.
+- [ ] **SON-01 | P0 | Delivery: needs verification | Integration: needs verification**
+- **Covers:** [REG-01-SON](son-history.md#reg-01-son), [REG-02-SON](son-history.md#reg-02-son), [PRIV-01-SON](son-history.md#priv-01-son).
+- **Allowed files:** API, DB, AUTH, SHARED above, limited by the exact shared ownership map.
+- **Work:** Preserve PR #11's agreed auth flow; complete canonical profile/preferences, ownership, consent and assistance boundaries.
+- **Start / prerequisites:** Owned service tests with mocked DB/Auth now; verify accepted PR #11 head before auth edits. Do not edit Tier screens.
+- **Acceptance:** Allowed edits persist/reload; day limits enforced; cross-account assistance denied; password-only demo login; demo cannot grant live SMS eligibility; failures honest.
+- **Integration handoff:** TIER-01,06: C03/C08 examples and errors; actual browser/database readback tracked separately.
 
-- [ ] <a id="sms-01-son"></a>**SMS-01-SON | P1 | Partial** - [Schedule routine advisories durably.](../reference/fixplan-detail.md#sms-01)
-  - **Files:** API, DB, DISPATCH. **Work:** Implement Manila-time selected-day jobs, durable recipient/day identity, valid target selection and last-minute safety gating.
-  - **Needs:** C01-C04, C06; D01/D03/D04. **Done when:** One routine outcome per selected day; retries do not duplicate; hazards contain no fishing coordinates; unavailable data stays unavailable.
+<a id="son-02"></a>
+### SON-02: Advisory scheduling and SMS delivery
 
-- [ ] <a id="sms-02-son"></a>**SMS-02-SON | P0 | Partial** - [Route critical events independently and track delivery.](../reference/fixplan-detail.md#sms-02)
-  - **Files:** API, DB, DISPATCH. **Work:** Separate critical events from routine scheduling; persist attempts/deduplication/retries, authenticated callbacks and terminal escalation.
-  - **Needs:** C02-C04; D03/D07. **Done when:** Restart/duplicate callbacks are safe; changed hazards still alert; routine days/subscription/budget assumptions never cap warnings.
+- [ ] **SON-02 | P0 | Delivery: needs verification | Integration: needs verification**
+- **Covers:** [SMS-01-SON](son-history.md#sms-01-son), [SMS-02-SON](son-history.md#sms-02-son), [SMS-03-SON](son-history.md#sms-03-son).
+- **Allowed files:** API, DB, DISPATCH above, limited by the exact shared ownership map.
+- **Work:** Implement selected-day durable jobs, independent critical routing, retries/deduplication, callbacks, delivery history, encoding costs and routine-only sponsor rules.
+- **Start / prerequisites:** Deterministic recipient/event/safety fixtures now; real providers and recipients require separate authorization/evidence.
+- **Acceptance:** Restart/duplicate-safe; off-schedule hazards alert; hazardous messages lack fishing coordinates; budgets never cap safety; Unicode/callback failures tested without provider calls.
+- **Integration handoff:** SON-01,03,04 supply operational inputs; TIER-03 consumes C04. Missing runtime does not block isolated dispatch work.
 
-- [ ] <a id="sms-03-son"></a>**SMS-03-SON | P1 | Partial** - [Govern segments, sponsorship and costs.](../reference/fixplan-detail.md#sms-03)
-  - **Files:** API, DB, DISPATCH. **Work:** Enforce approved/consented routine-only sponsor credits without extra segments; track real encoding and separate cost streams.
-  - **Needs:** C03, C04; D07. **Done when:** Unicode/multipart tests pass; drop sponsor before guidance; no safety/enterprise ads or budget suppression.
+<a id="son-03"></a>
+### SON-03: Safety decisions and warning enforcement
 
-- [ ] <a id="safe-01-son"></a>**SAFE-01-SON | P0 | Partial** - [Validate weather providers and backup.](../reference/fixplan-detail.md#safe-01)
-  - **Files:** API, DB, DISPATCH. **Work:** Serve and persist validated weather/source/quality contracts; integrate Toby adapters with controlled failover.
-  - **Needs:** C02; Toby SAFE-01; D03/D08. **Done when:** Only compatible current backups qualify; missing essential data withholds guidance while independent warnings survive.
+- [ ] **SON-03 | P0 | Delivery: needs verification | Integration: needs verification**
+- **Covers:** [SAFE-01-SON](son-history.md#safe-01-son), [SAFE-02-SON](son-history.md#safe-02-son), [SAFE-03-SON](son-history.md#safe-03-son).
+- **Allowed files:** API, DB, DISPATCH above, limited by the exact shared ownership map.
+- **Work:** Persist shared vessel-specific decisions and warning applicability; enforce query/SMS/export suppression and independent valid warnings.
+- **Start / prerequisites:** Decision plumbing with labelled fixtures now; actual thresholds/providers need Toby validation and agreed C02.
+- **Acceptance:** UNKNOWN retained; approved unit/boundary cases pass; outages withhold guidance while valid warnings survive; endpoints cannot bypass suppression.
+- **Integration handoff:** TOBY-04 validates inputs/rules; TIER-03 consumes reasons/times/quality (C02).
 
-- [ ] <a id="safe-02-son"></a>**SAFE-02-SON | P0 | Partial** - [Localize warnings and decouple them from inference.](../reference/fixplan-detail.md#safe-02)
-  - **Files:** API, DB, DISPATCH. **Work:** Implement independent local critical evaluation and affected-recipient routing separate from inference cadence.
-  - **Needs:** C02, C03, C06; D03; Toby spatial weather support. **Done when:** Applicable regions receive events during model failure; missing holds never become clearance.
+<a id="son-04"></a>
+### SON-04: Prediction storage, queries and geographic eligibility
 
-- [ ] <a id="safe-03-son"></a>**SAFE-03-SON | P0 | Partial** - [Share deterministic rules and preserve UNKNOWN.](../reference/fixplan-detail.md#safe-03)
-  - **Files:** API, DB, DISPATCH. **Work:** Own the shared deterministic decision/storage contract, schema migration and query/SMS/export enforcement; allow warning-only records.
-  - **Needs:** C02; D03; Toby validation recommendations. **Done when:** Known hazards survive other outages; UNKNOWN persists; direct endpoints cannot bypass suppression; deployed CHECK mismatch verified first.
+- [ ] **SON-04 | P0 | Delivery: needs verification | Integration: needs verification**
+- **Covers:** [DATA-01-SON](son-history.md#data-01-son), [DATA-02-SON](son-history.md#data-02-son), [DATA-03-SON](son-history.md#data-03-son), [DATA-04-SON](son-history.md#data-04-son), [MAP-01-SON](son-history.md#map-01-son), [MAP-02-SON](son-history.md#map-02-son), [MAP-03-SON](son-history.md#map-03-son), [OPS-01-SON](son-history.md#ops-01-son), [GEO-01-SON](son-history.md#geo-01-son), [GEO-02-SON](son-history.md#geo-02-son), [GEO-03-SON](son-history.md#geo-03-son).
+- **Allowed files:** API, DB, GEO, SHARED above, limited by the exact shared ownership map.
+- **Work:** Implement versioned atomic ingest/publication, numeric coordinates, coherent scoped runs, species/features, bounded ranking/paging, regional eligibility and reviewed exclusions.
+- **Start / prerequisites:** Storage/query logic can use labelled synthetic batches; operational publication requires validated outputs and authoritative boundaries.
+- **Acceptance:** Invalid/land targets rejected; no duplicate/mixed-run starvation; transaction failures visible; real zeros retained; legacy provenance not invented; no unreviewed destructive cleanup.
+- **Integration handoff:** TOBY-01,02,03,05 provide validated batches; TIER-02,05 consume C01/C06. Legal/product boundary decisions explicit.
 
-- [ ] <a id="data-01-son"></a>**DATA-01-SON | P0 | Planned** - [Apply a validated ocean mask.](../reference/fixplan-detail.md#data-01)
-  - **Files:** API, DB. **Work:** Own indexed versioned land storage/loader, ocean predicate and ingest/query enforcement; quarantine/cleanup design preserves advisory links.
-  - **Needs:** C01; Toby validated mask; D08. **Done when:** All ingest/query paths reject validated land; no destructive historical cleanup without its reviewed plan.
+<a id="son-05"></a>
+### SON-05: Catch reporting, review and evaluation access
 
-- [ ] <a id="data-02-son"></a>**DATA-02-SON | P0 | Planned** - [Stop production simulation and record provenance.](../reference/fixplan-detail.md#data-02)
-  - **Files:** API, DB. **Work:** Persist source/model/run versions, quality/coverage/publication state and serve eligible runs only; investigate deployed provenance read-only.
-  - **Needs:** C01; Toby run outputs; D08. **Done when:** Atomic publication and legacy-unknown provenance are explicit; no invented backfill or fresh-looking old rows.
+- [ ] **SON-05 | P1 | Delivery: needs verification | Integration: needs verification**
+- **Covers:** [REPORT-01-SON](son-history.md#report-01-son), [REPORT-02-SON](son-history.md#report-02-son), [EVAL-01-SON](son-history.md#eval-01-son).
+- **Allowed files:** API, DB, AUTH above, limited by the exact shared ownership map.
+- **Work:** Persist duplicate-safe reports, review/corrections, assistant attribution and controlled de-identified exports. Keep ratings separate from catch records.
+- **Start / prerequisites:** Reviewed example fixtures now; scientific units and retention agreement before operational use.
+- **Acceptance:** Zero catch round-trip; invalid values denied; ownership/assistance enforced; unreviewed reports excluded from learning; catch-location access restricted.
+- **Integration handoff:** TIER-04,06 / TOBY-06 consume C05/C08; publish examples without waiting for screens/models.
 
-- [ ] <a id="data-03-son"></a>**DATA-03-SON | P0 | Planned** - [Use real environmental features and calibrated scores.](../reference/fixplan-detail.md#data-03)
-  - **Files:** API, DB. **Work:** Persist and expose real feature units/semantics and supported species adjustment; reject invalid inference batches.
-  - **Needs:** C01; Toby feature/scoring definitions. **Done when:** No random feature or forced-score assumptions are introduced by storage/API mapping.
+<a id="son-06"></a>
+### SON-06: Enterprise entitlements, exports and capability contracts
 
-- [ ] <a id="data-04-son"></a>**DATA-04-SON | P1 | Planned** - [Integrate real historical VIIRS DBSCAN.](../reference/fixplan-detail.md#data-04)
-  - **Files:** API, DB. **Work:** Persist/serve versioned historical cluster support and provenance without inventing catch labels.
-  - **Needs:** C01; Toby cluster outputs. **Done when:** Exposed IDs trace to detection clusters and their source/version.
+- [ ] **SON-06 | P1 | Delivery: needs verification | Integration: needs verification**
+- **Covers:** [ENT-01-SON](son-history.md#ent-01-son), [ENT-02-SON](son-history.md#ent-02-son), [UI-01-SON](son-history.md#ui-01-son), [UI-02-SON](son-history.md#ui-02-son).
+- **Allowed files:** API, DB, AUTH, SHARED above, limited by the exact shared ownership map.
+- **Work:** Implement server vessel/plan/zone locks and export delivery; publish capability/error/language contracts for truthful UI without owning frontend copy.
+- **Start / prerequisites:** Owned logic with isolated datasets now; activation, real forecast data and device compatibility gated separately.
+- **Acceptance:** Access denied correctly; concurrent locks/quotas atomic; GPX/KML/GeoJSON genuinely generated/validated when supported; unknown horizons/devices unavailable; no payment activation.
+- **Integration handoff:** TIER-05,06 / TOBY-06 consume/provide C07 and capability evidence; shared configuration remains Son-owned.
 
-- [ ] <a id="map-01-son"></a>**MAP-01-SON | P0 | Partial** - [Normalize coordinates and remove legacy bypasses.](../reference/fixplan-detail.md#map-01)
-  - **Files:** API, DB. **Work:** Return numeric lat/lng from PostGIS and guard every operational query/RPC rather than expose raw geometry parsing bypasses.
-  - **Needs:** C01; DATA-01-Son. **Done when:** Valid targets share coordinate order across UI/SMS; shore-based home ports are not rejected as hotspots.
+## Existing progress and next selection
 
-- [ ] <a id="map-02-son"></a>**MAP-02-SON | P1 | Partial** - [Unify run validity, ranking and bounded payloads.](../reference/fixplan-detail.md#map-02)
-  - **Files:** API, DB. **Work:** Apply scope/valid run/habitat/threshold before ranking and paging; standardize score units and coherent run selection.
-  - **Needs:** C01, C06; D04; Toby threshold/ranking review. **Done when:** No duplicates/region starvation; nearest mode is nearest among eligible rows and no stale regional substitution.
+- PR #11 was source-reviewed at 0642034ee537a0b9c883698bb652983d575bcfe8, open/unmerged at inspection; it is not installed in this PR #2 checkout. Preserve its agreed direction without claiming runtime readiness.
+- Suggested next selection: verify the accepted SON-01 PR #11 baseline and remaining work, or independently test SON-02 scheduling. Do not reintroduce the reverted PR #3–7 journey.
 
-- [ ] <a id="map-03-son"></a>**MAP-03-SON | P1 | Partial** - [Correct species and environment presentation.](../reference/fixplan-detail.md#map-03)
-  - **Files:** API, DB. **Work:** Verify deployed species fields/aliases and remove unrelated-first-row fallback; expose real depth/environment support.
-  - **Needs:** C01, C02; Toby HSI definitions. **Done when:** Unknown species never inherits another profile or falsely claims adjustment.
+## Legacy lookup and deferred work
 
-- [ ] <a id="ops-01-son"></a>**OPS-01-SON | P1 | Partial** - [Harden dates, ingestion and run visibility.](../reference/fixplan-detail.md#ops-01)
-  - **Files:** API, DB. **Work:** Harden API/CSV dates, ingestion transactions, run uniqueness, error visibility and source-cell persistence; protect linked advisories.
-  - **Needs:** C01; D01/D08; Toby source-cell definition. **Done when:** Manila boundary, partial batch/retry and silent DB failure tests pass; no blind destructive replace.
+Each original assignment maps once below. Historical labels do not establish current completion; full criteria/logs remain in the archive and [detailed proposal](../reference/fixplan-detail.md).
 
-- [ ] <a id="report-01-son"></a>**REPORT-01-SON | P1 | Planned** - [Add structured voluntary trip reports.](../reference/fixplan-detail.md#report-01)
-  - **Files:** API, DB, AUTH. **Work:** Add structured authenticated report persistence/units/ownership/advisory linkage, reviewable corrections and duplicate-safe submissions.
-  - **Needs:** C03, C05; D09. **Done when:** Negative/invalid inputs fail; zero catch accepted; old ratings are not invented weight records.
+| Original assignment / anchor | Current package or disposition | Historical priority / status |
+| --- | --- | --- |
+| <a id="reg-01-son"></a>[REG-01-SON](son-history.md#reg-01-son) | [SON-01](#son-01) | P1 / Partial |
+| <a id="reg-02-son"></a>[REG-02-SON](son-history.md#reg-02-son) | [SON-01](#son-01) | P0 / Partial |
+| <a id="sms-01-son"></a>[SMS-01-SON](son-history.md#sms-01-son) | [SON-02](#son-02) | P1 / Partial |
+| <a id="sms-02-son"></a>[SMS-02-SON](son-history.md#sms-02-son) | [SON-02](#son-02) | P0 / Partial |
+| <a id="sms-03-son"></a>[SMS-03-SON](son-history.md#sms-03-son) | [SON-02](#son-02) | P1 / Partial |
+| <a id="safe-01-son"></a>[SAFE-01-SON](son-history.md#safe-01-son) | [SON-03](#son-03) | P0 / Partial |
+| <a id="safe-02-son"></a>[SAFE-02-SON](son-history.md#safe-02-son) | [SON-03](#son-03) | P0 / Partial |
+| <a id="safe-03-son"></a>[SAFE-03-SON](son-history.md#safe-03-son) | [SON-03](#son-03) | P0 / Partial |
+| <a id="data-01-son"></a>[DATA-01-SON](son-history.md#data-01-son) | [SON-04](#son-04) | P0 / Planned |
+| <a id="data-02-son"></a>[DATA-02-SON](son-history.md#data-02-son) | [SON-04](#son-04) | P0 / Planned |
+| <a id="data-03-son"></a>[DATA-03-SON](son-history.md#data-03-son) | [SON-04](#son-04) | P0 / Planned |
+| <a id="data-04-son"></a>[DATA-04-SON](son-history.md#data-04-son) | [SON-04](#son-04) | P1 / Planned |
+| <a id="map-01-son"></a>[MAP-01-SON](son-history.md#map-01-son) | [SON-04](#son-04) | P0 / Partial |
+| <a id="map-02-son"></a>[MAP-02-SON](son-history.md#map-02-son) | [SON-04](#son-04) | P1 / Partial |
+| <a id="map-03-son"></a>[MAP-03-SON](son-history.md#map-03-son) | [SON-04](#son-04) | P1 / Partial |
+| <a id="ops-01-son"></a>[OPS-01-SON](son-history.md#ops-01-son) | [SON-04](#son-04) | P1 / Partial |
+| <a id="report-01-son"></a>[REPORT-01-SON](son-history.md#report-01-son) | [SON-05](#son-05) | P1 / Planned |
+| <a id="report-02-son"></a>[REPORT-02-SON](son-history.md#report-02-son) | [SON-05](#son-05) | P1 / Planned |
+| <a id="eval-01-son"></a>[EVAL-01-SON](son-history.md#eval-01-son) | [SON-05](#son-05) | P1 / Planned |
+| <a id="geo-01-son"></a>[GEO-01-SON](son-history.md#geo-01-son) | [SON-04](#son-04) | P0 / Planned |
+| <a id="geo-02-son"></a>[GEO-02-SON](son-history.md#geo-02-son) | [SON-04](#son-04) | P1 / Planned |
+| <a id="geo-03-son"></a>[GEO-03-SON](son-history.md#geo-03-son) | [SON-04](#son-04) | P1 / Planned |
+| <a id="ent-01-son"></a>[ENT-01-SON](son-history.md#ent-01-son) | [SON-06](#son-06) | P2 / Planned |
+| <a id="ent-02-son"></a>[ENT-02-SON](son-history.md#ent-02-son) | [SON-06](#son-06) | P2 / Partial |
+| <a id="road-01-son"></a>[ROAD-01-SON](son-history.md#road-01-son) | Deferred; separate prioritization required | P2 / Deferred |
+| <a id="ui-01-son"></a>[UI-01-SON](son-history.md#ui-01-son) | [SON-06](#son-06) | P1 / Partial |
+| <a id="ui-02-son"></a>[UI-02-SON](son-history.md#ui-02-son) | [SON-06](#son-06) | P1 / Partial |
+| <a id="priv-01-son"></a>[PRIV-01-SON](son-history.md#priv-01-son) | [SON-01](#son-01) | P1 / Partial |
+| <a id="ux-01-son"></a>[UX-01-SON](son-history.md#ux-01-son) | Deferred; separate prioritization required | P2 / Deferred |
+| <a id="leg-01-son"></a>[LEG-01-SON](son-history.md#leg-01-son) | Superseded; separate prioritization required | P2 / Superseded |
+| <a id="leg-02-son"></a>[LEG-02-SON](son-history.md#leg-02-son) | Deferred; separate prioritization required | P2 / Deferred |
 
-- [ ] <a id="report-02-son"></a>**REPORT-02-SON | P1 | Planned** - [Review assisted reports before learning.](../reference/fixplan-detail.md#report-02)
-  - **Files:** API, DB, AUTH. **Work:** Enforce assisting actor scope and review/audit lifecycle; export only permitted eligible reviewed records.
-  - **Needs:** C03, C05, C08; D02/D09. **Done when:** Revoked helper and cross-owner requests fail; flagged/duplicate/unreviewed rows excluded.
+## Delivery log and integration handoffs
 
-- [ ] <a id="eval-01-son"></a>**EVAL-01-SON | P1 | Planned** - [Measure outcomes without overstating them.](../reference/fixplan-detail.md#eval-01)
-  - **Files:** API, DB. **Work:** Expose consented pilot/evaluation aggregates with provenance and distinct operational delivery/adoption outcomes.
-  - **Needs:** C05, C08; D09; Toby evaluation outputs. **Done when:** Only reviewed accessible evidence is reported; target counts/revenue never become observed records.
+Log selected portions with package/legacy IDs, changed files, automated/manual evidence, remaining work and PR. Mark only proven-complete member delivery; integration may stay pending. Never mark another owner complete.
 
-- [ ] <a id="geo-01-son"></a>**GEO-01-SON | P0 | Planned** - [Enforce proposed permitted areas server-side.](../reference/fixplan-detail.md#geo-01)
-  - **Files:** API, DB, GEO. **Work:** Own authoritative boundary ingestion/versioning and Standard/small/medium/large eligibility in query/SMS/export before limits.
-  - **Needs:** C03, C06, C07; D05/D08. **Done when:** Direct requests cannot bypass municipal/commercial/radius/FMA/EEZ checks; unsupported coverage is explicit.
+| From package / portion | Producer → consumer | Missing interface and example | Integration status / evidence |
+| --- | --- | --- |
+| None newly asserted by this documentation change | — | Carry forward relevant historical handoffs after checking current code; consolidate by actual interface. | Needs verification |
 
-- [ ] <a id="geo-02-son"></a>**GEO-02-SON | P1 | Planned** - [Stage authoritative conservation exclusions.](../reference/fixplan-detail.md#geo-02)
-  - **Files:** API, DB, GEO. **Work:** Obtain versioned MPA/no-take/closure sources; enforce validated active restrictions with expiry/stale/conflict handling.
-  - **Needs:** C06; D05/D08. **Done when:** Enabled exclusions apply to all channels; initial reminders do not waive pilot eligibility.
-
-- [ ] <a id="geo-03-son"></a>**GEO-03-SON | P1 | Planned** - [Distribute recommendations across suitable grounds.](../reference/fixplan-detail.md#geo-03)
-  - **Files:** API, DB, GEO. **Work:** Implement atomic recommendation counting and eligible next-best selection compatible with ranking and zone locks.
-  - **Needs:** C01, C06, C07; D04/D06; Toby review. **Done when:** Concurrent/retried requests respect approved counting; no lower-quality or unsafe alternative is invented.
-
-- [ ] <a id="ent-01-son"></a>**ENT-01-SON | P2 | Planned** - [Verify vessels and persist entitlements/zone locks.](../reference/fixplan-detail.md#ent-01)
-  - **Files:** API, DB, AUTH. **Work:** Persist verified credentials/operators/trials/subscriptions and atomic vessel zone locks; separate custom fleets and audit events.
-  - **Needs:** C03, C06, C07; D05/D06/D07. **Done when:** Forged client tier/GT fails; concurrent unlock/re-download/expiry obey contract and never affect free critical alerts.
-
-- [ ] <a id="ent-02-son"></a>**ENT-02-SON | P2 | Partial** - [Generate real verified Geo-Packs.](../reference/fixplan-detail.md#ent-02)
-  - **Files:** API, DB, GEO. **Work:** Generate/protect/schema-validate real format downloads with entitlements, safety/spatial checks and provenance.
-  - **Needs:** C01, C02, C06, C07; D06/D08; Toby forecast support. **Done when:** Correct coordinate order/time; no land/restricted/suppressed samples; device claims require actual import tests.
-
-- [ ] <a id="road-01-son"></a>**ROAD-01-SON | P2 | Deferred** - [Validate satellite, fleet and institutional capabilities.](../reference/fixplan-detail.md#road-01)
-  - **Files:** API, DB, DISPATCH. **Work:** Later own satellite transport/custom fleet/API access and suitably anonymized institutional delivery.
-  - **Needs:** Deferred; C07/C08 and separate prioritization. **Done when:** Real channel/cost/access checks and privacy aggregation precede launch.
-
-- [ ] <a id="ui-01-son"></a>**UI-01-SON | P1 | Partial** - [Align all public and signed-in journeys.](../reference/fixplan-detail.md#ui-01)
-  - **Files:** API, DB. **Work:** Provide factual capability/readiness/source metadata used by Tier; remove no frontend copy on Tier's behalf.
-  - **Needs:** Relevant C01-C08; UI wiring depends on real capability evidence. **Done when:** Persisted capability status cannot be synthesized from preview/local storage or imply deployment proof.
-
-- [ ] <a id="ui-02-son"></a>**UI-02-SON | P1 | Partial** - [Extend accessible regional-language flows.](../reference/fixplan-detail.md#ui-02)
-  - **Files:** API, DB. **Work:** Persist language and provide stable localized-validation/status inputs and duplicate-safe bounded requests.
-  - **Needs:** C03-C05; D10. **Done when:** Language survives reload; server behavior supports retries without requiring a native app.
-
-- [ ] <a id="priv-01-son"></a>**PRIV-01-SON | P1 | Partial** - [Separate identity, reports and delegated access.](../reference/fixplan-detail.md#priv-01)
-  - **Files:** API, DB, AUTH. **Work:** Own RLS/server/service-role checks, identity-location separation, export permissions, tamper-evident audits and reviewed retention/purge.
-  - **Needs:** C03, C05, C07, C08; D02/D09. **Done when:** Cross-account/fleet/helper access denied; raw sensitive catch locations protected; no continuous tracking or unrestricted enforcement feed.
-
-- [ ] <a id="ux-01-son"></a>**UX-01-SON | P2 | Deferred** - [Preserve useful map/trip-planning additions.](../reference/fixplan-detail.md#ux-01)
-  - **Files:** API, DB, GEO. **Work:** Later serve masked polygons and route/vessel-backed estimation/export contracts.
-  - **Needs:** Deferred; C01/C06/C07 and separate prioritization. **Done when:** No recommended land/restricted hulls or unsupported route certainty.
-
-- [ ] <a id="leg-01-son"></a>**LEG-01-SON | P2 | Superseded** - [Incoming SMS commands and rating feedback.](../reference/fixplan-detail.md#leg-01)
-  - **Files:** API, DB, DISPATCH. **Work:** Retain inbound commands/ratings as superseded reference; future reactivation needs separate authorization/provider validation.
-  - **Needs:** Superseded; no implementation work now; Tier removes core claims under UI-01. **Done when:** Do not delete legacy handlers/data or require inbound SMS; any future parser rejects ambiguity and has durable retry-safe idempotency.
-
-- [ ] <a id="leg-02-son"></a>**LEG-02-SON | P2 | Deferred** - [Cooperative fuel pooling.](../reference/fixplan-detail.md#leg-02)
-  - **Files:** API, DB, AUTH. **Work:** Only later reconcile persistent fuel pools/orders/membership with existing schema and concurrency/fulfilment rules.
-  - **Needs:** Deferred; separate fuel product authorization. **Done when:** Authorized persistent orders/commitments and confirmed volume/status required; not a prerequisite for pilot fuel evaluation.
-
-## Progress and handoffs
-
-No assignment is completed and no handoff is outstanding at document creation. Keep this section short; update only your own records. Do not mark a parent feature complete from this checklist alone.
-
-Handoff format: `from assignment | to member | requested file/contract change | acceptance/example | blocks | status`. Record requests here and summarize them in chat; this does not authorize sending external messages or changing the recipient's files. The recipient updates their own plan; Son updates shared integration decisions after coordination.
-
-Completion report: assignment ID, owned files changed, focused checks/results, unmet prerequisites, and owner handoffs. Branch pattern: `codex/son/<task>`. Create/use branches only when implementation is requested; this documentation update creates none.
+Historical requests remain preserved in the archive. Add each still-applicable interface here once with its producer/consumer and acceptance evidence. Do not copy blanket gates onto every package.
