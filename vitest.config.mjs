@@ -9,7 +9,7 @@ export default defineConfig({
   },
   test: {
     environment: 'node',
-    include: ['app/**/*.test.ts', 'lib/**/*.test.ts', 'tests/**/*.test.ts'],
+    include: ['app/**/*.test.ts', 'lib/**/*.test.ts', 'tests/**/*.test.ts', 'supabase/**/*.test.ts'],
     // Legacy self-running script (no vitest suites) — run separately, not via vitest.
     exclude: ['node_modules', 'tests/iprogSmsService.test.ts'],
   },

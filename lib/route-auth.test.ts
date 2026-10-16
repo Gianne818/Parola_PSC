@@ -18,7 +18,7 @@ const ANON = 'anon-key';
 function mockSupabaseUser(phone: string | null, id = 'user-1') {
   createClientMock.mockReturnValue({
     auth: {
-      getUser: async () => ({ data: { user: { id, phone, user_metadata: {} } }, error: null }),
+      getUser: async () => ({ data: { user: { id, phone, phone_confirmed_at: '2026-10-15T00:00:00Z', user_metadata: {} } }, error: null }),
     },
   } as never);
 }
@@ -91,6 +91,46 @@ describe('requireOwnerOrAdmin (+63/09 suffix match)', () => {
   it('forbids a different number with 403', async () => {
     mockSupabaseUser('+639171234567');
     const res = await requireOwnerOrAdmin(authedRequest('valid-token'), '09170000000');
+    expect(res?.status).toBe(403);
+  });
+
+  it('does not use editable metadata to grant access to another fisher', async () => {
+    createClientMock.mockReturnValue({
+      auth: {
+        getUser: async () => ({
+          data: { user: { id: 'attacker', phone: null, user_metadata: { phone_number: '09171234567' } } },
+          error: null,
+        }),
+      },
+    } as never);
+    const res = await requireOwnerOrAdmin(authedRequest('email-session'), '09171234567');
+    expect(res?.status).toBe(403);
+  });
+
+  it('does not treat an unconfirmed Auth phone as verified ownership', async () => {
+    createClientMock.mockReturnValue({
+      auth: {
+        getUser: async () => ({
+          data: { user: { id: 'pending-user', phone: '+639171234567', phone_confirmed_at: null } },
+          error: null,
+        }),
+      },
+    } as never);
+    const res = await requireOwnerOrAdmin(authedRequest('pending-session'), '09171234567');
+    expect(res?.status).toBe(403);
+  });
+
+  it.each(['+14159171234567', 'garbage09171234567', '00009171234567'])(
+    'rejects an invalid target phone even when its suffix matches: %s', async phone => {
+      mockSupabaseUser('+639171234567');
+      const res = await requireOwnerOrAdmin(authedRequest('valid-token'), phone);
+      expect(res?.status).toBe(403);
+    },
+  );
+
+  it('rejects an invalid Auth phone even when its suffix matches', async () => {
+    mockSupabaseUser('+14159171234567');
+    const res = await requireOwnerOrAdmin(authedRequest('valid-token'), '09171234567');
     expect(res?.status).toBe(403);
   });
 

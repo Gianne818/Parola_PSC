@@ -1,6 +1,6 @@
 "use client";
 
-import React, { createContext, useContext, useState, useEffect, useCallback } from "react";
+import React, { createContext, useContext, useState, useEffect, useCallback, useRef } from "react";
 import { UserProfile, AlertNotification, Hotspot, FuelPool, PhilippineRegion } from "../types";
 import { readUpdates } from '../lib/updates';
 import { APPLICATION_COPY } from '../components/application/application-copy';
@@ -9,7 +9,9 @@ import { fetchLiveWeather, UNAVAILABLE_WEATHER, type ClientWeatherTelemetry } fr
 import { isClientCoordinate, isClientTargetCoordinate } from '@/lib/frontend/coordinates';
 import { fetchHotspots } from "../services/supabaseHotspotService";
 import { fetchWeatherSafetyOverrides } from "../services/supabaseWeatherService";
-import { createUserProfile } from "../services/profileService";
+import { accountRequest } from '@/lib/frontend/registration-client';
+import { supabase } from '@/lib/supabase';
+import type { AuthMode } from '@/lib/auth-mode';
 import { authHeaders } from "../utils/auth-fetch";
 import { fetchWithTimeout } from "../utils/fetchWithTimeout";
 import { PHILIPPINE_REGIONS, detectPhilippineRegion, isCoordinateInRegion } from "../data/philippineRegions";
@@ -75,6 +77,8 @@ const DEFAULT_POOLS: FuelPool[] = [
   }
 ];
 
+type RegistrationOptions = { mode: AuthMode; session?: { access_token: string; refresh_token: string } | null; consent?: { messaging_consent: boolean; consent_version: string } };
+
 interface AppContextType {
   isInitialized: boolean;
   isAuthenticated: boolean;
@@ -91,7 +95,7 @@ interface AppContextType {
   showToast: (message: string, type: "success" | "error" | "info") => void;
   hideToast: () => void;
   login: (phone: string, pin: string) => Promise<{ ok: boolean; error?: string }>;
-  register: (profile: Partial<UserProfile>, password?: string) => Promise<{ ok: boolean; error?: string }>;
+  register: (profile: Partial<UserProfile>, password?: string, options?: RegistrationOptions) => Promise<{ ok: boolean; error?: string }>;
   logout: () => void;
   updateProfile: (profile: Partial<UserProfile>) => void | Promise<void>;
   changeLanguage: (lang: 'en' | 'tl' | 'ceb' | 'hil') => void;
@@ -181,7 +185,7 @@ const telemetryInflight = new Map<string, Promise<TelemetryCacheEntry>>();
 const telemetryCacheKey = (lat: number, lng: number) =>
   `${lat.toFixed(3)},${lng.toFixed(3)}`;
 
-export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+export const AppProvider: React.FC<{ children: React.ReactNode; authMode?: AuthMode }> = ({ children, authMode = 'demo' }) => {
   const [isInitialized, setIsInitialized] = useState<boolean>(false);
   const [isAuthenticated, setIsAuthenticated] = useState<boolean>(false);
   const [language, setLanguage] = useState<'en' | 'tl' | 'ceb' | 'hil'>('en');
@@ -197,10 +201,23 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
 
 
-  // Load from localStorage on mount
+  const accountGeneration = useRef(0);
+  const applyAccount = useCallback((account: Record<string, any>) => {
+    const profile: UserProfile = { ...DEFAULT_PROFILE, phone: account.phone_number,
+      vesselName: account.full_name || account.phone_number, port: account.home_port_name || DEFAULT_PROFILE.port,
+      lat: account.latitude ?? DEFAULT_PROFILE.lat, lng: account.longitude ?? DEFAULT_PROFILE.lng };
+    setUserProfile(profile);
+    storageService.setItem('parola-profile', profile);
+    storageService.setItem('parola-account-mode', account.auth_mode || 'live');
+    setIsAuthenticated(true);
+  }, []);
+
+  // Restore preferences locally; account authority comes from the server.
   useEffect(() => {
-    setTimeout(() => {
-      setIsAuthenticated(storageService.getItem("parola-auth", false));
+    const generation = accountGeneration.current;
+    let active = true;
+    const timer = setTimeout(() => {
+      setIsAuthenticated(false);
       setLanguage(storageService.getItem("parola-language", "en"));
       setFontScale(storageService.getItem("parola-font-scale", 0));
       setTheme("light");
@@ -217,9 +234,20 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       setNotifications(storageService.getItem("parola-notifications-clean", INITIAL_NOTIFICATIONS));
       setFuelPools(storageService.getItem("parola-fuelpools", DEFAULT_POOLS));
       setManualOverrideHold(storageService.getItem("parola-manual-override-hold", false));
-      setIsInitialized(true);
+      void (async () => {
+        try {
+          const headers = authMode === 'demo' ? {} : await authHeaders();
+          const response = await fetch('/api/users/profile', { cache: 'no-store', credentials: 'same-origin', headers, signal: AbortSignal.timeout(15000) });
+          if (response.ok) {
+            const account = await response.json();
+            if (active && accountGeneration.current === generation) applyAccount(account);
+          }
+        } catch { /* Remain signed out when the account cannot be confirmed. */ }
+        finally { if (active) setIsInitialized(true); }
+      })();
     }, 0);
-  }, []);
+    return () => { active = false; clearTimeout(timer); accountGeneration.current++; };
+  }, [authMode, applyAccount]);
 
   useEffect(() => {
     if (isInitialized) storageService.setItem("parola-notifications-clean", notifications);
@@ -385,193 +413,71 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   }, []);
 
   const login = async (phone: string, pin: string): Promise<{ ok: boolean; error?: string }> => {
-    if (!phone || !pin) {
-      const error = "Please enter both phone number and password.";
-      showToast(error, "error");
-      return { ok: false, error };
-    }
-
-    const cleanedPhone = phone.trim();
-    const compactPhone = cleanedPhone.replace(/\s+/g, '');
-
-    let res: Response | null = null;
-    let errData: any = {};
-
     try {
-      // 8s AbortController timeout + 1 retry; AbortError falls through to the
-      // local offline credential check below, preserving offline login.
-      res = await fetchWithTimeout('/api/users/login', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          phone_number: cleanedPhone,
-          password: pin,
-        }),
-        timeoutMs: 8000,
-        retries: 1,
-      });
-
-      if (res.ok) {
-        const userData = await res.json();
-        const profile: UserProfile = {
-          ...userProfile,
-          phone: userData.phone_number,
-          vesselName: userData.full_name || userProfile.vesselName,
-          port: userData.home_port_name || userProfile.port,
-          lat: userData.latitude || userProfile.lat,
-          lng: userData.longitude || userProfile.lng,
-        };
-        setIsAuthenticated(true);
-        storageService.setItem("parola-auth", true);
-        setUserProfile(profile);
-        storageService.setItem("parola-profile", profile);
-        showToast(`Welcome back, ${profile.vesselName || 'Captain'}!`, "success");
-        return { ok: true };
+      accountGeneration.current++;
+      if (authMode === 'live') {
+        const normalizedPhone = '+63' + phone.replace(/\D/g, '').slice(-10);
+        const { data, error } = await supabase.auth.signInWithPassword({ phone: normalizedPhone, password: pin });
+        if (error || !data.session) throw new Error('Sign-in failed. Verify your phone before using live mode.');
+        applyAccount(await accountRequest('/api/users/profile', undefined, data.session.access_token));
       } else {
-        errData = await res.json().catch(() => ({}));
+        applyAccount(await accountRequest('/api/users/login', { phone_number: phone, password: pin }));
       }
-    } catch (err) {
-      console.warn("Backend login fetch error:", err);
+      return { ok: true };
+    } catch (error) {
+      return { ok: false, error: error instanceof Error ? error.message : 'Login failed.' };
     }
-
-    // Explicit API response errors from running backend (e.g. 404 account not found or 401 wrong password)
-    if (res && res.status !== 503 && !errData.offline) {
-      const errorMessage = errData.error || (res.status === 401 ? "Incorrect password. Please try again." : "Account not found for this phone number. Please register first.");
-      showToast(errorMessage, "error");
-      return { ok: false, error: errorMessage };
-    }
-
-    // Backend is offline (503 / fetch error): perform local offline credential verification against registered accounts
-    const localUsers = getLocalRegisteredUsers();
-    const matchedUser = localUsers.find(
-      u => u.phone.trim().replace(/\s+/g, '') === compactPhone
-    );
-
-    if (!matchedUser) {
-      const errorMessage = "Account not found for this phone number. Please register first.";
-      showToast(errorMessage, "error");
-      return { ok: false, error: errorMessage };
-    }
-
-    if (matchedUser.password && matchedUser.password !== pin) {
-      const errorMessage = "Incorrect password. Please try again.";
-      showToast(errorMessage, "error");
-      return { ok: false, error: errorMessage };
-    }
-
-    // Local offline sign in success
-    const profile: UserProfile = {
-      ...userProfile,
-      phone: matchedUser.phone,
-      vesselName: matchedUser.vesselName,
-      licenseNo: matchedUser.licenseNo || userProfile.licenseNo,
-      port: matchedUser.port || userProfile.port,
-      lat: matchedUser.lat || userProfile.lat,
-      lng: matchedUser.lng || userProfile.lng,
-    };
-    setIsAuthenticated(true);
-    storageService.setItem("parola-auth", true);
-    setUserProfile(profile);
-    storageService.setItem("parola-profile", profile);
-    showToast(`Welcome back, ${profile.vesselName || 'Captain'}!`, "success");
-    return { ok: true };
   };
 
   const updateUserWithBackend = async (prof: UserProfile) => {
-    try {
-      if (!prof.phone) return;
-      await fetchWithTimeout('/api/users/profile', {
+    if (!prof.phone) throw new Error('Phone number is required to save the profile.');
+      const response = await fetchWithTimeout('/api/users/profile', {
         method: 'PUT',
-        headers: await authHeaders({ 'Content-Type': 'application/json' }),
+        headers: authMode === 'demo' ? { 'Content-Type': 'application/json' } : await authHeaders({ 'Content-Type': 'application/json' }),
         body: JSON.stringify({
           phone_number: prof.phone,
           full_name: prof.vesselName || 'Captain',
           home_port_name: prof.port || 'Mercedes Fish Port',
-          latitude: prof.lat || 14.0122,
-          longitude: prof.lng || 123.0114,
-          preferred_advisory_time: '05:00:00',
+          latitude: prof.lat ?? 14.0122,
+          longitude: prof.lng ?? 123.0114,
         }),
         timeoutMs: 8000,
-        retries: 1,
+        retries: 0,
       });
-    } catch (err) {
-      console.warn('Profile update sync deferred:', err);
-    }
+      if (!response.ok) throw new Error('Profile was not saved. Please try again.');
   };
 
-  const register = async (profile: Partial<UserProfile>, password?: string): Promise<{ ok: boolean; error?: string }> => {
-    const updated = { ...DEFAULT_PROFILE, ...profile };
-    if (!updated.phone) {
-      const errorMsg = "Phone number is required for registration.";
-      showToast(errorMsg, "error");
-      return { ok: false, error: errorMsg };
-    }
-
-    const cleanedPhone = updated.phone.trim();
-    const compactPhone = cleanedPhone.replace(/\s+/g, '');
-    const userFullName = (updated.vesselName && updated.vesselName !== "F/V Parola I") ? updated.vesselName : cleanedPhone;
-
+  const register = async (profile: Partial<UserProfile>, password?: string, options?: RegistrationOptions): Promise<{ ok: boolean; error?: string }> => {
     try {
-      // 8s timeout + 1 retry; network/timeout errors fall through to local
-      // offline registration below, preserving offline sign-up.
-      const res = await fetchWithTimeout('/api/users/register', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          phone_number: cleanedPhone,
-          full_name: userFullName,
-          home_port_name: updated.port || 'Mercedes Fish Port',
-          latitude: updated.lat || 14.0122,
-          longitude: updated.lng || 123.0114,
-          preferred_advisory_time: '05:00:00',
-          password: password || undefined,
-        }),
-        timeoutMs: 8000,
-        retries: 1,
-      });
-
-      if (!res.ok) {
-        const errData = await res.json().catch(() => ({}));
-
-        // Explicit 400 or 409: duplicate phone number or invalid client data
-        if (res.status === 400 || res.status === 409) {
-          const errMsg = errData.error || "An account with this phone number already exists. Please sign in instead.";
-          showToast(errMsg, "error");
-          return { ok: false, error: errMsg };
-        }
-
-        // For upstream server/database connectivity issues, log and allow local offline registration
-        console.warn('Backend server registration fallback to local store:', errData);
+      if (!options) throw new Error('Reload the registration page before continuing.');
+      const updated = { ...DEFAULT_PROFILE, ...profile };
+      if (!updated.phone) throw new Error('Phone number is required for registration.');
+      accountGeneration.current++;
+      if (options.mode !== authMode) throw new Error('Registration mode changed. Reload the page.');
+      if (options.mode === 'live') {
+        if (!options.session) throw new Error('Verify your phone before continuing.');
+        const { error } = await supabase.auth.setSession(options.session);
+        if (error) throw new Error('Phone session could not be established.');
+        const update = await supabase.auth.updateUser({ password });
+        if (update.error) throw new Error('Password could not be saved. Please try again.');
       }
-    } catch (err) {
-      console.warn('Registration network error, falling back to local registration:', err);
+      const account = await accountRequest('/api/users/register', {
+        phone_number: updated.phone, full_name: updated.vesselName || updated.phone,
+        home_port_name: updated.port, latitude: updated.lat, longitude: updated.lng,
+        preferred_advisory_time: '05:00:00', password,
+        ...(options.mode === 'live' ? options.consent : {}),
+      }, options.session?.access_token);
+      applyAccount(account);
+      return { ok: true };
+    } catch (error) {
+      return { ok: false, error: error instanceof Error ? error.message : 'Registration failed.' };
     }
-
-    const finalProfile: UserProfile = {
-      ...updated,
-      phone: cleanedPhone,
-      vesselName: userFullName,
-    };
-
-    // Save to local registered accounts store
-    saveLocalRegisteredUser({
-      phone: cleanedPhone,
-      password: password || "password123",
-      vesselName: userFullName,
-      licenseNo: updated.licenseNo,
-      port: updated.port || 'Mercedes Fish Port',
-      lat: updated.lat || 14.0122,
-      lng: updated.lng || 123.0114,
-    });
-
-    setUserProfile(finalProfile);
-    storageService.setItem("parola-profile", finalProfile);
-    setIsAuthenticated(true);
-    storageService.setItem("parola-auth", true);
-    return { ok: true };
   };
 
   const logout = () => {
+    accountGeneration.current++;
+    void fetch('/api/users/logout', { method: 'POST', credentials: 'same-origin' }).catch(() => showToast('Sign-out could not reach the server. Please retry.', 'error'));
+    if (authMode === 'live') void supabase.auth.signOut({ scope: 'local' });
     setIsAuthenticated(false);
     storageService.setItem("parola-auth", false);
     showToast("Logged out.", "info");
@@ -580,12 +486,13 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const updateProfile = async (profile: Partial<UserProfile>) => {
     try {
       const updated = { ...userProfile, ...profile };
+      await updateUserWithBackend(updated);
       setUserProfile(updated);
       storageService.setItem("parola-profile", updated);
       showToast("Vessel profile updated.", "success");
-      await updateUserWithBackend(updated);
     } catch (err) {
-      console.warn("Failed to update profile backend sync:", err);
+      showToast('Profile was not saved. Please try again.', 'error');
+      throw err;
     }
   };
 

@@ -1,8 +1,11 @@
 import type { Metadata } from 'next';
 import { Inter_Tight, Plus_Jakarta_Sans } from 'next/font/google';
 import './globals.css';
+import { getAuthMode } from '@/lib/auth-mode';
 import { AppProvider } from '../context/AppContext';
 import ToastContainer from '../components/ui/ToastContainer';
+
+export const dynamic = 'force-dynamic';
 
 const interTight = Inter_Tight({
   subsets: ['latin'],
@@ -25,7 +28,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
   return (
     <html lang="en" className={`${interTight.variable} ${sans.variable}`}>
       <body suppressHydrationWarning className="antialiased">
-        <AppProvider>
+        <AppProvider authMode={getAuthMode()}>
           {children}
           <ToastContainer />
         </AppProvider>

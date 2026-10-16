@@ -1,7 +1,7 @@
 import uuid
-from datetime import datetime
-from sqlalchemy import Column, BigInteger, Integer, Float, String, Date, Boolean, Time, DateTime, ForeignKey, Text
-from sqlalchemy.dialects.postgresql import UUID
+from datetime import datetime, time
+from sqlalchemy import Column, BigInteger, Integer, SmallInteger, Float, String, Date, Boolean, Time, DateTime, ForeignKey, Text, Numeric, text
+from sqlalchemy.dialects.postgresql import ARRAY, UUID
 from geoalchemy2 import Geometry
 from database import Base
 
@@ -29,7 +29,10 @@ class User(Base):
     full_name = Column(String(100))
     home_port_name = Column(String(100), default="Brgy Pasil, Cebu")
     home_port_geom = Column(Geometry("POINT", srid=4326, spatial_index=True), nullable=False)
-    preferred_advisory_time = Column(Time, nullable=False)
+    preferred_advisory_time = Column(Time, nullable=False, default=time(5, 0))
+    advisory_days = Column(ARRAY(SmallInteger), nullable=False, server_default=text("'{}'::smallint[]"))
+    preferred_language = Column(Text, nullable=False, server_default=text("'en'"))
+    habitat_preference = Column(Text, nullable=False, server_default=text("'both'"))
     coop_id = Column(UUID(as_uuid=True), nullable=True)
     password_hash = Column(Text, nullable=True)
     is_active = Column(Boolean, default=True)
@@ -69,29 +72,30 @@ class PelagicSpecies(Base):
     __tablename__ = "pelagic_species"
     __table_args__ = {"schema": "public"}
 
-    id = Column(BigInteger, primary_key=True, index=True)
-    species_name = Column(String(100), nullable=False)
-    family = Column(String(100))
-    local_name = Column(String(100))
-    temp_min = Column(Float)
-    temp_opt_low = Column(Float)
-    temp_opt_high = Column(Float)
-    temp_max = Column(Float)
-    depth_min = Column(Float)
-    depth_max = Column(Float)
+    id = Column(Integer, primary_key=True)
+    family = Column(Text)
+    common_name = Column(Text)
+    representative_species = Column(Text)
+    depth_min_m = Column(Numeric)
+    depth_max_m = Column(Numeric)
+    sst_min_c = Column(Numeric)
+    sst_max_c = Column(Numeric)
+    salinity_min = Column(Numeric)
+    salinity_max = Column(Numeric)
+    environment = Column(Text)
+
 
 class DemersalSpecies(Base):
     __tablename__ = "demersal_species"
     __table_args__ = {"schema": "public"}
 
-    id = Column(BigInteger, primary_key=True, index=True)
-    species_name = Column(String(100), nullable=False)
-    family = Column(String(100))
-    local_name = Column(String(100))
-    temp_min = Column(Float)
-    temp_opt_low = Column(Float)
-    temp_opt_high = Column(Float)
-    temp_max = Column(Float)
-    depth_min = Column(Float)
-    depth_max = Column(Float)
-
+    id = Column(Integer, primary_key=True)
+    family = Column(Text)
+    common_name = Column(Text)
+    representative_species = Column(Text)
+    depth_min_m = Column(Numeric)
+    depth_max_m = Column(Numeric)
+    temp_min_c = Column(Numeric)
+    temp_max_c = Column(Numeric)
+    max_distance_to_reef_km = Column(Numeric)
+    environment = Column(Text)

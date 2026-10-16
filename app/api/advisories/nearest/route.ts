@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server';
 import { calculateDistance } from '../../../../utils/spatial';
 import { getDbPool } from '@/lib/db';
 import { RATE_LIMITS, checkRateLimit, rateLimitExceededResponse } from '@/lib/rate-limit';
-import type { Pool } from 'pg';
+import { loadSpeciesProfile, environmentalNumber, type SpeciesProfile } from '@/lib/species-catalog';
 import { PHILIPPINE_REGIONS } from '@/data/philippineRegions';
 import { loadRegionalPredictions, type PredictionRow } from '@/lib/regional-predictions';
 
@@ -11,112 +11,6 @@ const DEFAULT_LON = 123.0114;
 const DEFAULT_LIMIT = 100;
 const MAX_LIMIT = 1000; // Demo: allow maximum visuals; re-clamp to 200 post-demo
 const MAX_SPECIES_CHARS = 100;
-
-interface SpeciesBounds {
-  temp_min: number;
-  temp_opt_low: number;
-  temp_opt_high: number;
-  temp_max: number;
-  depth_min?: number;
-  depth_max?: number;
-}
-
-/** Escape LIKE wildcards so user input can't force full-table wildcard scans. */
-function escapeLike(value: string): string {
-  return value.replace(/[\\%_]/g, (ch) => `\\${ch}`);
-}
-
-/**
- * Query public.pelagic_species or public.demersal_species to get species bounds.
- * Table names are hardcoded (never user input); values stay parameterized.
- */
-async function getSpeciesBounds(db: Pool, speciesName: string): Promise<SpeciesBounds | null> {
-  const cleanedName = speciesName.split(/[\/\(\),]/)[0].trim().slice(0, MAX_SPECIES_CHARS);
-  if (!cleanedName) return null;
-  const searchPattern = `%${escapeLike(cleanedName)}%`;
-
-  const tables = ['public.demersal_species', 'public.pelagic_species'];
-  for (const table of tables) {
-    try {
-      const res = await db.query(
-        `SELECT temp_min, temp_opt_low, temp_opt_high, temp_max, depth_min, depth_max
-         FROM ${table}
-         WHERE common_name ILIKE $1 ESCAPE '\\'
-            OR species_name ILIKE $1 ESCAPE '\\'
-            OR family ILIKE $1 ESCAPE '\\'
-            OR local_name ILIKE $1 ESCAPE '\\'
-            OR name ILIKE $1 ESCAPE '\\'
-            OR $2 ILIKE '%' || common_name || '%'
-         LIMIT 1`,
-        [searchPattern, cleanedName]
-      ).catch(async () => {
-        return await db.query(
-          `SELECT temp_min, temp_opt_low, temp_opt_high, temp_max, depth_min, depth_max FROM ${table} LIMIT 1`
-        ).catch(() => null);
-      });
-
-      if (res && res.rows && res.rows.length > 0) {
-        const r = res.rows[0];
-        if (r.temp_min !== undefined && r.temp_max !== undefined) {
-          return {
-            temp_min: parseFloat(r.temp_min),
-            temp_opt_low: parseFloat(r.temp_opt_low),
-            temp_opt_high: parseFloat(r.temp_opt_high),
-            temp_max: parseFloat(r.temp_max),
-            depth_min: r.depth_min !== null && r.depth_min !== undefined ? parseFloat(r.depth_min) : undefined,
-            depth_max: r.depth_max !== null && r.depth_max !== undefined ? parseFloat(r.depth_max) : undefined,
-          };
-        }
-      }
-    } catch {
-      console.error(`[Nearest API] bounds query failed for ${table}`);
-    }
-  }
-
-  return null;
-}
-
-/**
- * Compute trapezoidal temperature suitability (S_temp) from sst and species temperature bounds
- */
-function calculateSTemp(sst: number, bounds: SpeciesBounds): number {
-  const { temp_min, temp_opt_low, temp_opt_high, temp_max } = bounds;
-
-  if (sst < temp_min || sst > temp_max) {
-    return 0.05;
-  }
-  if (sst >= temp_opt_low && sst <= temp_opt_high) {
-    return 1.0;
-  }
-  if (sst >= temp_min && sst < temp_opt_low) {
-    const denom = temp_opt_low - temp_min;
-    if (denom === 0) return 1.0;
-    return 0.05 + 0.95 * ((sst - temp_min) / denom);
-  }
-  if (sst > temp_opt_high && sst <= temp_max) {
-    const denom = temp_max - temp_opt_high;
-    if (denom === 0) return 1.0;
-    return 0.05 + 0.95 * ((temp_max - sst) / denom);
-  }
-  return 1.0;
-}
-
-/**
- * Compute depth suitability (S_depth) based on bathymetry depth and species depth range
- */
-function calculateSDepth(depth: number, depthMin?: number, depthMax?: number): number {
-  if (depthMin === undefined || depthMax === undefined || depthMin === null || depthMax === null) {
-    return 1.0;
-  }
-  if (depth >= depthMin && depth <= depthMax) {
-    return 1.0;
-  }
-  const margin = Math.max(10, (depthMax - depthMin) * 0.5);
-  if (depth >= Math.max(0, depthMin - margin) && depth <= depthMax + margin) {
-    return 0.5;
-  }
-  return 0.1;
-}
 
 function parseCoordinate(raw: string | null, min: number, max: number, fallback: number): number | null {
   if (raw === null) return fallback;
@@ -170,12 +64,14 @@ export async function GET(request: Request) {
       }, { status: 503 });
     }
 
-    let speciesBounds: SpeciesBounds | null = null;
+    let speciesProfile: SpeciesProfile | null = null;
     if (species) {
-      speciesBounds = await getSpeciesBounds(db, species);
+      try { speciesProfile = await loadSpeciesProfile(db, species); }
+      catch { return NextResponse.json({ error: 'Species catalog is unavailable.', code: 'species_catalog_unavailable', species_status: 'unavailable', hotspots: [] }, { status: 503 }); }
+      if (!speciesProfile) return NextResponse.json({ error: 'Species is unsupported or ambiguous. Use a catalog identifier.', code: 'species_unsupported', species_status: 'unsupported', hotspots: [] }, { status: 422 });
     }
 
-    const result = region ? await loadRegionalPredictions(db, region, lat, lon, limit) : await db.query(
+    const result = region ? await loadRegionalPredictions(db, region, lat, lon, limit, speciesProfile?.category) : await db.query(
       `SELECT
         id,
         prediction_date,
@@ -192,16 +88,19 @@ export async function GET(request: Request) {
         OR prediction_date = (SELECT MAX(prediction_date) FROM public.daily_grid_predictions)
       )
         AND catch_probability >= 0.60
+        AND ($2::text IS NULL OR model_type = $2)
       ORDER BY prediction_date DESC, catch_probability DESC
       LIMIT $1`,
-      [limit]
+      [limit, speciesProfile?.category ?? null]
     );
 
     if (!result.rows || result.rows.length === 0) {
       return NextResponse.json({
         hotspots: [],
         source: 'postgres_direct',
-        message: 'No predictions found for today. Pipeline may not have run yet.',
+        message: 'No stored predictions match this query.',
+        species_status: speciesProfile ? 'resolved' : 'not_requested',
+        prediction_scope: 'habitat_model', species_hsi_status: species ? 'unavailable' : 'not_requested',
         ...('metadata' in result ? { metadata: result.metadata } : {}),
       });
     }
@@ -216,22 +115,8 @@ export async function GET(request: Request) {
         }
       }
 
-      let catchProb = Number(row.catch_probability);
-      const sstVal = row.sst !== null && row.sst !== undefined ? Number(row.sst) : null;
-      const spotType = row.model_type || 'pelagic';
-      const cellDepth = spotType === 'demersal' ? 45 : 250; // Estimated bathymetry depth
-
-      if (speciesBounds) {
-        if (sstVal !== null && Number.isFinite(sstVal)) {
-          const sTemp = calculateSTemp(sstVal, speciesBounds);
-          catchProb = catchProb * sTemp;
-        }
-        if (speciesBounds.depth_min !== undefined || speciesBounds.depth_max !== undefined) {
-          const sDepth = calculateSDepth(cellDepth, speciesBounds.depth_min, speciesBounds.depth_max);
-          catchProb = catchProb * sDepth;
-        }
-      }
-
+      const catchProb = Number(row.catch_probability);
+      const sstVal = environmentalNumber(row.sst);
       const distKm = calculateDistance(lat, lon, itemLat, itemLng);
       const catchProbPercent = catchProb <= 1.0 ? catchProb * 100 : catchProb;
       const efficiencyRatio = distKm > 0 ? parseFloat((catchProbPercent / distKm).toFixed(2)) : catchProbPercent;
@@ -243,10 +128,13 @@ export async function GET(request: Request) {
         catch_probability: catchProb,
         distance_km: distKm,
         efficiency_ratio: efficiencyRatio,
-        model_type: row.model_type || 'pelagic',
+        model_type: row.model_type ?? null,
         model_type_known: row.model_type === 'pelagic' || row.model_type === 'demersal' || row.model_type === 'both',
         sst: sstVal,
-        chl_a: row.chl_a ? Number(row.chl_a) : null,
+        chl_a: environmentalNumber(row.chl_a),
+        depth: null, depth_status: 'unavailable', depth_unit: 'm',
+        environment_provenance: 'legacy_unverified',
+        prediction_scope: 'habitat_model', species_hsi_status: species ? 'unavailable' : 'not_requested',
         dbscan_cluster_id: row.dbscan_cluster_id,
         created_at: row.created_at,
         prediction_date: row.prediction_date,
@@ -259,7 +147,13 @@ export async function GET(request: Request) {
         source: 'postgres_direct',
         count: hotspots.length,
         ...('metadata' in result ? { metadata: result.metadata } : {}),
-        ...(speciesBounds ? { species_hsi_applied: species, species_bounds: speciesBounds } : {}),
+        species_status: speciesProfile ? 'resolved' : 'not_requested',
+        ...(speciesProfile ? { species_profile: speciesProfile } : {}),
+        prediction_scope: 'habitat_model',
+        species_hsi_status: species ? 'unavailable' : 'not_requested',
+        species_hsi_reason: species ? 'Validated HSI inputs and real depth are not available; habitat scores are unchanged.' : null,
+        weather_endpoint: '/api/dashboard/weather',
+        provenance: 'legacy_unverified',
       },
       { headers: { 'Cache-Control': 'public, s-maxage=300, stale-while-revalidate=60' } }
     );

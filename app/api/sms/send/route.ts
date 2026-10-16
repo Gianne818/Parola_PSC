@@ -1,7 +1,7 @@
-import { NextResponse } from 'next/server';
 import { smsService } from '@/services/smsServiceInstance';
 import type { SmsSendRequest } from '@/services/iprogSmsService';
 import { requireUser } from '@/lib/route-auth';
+import { smsRecipientEligible } from '@/lib/registration';
 import { RATE_LIMITS, checkRateLimit, rateLimitExceededResponse } from '@/lib/rate-limit';
 
 const ALLOWED_CATEGORIES: ReadonlySet<SmsSendRequest['category']> = new Set([
@@ -21,7 +21,7 @@ export async function POST(request: Request) {
     }
     const body = await request.json().catch(() => null);
     if (!body || typeof body !== 'object') {
-      return NextResponse.json({ error: 'Invalid JSON body.' }, { status: 400 });
+      return Response.json({ error: 'Invalid JSON body.' }, { status: 400 });
     }
     const { recipient, message, category } = body as {
       recipient?: unknown;
@@ -30,25 +30,25 @@ export async function POST(request: Request) {
     };
 
     if (typeof recipient !== 'string' || !recipient.trim()) {
-      return NextResponse.json(
+      return Response.json(
         { error: 'recipient and message are required fields.' },
         { status: 400 }
       );
     }
     if (typeof message !== 'string' || !message.trim()) {
-      return NextResponse.json(
+      return Response.json(
         { error: 'recipient and message are required fields.' },
         { status: 400 }
       );
     }
     if (message.length > MAX_MESSAGE_CHARS) {
-      return NextResponse.json(
+      return Response.json(
         { error: `message must be at most ${MAX_MESSAGE_CHARS} characters.` },
         { status: 400 }
       );
     }
     if (category !== undefined && (typeof category !== 'string' || !ALLOWED_CATEGORIES.has(category as SmsSendRequest['category']))) {
-      return NextResponse.json(
+      return Response.json(
         { error: `category must be one of: ${[...ALLOWED_CATEGORIES].join(', ')}.` },
         { status: 400 }
       );
@@ -58,8 +58,13 @@ export async function POST(request: Request) {
     // Mock dry-runs stay open for the demo so onboarding/alerts previews keep working.
     const isLive = !smsService.getConfig().mockMode;
     if (isLive) {
-      const { error } = await requireUser(request);
+      const { user, error } = await requireUser(request);
       if (error) return error;
+      // A user may send only to their own registered contact. System dispatch
+      // can use an admin key, but cannot bypass recipient verification/consent.
+      if (!await smsRecipientEligible(recipient, user?.id)) {
+        return Response.json({ error: 'Recipient is not eligible for live messaging.' }, { status: 403 });
+      }
     }
 
     const result = await smsService.sendSms({
@@ -70,9 +75,9 @@ export async function POST(request: Request) {
           ? (category as SmsSendRequest['category'])
           : undefined,
     });
-    return NextResponse.json(result);
+    return Response.json(result);
   } catch {
     console.error('[SMS Send API] dispatch failed');
-    return NextResponse.json({ error: 'SMS Dispatch failed.' }, { status: 500 });
+    return Response.json({ error: 'SMS Dispatch unavailable.' }, { status: 503 });
   }
 }
