@@ -47,6 +47,8 @@ Dashboard details and both legacy map detail surfaces reuse one evidence display
 
 **Completion boundary:** This selected frontend portion is implemented with disconnected evidence. **Full MAP-03-TIER and parent MAP-03 remain partial and unchecked**: no live cross-channel alias/catalog acceptance, validated scientific depth/HSI/source definitions or full release acceptance is inferred. Full Next runtime navigation/hydration, human screen-reader speech, physical-device touch and reviewed regional terminology remain unproven by these fixtures.
 
+**Publication:** Reviewed implementation committed as `642eed2` and pushed to `origin/codex/tier/map-03-contracts`; [draft PR #10](https://github.com/Gianne818/Parola_PSC/pull/10) targets `main` with exactly these 19 files. This publication entry is a documentation-only follow-up. Final original-checkout inspection shows REG-01 independently committed at `0605b37` on `codex/tier/reg-01`, with its preference files present; that commit is not an ancestor of this task branch and none of its changes enter this PR. The isolated implementation checkout is clean after publication. No merge/deploy or next assignment is started.
+
 | From assignment | To member | Required handoff / acceptance | Status |
 | --- | --- | --- | --- |
 | MAP-03-TIER | Son | Published species/error/habitat/HSI/environment metadata is supplied and consumed, superseding the old pending-metadata request below. Separately make shared `Hotspot.depth` nullable/optional so the client can replace its private nonfinite sentinel with canonical absence. Do not treat missing depth as measured zero. | Contract supplied; shared-nullability request pending. No Son-owned file changed. |
