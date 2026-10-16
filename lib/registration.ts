@@ -3,6 +3,7 @@ import { getSupabaseUser, type AuthUser } from '@/lib/route-auth';
 import { getDbPool } from '@/lib/db';
 import { isValidPhilippineMobile } from '@/lib/philippine-mobile';
 import { boundedJson, RequestBodyError } from '@/lib/request-body';
+import { isSmsDemoMode } from '@/lib/sms-mode.mjs';
 
 export const MESSAGING_CONSENT_VERSION = 'messaging-v1';
 export const MESSAGING_CONSENT_TEXT = 'I agree to receive Parola fishing advisories and safety alerts by SMS at my verified phone number. I can withdraw this messaging consent in the portal. Sponsor messages are not included.';
@@ -47,6 +48,7 @@ export function consentInput(body: Record<string, unknown>): boolean {
 }
 
 export function phoneAuthClient() {
+  if (isSmsDemoMode()) throw new RegistrationError(503, 'Live phone authentication is paused for SMS demo mode.', 'sms_demo_mode');
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL || '';
   const key = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || '';
   if (process.env.PAROLA_PHONE_AUTH_ENABLED !== 'true' || !url.startsWith('https://') || !key) {

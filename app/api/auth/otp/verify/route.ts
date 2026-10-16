@@ -1,4 +1,5 @@
 import { RATE_LIMITS, checkRateLimit, rateLimitExceededResponse } from '@/lib/rate-limit';
+import { isSmsDemoMode } from '@/lib/sms-mode.mjs';
 import { phoneAuthClient, phoneE164, registrationBody, registrationJson, registrationResponse, RegistrationError } from '@/lib/registration';
 
 export async function POST(request: Request) {
@@ -8,6 +9,10 @@ export async function POST(request: Request) {
     const body = await registrationBody(request, ['phone_number', 'code']);
     const phone = phoneE164(body.phone_number);
     if (typeof body.code !== 'string' || !/^\d{6}$/.test(body.code)) throw new RegistrationError(400, 'Enter the six-digit verification code.');
+    if (isSmsDemoMode()) {
+      return registrationJson({ status: 'demo_code_checked', mode: 'MOCK_DRY_RUN', simulated: true,
+        contact_verified: false, session: null, creditsUsed: 0 });
+    }
     const { data, error } = await phoneAuthClient().auth.verifyOtp({ phone, token: body.code, type: 'sms' });
     if (error) {
       if (error.status === 429) return rateLimitExceededResponse(RATE_LIMITS.otpVerify, { ...limit, retryAfterSec: 60 }, 'otp-verify');

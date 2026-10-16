@@ -13,7 +13,7 @@ If the user has not explicitly identified themselves in the current chat, ask:
 | Member | Responsibility | Open only your task checklist |
 | --- | --- | --- |
 | Tier | UI screens/interactions, accessibility, translations and client integration | [Tier's tasks](docs/tasks/tier.md) |
-| Son | APIs, database, auth, SMS, permissions and shared integration contracts | [Son's tasks](docs/tasks/son.md) |
+| Son | APIs, database, auth, SMS, permissions and shared integration contracts | [Son's tasks](docs/tasks/son/son.md) |
 | Toby | Datasets, inference, models, clustering and scientific evaluation | [Toby's tasks](docs/tasks/toby.md) |
 
 ## 2. Select and respect the assignment

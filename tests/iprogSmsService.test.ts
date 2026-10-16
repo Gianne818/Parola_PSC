@@ -51,7 +51,7 @@ async function runTests() {
   assert(segLong.segmentCount === 2, `Long message (200 chars) consumes 2 segments`);
 
   // Test 4: Mock Mode Execution
-  console.log('\n4. Testing Mock Mode Execution (5 Free Credits Protection)...');
+  console.log('\n4. Testing Mock Mode Execution (No SMS Credits Used)...');
   const smsService = new IProgSmsService({ mockMode: true });
   const mockRes = await smsService.sendSms({
     recipient: '09171234567',
@@ -62,7 +62,8 @@ async function runTests() {
   assert(mockRes.success === true, 'Mock send returns success=true');
   assert(mockRes.mode === 'MOCK_DRY_RUN', 'Mock mode is MOCK_DRY_RUN');
   assert(mockRes.recipientFormatted === '639171234567', 'Recipient formatted correctly in mock response');
-  assert(mockRes.remainingQuotaEstimate === 5, 'Remaining quota estimate preserved at 5 credits');
+  assert(mockRes.creditsUsed === 0, 'Demo consumes zero SMS credits');
+  assert(mockRes.simulated === true && mockRes.delivered === false, 'Demo is explicitly simulated, not delivered');
 
   console.log(`\n========================================`);
   console.log(`Test Results: ${passed} Passed, ${failed} Failed`);

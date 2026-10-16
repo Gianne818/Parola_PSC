@@ -11,6 +11,8 @@ const phone = '+639171234567';
 function request(body: unknown) { return new Request('http://localhost/api/auth/otp', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) }); }
 beforeEach(() => {
   vi.resetAllMocks();
+  vi.stubEnv('PAROLA_SMS_MODE', 'live');
+  vi.stubEnv('IPROG_MOCK_MODE', 'false');
   vi.stubEnv('PAROLA_PHONE_AUTH_ENABLED', 'true');
   vi.stubEnv('NEXT_PUBLIC_SUPABASE_URL', 'https://example.supabase.co');
   vi.stubEnv('NEXT_PUBLIC_SUPABASE_ANON_KEY', 'public-anon-key');

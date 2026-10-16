@@ -1,5 +1,6 @@
 import { createInterface } from 'node:readline/promises';
 import { stdin, stdout } from 'node:process';
+import { isSmsDemoMode } from '../lib/sms-mode.mjs';
 
 if (process.argv.includes('--help')) {
   console.log('Run from the repository root: node scripts/test-supabase-otp.mjs');
@@ -14,6 +15,12 @@ for (const file of ['.env.local', '.env']) {
   try { process.loadEnvFile(file); } catch (error) {
     if (error.code !== 'ENOENT') throw new Error(`Unable to read ${file}`);
   }
+}
+
+if (isSmsDemoMode() || process.env.IPROG_MOCK_MODE !== 'false') {
+  console.log('SMS demo mode is enabled. No real OTP was requested and no credits were used.');
+  console.log('For a preview use /api/auth/otp/request. Live testing requires PAROLA_SMS_MODE=live and IPROG_MOCK_MODE=false.');
+  process.exit(0);
 }
 
 const terminal = createInterface({ input: stdin, output: stdout });
