@@ -3,6 +3,7 @@ import hashlib
 import os
 import secrets
 from datetime import date as date_type, datetime
+from calendar_dates import manila_today
 from typing import List, Optional
 from fastapi import FastAPI, Depends, HTTPException, Query, status, Request
 from fastapi.middleware.cors import CORSMiddleware
@@ -265,7 +266,7 @@ def get_nearest_advisories(
     lat: Optional[float] = Query(None, ge=-90, le=90, description="Latitude of user/vessel"),
     lon: Optional[float] = Query(None, ge=-180, le=180, description="Longitude of user/vessel"),
     user_id: Optional[uuid.UUID] = Query(None, description="Registered User UUID in Supabase"),
-    prediction_date: Optional[date_type] = Query(default_factory=date_type.today),
+    prediction_date: Optional[date_type] = Query(default_factory=manila_today),
     min_probability: float = Query(0.50, ge=0.0, le=1.0),
     limit: int = Query(5, ge=1, le=20),
     db: Session = Depends(get_db)
@@ -578,7 +579,7 @@ def get_species_predictions(
         if latest_row and latest_row[0]:
             target_date = latest_row[0]
         else:
-            target_date = date_type.today()
+            target_date = manila_today()
 
     sql_query = text("""
         SELECT 

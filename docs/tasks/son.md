@@ -1,5 +1,24 @@
 # Son's task plan
 
+**Current selection, October 17, 2026: Batch 1, independent MAP-01/OPS-01 slice.**
+Branch `codex/son/api-foundations`. Prediction ingestion now requires finite
+numeric latitude/longitude in range and explicit ISO calendar dates. API and
+CSV defaults share the Manila calendar day. CSV uses the standard-library reader
+(no pandas installation), validates all rows before opening a database session,
+and reports redacted failures with nonzero CLI exit and rollback/cleanup attempts.
+No successful local fallback or automatic retry is inferred after write failure.
+
+Tests cover in-process API validation/default dates and both habitats, CSV
+prevalidation, commit/execute failures, CLI exit status and valid zero coordinates.
+All 27 Python tests, Python compilation and whitespace checks passed.
+Spec and standards reviews found no blocker. No live DB/network/SMS call, dependency
+installation, schema change, commit or push was performed. MAP-01 and OPS-01 stay
+partial: ocean-mask enforcement, agreed source-cell/run identities, duplicate
+prevention and atomic run publication remain pending with their existing handoffs.
+The existing CSV pelagic/global-rank mapping and fixed cell envelope are retained;
+this slice does not validate their scientific suitability or alter Toby's models.
+
+
 **User-selected follow-up, October 16, 2026: registration demo/live mode.**
 Same screen and existing users table; any numeric demo code skips OTP, while
 live mode retains real verification. Scope includes the explicitly requested

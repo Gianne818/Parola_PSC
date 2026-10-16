@@ -3,6 +3,7 @@ import re
 from datetime import date, time
 from typing import List, Literal, Optional
 from pydantic import BaseModel, Field, field_validator
+from calendar_dates import parse_prediction_date
 
 class FishingHotspotItem(BaseModel):
     grid_id: int
@@ -104,12 +105,18 @@ class UserResponse(AdvisoryPreferences):
 class DailyGridPredictionItem(BaseModel):
     prediction_date: date
     model_type: Optional[str] = "pelagic"
-    lat: float
-    lon: float
+    lat: float = Field(..., ge=-90, le=90, strict=True, allow_inf_nan=False)
+    lon: float = Field(..., ge=-180, le=180, strict=True, allow_inf_nan=False)
     catch_probability: float
     dbscan_cluster_id: Optional[int] = -1
     sst: Optional[float] = None
     chl_a: Optional[float] = None
+
+
+    @field_validator('prediction_date', mode='before')
+    @classmethod
+    def validate_prediction_date(cls, value):
+        return parse_prediction_date(value)
 
 
 class BatchPredictionIngestRequest(BaseModel):
