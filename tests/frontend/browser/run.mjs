@@ -1,4 +1,4 @@
-// Run: node tests/frontend/browser/run.mjs [absolute Chrome/Edge executable]
+// Run: node tests/frontend/browser/run.mjs [--demo | --registration] [--zoom200] [--manual] [absolute Chromium executable]
 // Uses only installed Vite, React and a local Chromium binary. No app server.
 import assert from 'node:assert/strict';
 import { spawn } from 'node:child_process';
@@ -18,6 +18,14 @@ const blocked = new Set();
 const exceptions = [];
 let passedChecks = 0;
 const manual = process.argv.includes('--manual');
+const registrationMode = process.argv.includes('--registration');
+const demoMode = process.argv.includes('--demo');
+assert.ok(!(demoMode && registrationMode), 'Demo and real-registration verification are separate modes');
+const zoom200 = process.argv.includes('--zoom200');
+const servedAssets = new Set();
+let demoEntryAssets;
+let windowId;
+let zoomChrome = { x: 0, y: 0 };
 let browser;
 let profile;
 let sequence = 0;
@@ -53,6 +61,13 @@ async function key(key, modifiers = 0) {
 const byText = (tag, text) => `Array.from(document.querySelectorAll(${JSON.stringify(tag)})).find(e=>e.getClientRects().length && e.textContent.trim()===${JSON.stringify(text)})`;
 async function clickText(tag, text) { const expression = byText(tag, text); await until(`Boolean(${expression})`); await evaluate(`(${expression}).click()`); }
 async function viewport(width, height = 800) {
+  if (zoom200) {
+    await send('Emulation.clearDeviceMetricsOverride', {}, session);
+    // Browser chrome borders are measured separately from the zoomed page.
+    await send('Browser.setWindowBounds', { windowId, bounds: { width: Math.round(width * 2 + zoomChrome.x), height: Math.round(height * 2 + zoomChrome.y), windowState: 'normal' } });
+    if (await evaluate(`location.origin===${JSON.stringify(origin)}`)) await until(`innerWidth===${width}`);
+    return;
+  }
   await send('Emulation.setDeviceMetricsOverride', { width, height, deviceScaleFactor: 1, mobile: false }, session);
   await until(`innerWidth===${width}`);
 }
@@ -74,20 +89,52 @@ try {
     resolve: { alias: { '@': root } }, esbuild: { jsx: 'automatic' },
     plugins: [{ name: 'offline-boundaries', enforce: 'pre',
       resolveId(id) {
+        if (demoMode) {
+          // Only the framework pathname primitive is substituted. No OTP,
+          // Supabase, application provider, API or transport success mocks.
+          if (id === 'next/navigation') return '\0demo:navigation';
+          return;
+        }
+        if (registrationMode) {
+          if (/(^|\/)lib\/supabase$/.test(id)) return directory + '/registration-mocks.ts';
+          if (['next/navigation', 'next/link', 'next/dynamic', 'next/image'].includes(id)) return '\0registration:' + id;
+          if (/(^|\/)services\/(weatherService|supabaseHotspotService|supabaseWeatherService)$/.test(id)) return '\0registration:' + id.split('/').at(-1);
+          return;
+        }
         if (/(^|\/)context\/AppContext$/.test(id)) return stateModule;
         if (['next/navigation', 'next/link', 'next/dynamic'].includes(id)) return '\0offline:' + id;
         if (/(^|\/)services\/(geocodingService|dashboardService)$/.test(id)) return '\0offline:' + id.split('/').at(-1);
       },
       load(id) {
+        if (id === '\0demo:navigation') return `export const usePathname=()=>window.demoPath||'/register';export const useRouter=()=>{throw new Error('Demo must not mount live routing/auth')};`;
+        if (id === '\0registration:next/link') return `import React from 'react';export default function Link({href,children,...props}){return React.createElement('a',{...props,href,onClick:e=>{e.preventDefault();window.fixtureNavigation=href}},children)}`;
+        if (id === '\0registration:next/navigation') return `const router={push:href=>{window.fixtureNavigation=href},replace:href=>{window.fixtureNavigation=href}};export const useRouter=()=>router;export const usePathname=()=>'/dashboard';`;
+        if (id === '\0registration:next/dynamic') return `export default function dynamic(){return ()=>null}`;
+        if (id === '\0registration:next/image') return `export default function Image(){return null}`;
+        if (id === '\0registration:weatherService') return `export const UNAVAILABLE_WEATHER={temp:null,windSpeed:null,windDirection:null,waveHeight:null,tide:null,stormSignal:null};export async function fetchLiveWeather(){return UNAVAILABLE_WEATHER}`;
+        if (id === '\0registration:supabaseHotspotService') return `export async function fetchHotspots(){return []}`;
+        if (id === '\0registration:supabaseWeatherService') return `export async function fetchWeatherSafetyOverrides(){return []}`;
         if (id === '\0offline:next/link') return `import React from 'react'; import {useApp} from ${JSON.stringify(stateModule)}; export default function Link({href,children,onClick,...props}){const {route}=useApp();return React.createElement('a',{...props,href,onClick:e=>{onClick?.(e);if(!e.defaultPrevented){e.preventDefault();route(href)}}},children)}`;
         if (id === '\0offline:next/navigation') return `import {useApp} from ${JSON.stringify(stateModule)}; export const useRouter=()=>{const {route}=useApp();return {push:route,replace:route}}; export const usePathname=()=>location.pathname;export const useSearchParams=()=>new URLSearchParams(location.search);`;
         if (id === '\0offline:next/dynamic') return `import React from 'react'; export default function dynamic(loader, options){const Component=React.lazy(async()=>{const value=await loader();return {default:value.default||value}});return props=>React.createElement(React.Suspense,{fallback:options.loading?React.createElement(options.loading):null},React.createElement(Component,props))}`;
         if (id === '\0offline:geocodingService') return `export async function searchLocations(){return []} export async function reverseGeocode(){throw new Error('Offline fixture: no geocoder')}`;
         if (id === '\0offline:dashboardService') return `export async function loadDashboardWeather(){throw new Error('Offline fixture: no weather')} export async function loadFishingAreaResult(){throw new Error('Offline fixture: no predictions')} export async function requestWeatherSms(){throw new Error('Offline fixture: SMS disabled')}`;
       } }],
-    build: { write: false, minify: false, cssCodeSplit: false, sourcemap: false, rollupOptions: { input: path.join(directory, 'fixture.tsx') } } });
+    build: { write: false, minify: false, cssCodeSplit: false, sourcemap: false, rollupOptions: { input: path.join(directory, demoMode ? 'demo-fixture.tsx' : registrationMode ? 'registration-fixture.tsx' : 'fixture.tsx') } } });
   for (const item of output.output) assets.set('/' + item.fileName, Buffer.from(item.type === 'chunk' ? item.code : item.source));
   const entry = output.output.find(item => item.type === 'chunk' && item.isEntry).fileName;
+  if (demoMode) {
+    const chunks = new Map(output.output.filter(item=>item.type==='chunk').map(item=>[item.fileName,item]));
+    const eager = new Set();
+    const visit = name => { if(eager.has(name)) return; eager.add(name); chunks.get(name)?.imports.forEach(visit); };
+    visit(entry);
+    const modules = [...eager].flatMap(name=>Object.keys(chunks.get(name)?.modules || {}));
+    check('demo eager module graph excludes live auth, provider, SDK and services', !modules.some(id=>/[/\\](?:services|context|hooks)[/\\]|[/\\]lib[/\\]supabase|[/\\]@supabase[/\\]|[/\\]LiveApplication\./.test(id)));
+    check('demo graph is independent of backend OTP previews and their code', !modules.some(id=>/[/\\]app[/\\]api[/\\]|[/\\]lib[/\\](?:sms-mode|registration)\./.test(id)));
+    check('demo graph includes actual login/register routes and their application boundary', ['app/login/page.tsx','app/register/page.tsx','components/application/ApplicationBoundary.tsx'].every(part=>modules.some(id=>id.replaceAll('\\','/').endsWith(part))));
+    // Even the separately compiled live chunk cannot be loaded by this demo.
+    demoEntryAssets = new Set(['/', ...[...eager].map(name=>'/'+name), ...output.output.filter(item=>item.fileName.endsWith('.css')).map(item=>'/'+item.fileName)]);
+  }
   const css = output.output.filter(item => item.fileName.endsWith('.css')).map(item => `<link rel="stylesheet" href="/${item.fileName}">`).join('');
   assets.set('/', Buffer.from(`<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Offline frontend verification</title>${css}</head><body><div id="root"></div><script type="module" src="/${entry}"></script></body></html>`));
   console.log('Fixture compiled in memory; starting isolated browser with deny proxy.');
@@ -111,16 +158,38 @@ try {
   browser.on('exit', (code, signal) => { for (const item of pending.values()) { clearTimeout(item.timeout); item.reject(new Error(`Browser exited (${code}, ${signal})`)); } pending.clear(); });
   on('Fetch.requestPaused', async ({ params, sessionId }) => {
     const url = new URL(params.request.url);
-    const asset = url.origin === origin && assets.get(url.pathname);
+    if (zoom200 && ['chrome:', 'chrome-untrusted:'].includes(url.protocol)) {
+      await send('Fetch.continueRequest', { requestId: params.requestId }, sessionId); return;
+    }
+    const asset = url.origin === origin && (!demoMode || demoEntryAssets.has(url.pathname)) && assets.get(url.pathname);
     if (!asset) { blocked.add(url.origin); await send('Fetch.failRequest', { requestId: params.requestId, errorReason: 'BlockedByClient' }, sessionId); return; }
+    servedAssets.add(url.pathname);
     const type = url.pathname.endsWith('.css') ? 'text/css' : url.pathname.endsWith('.js') ? 'text/javascript' : url.pathname === '/' ? 'text/html' : 'application/octet-stream';
     await send('Fetch.fulfillRequest', { requestId: params.requestId, responseCode: 200, responseHeaders: [{ name: 'Content-Type', value: type },
       { name: 'Content-Security-Policy', value: "default-src 'none'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src data: blob:; connect-src 'none'; font-src 'none'; object-src 'none'; frame-src 'none'; form-action 'none'; base-uri 'none'" }], body: asset.toString('base64') }, sessionId);
   });
   on('Runtime.exceptionThrown', ({ params }) => { const error = params.exceptionDetails.exception?.description || params.exceptionDetails.text; exceptions.push(error); console.log(error); });
   // Page is still about:blank. Install deny-by-default interception before navigation.
+  if (zoom200) {
+    const settings = await send('Target.createTarget', { url: 'about:blank' });
+    const { sessionId: settingsSession } = await send('Target.attachToTarget', { targetId: settings.targetId, flatten: true });
+    await send('Fetch.enable', { patterns: [{ urlPattern: '*' }] }, settingsSession);
+    await send('Page.navigate', { url: 'chrome://settings/' }, settingsSession);
+    const deadline = Date.now() + 10000;
+    let ready = false;
+    do {
+      const result = await send('Runtime.evaluate', { expression: 'typeof chrome.settingsPrivate?.setDefaultZoom === "function"', returnByValue: true }, settingsSession);
+      ready = result.result.value;
+      if (ready) break;
+      await new Promise(resolve => setTimeout(resolve, 50));
+    } while (Date.now() < deadline);
+    assert.ok(ready, 'isolated Chromium settings exposes default browser zoom');
+    await send('Runtime.evaluate', { expression: 'new Promise(resolve=>chrome.settingsPrivate.setDefaultZoom(2,resolve))', awaitPromise: true }, settingsSession);
+    await send('Target.closeTarget', { targetId: settings.targetId });
+  }
   const target = await send('Target.createTarget', { url: 'about:blank' });
   ({ sessionId: session } = await send('Target.attachToTarget', { targetId: target.targetId, flatten: true }));
+  ({ windowId } = await send('Browser.getWindowForTarget', { targetId: target.targetId }));
   await send('Fetch.enable', { patterns: [{ urlPattern: '*' }] }, session);
   await send('Network.enable', {}, session);
   await send('Network.setBypassServiceWorker', { bypass: true }, session);
@@ -136,11 +205,26 @@ try {
     const click=HTMLAnchorElement.prototype.click;
     HTMLAnchorElement.prototype.click=function(){if(this.download){const blob=blobs.get(this.href);if(blob)blob.text().then(text=>window.samples.push({name:this.download,type:blob.type,text}));return;}return click.call(this)};
     navigator.sendBeacon=()=>false;window.open=()=>null;
+    if (${demoMode}) {
+      window.demoRequests=[];
+      const denied=(kind,url)=>{window.demoRequests.push(kind+':'+url);throw new Error('Disconnected demo: '+kind+' disabled')};
+      window.fetch=async url=>denied('fetch',url);
+      XMLHttpRequest.prototype.open=function(method,url){denied('xhr',url)};
+      window.WebSocket=class{constructor(url){denied('websocket',url)}};
+      window.EventSource=class{constructor(url){denied('eventsource',url)}};
+      navigator.sendBeacon=url=>{denied('beacon',url)};
+    }
   ` }, session);
   await viewport(1280);
   await send('Page.navigate', { url: origin + '/' }, session);
   await until(`Boolean(window.fixture && document.querySelector('main'))`);
-  check('external fetch is rejected under fixture CSP', await evaluate(`fetch('https://example.invalid/offline-canary').then(()=>false,()=>true)`));
+  if (zoom200) {
+    const metrics = await evaluate(`({innerWidth,outerWidth,dpr:devicePixelRatio,scale:visualViewport.scale,root:getComputedStyle(document.documentElement).fontSize})`);
+    console.log('Browser zoom evidence:', metrics);
+    check('actual 200% browser zoom doubles DPR and halves layout width without pinch/CSS scaling', metrics.dpr === 2 && Math.abs(metrics.outerWidth / metrics.innerWidth - 2) < 0.03 && metrics.scale === 1 && metrics.root === '16px');
+    zoomChrome = await evaluate(`({x:outerWidth-innerWidth*2,y:outerHeight-innerHeight*2})`);
+  }
+  check('external fetch is rejected by fixture network guards', await evaluate(`fetch('https://example.invalid/offline-canary').then(()=>false,()=>true)`));
   check('same-origin API is also rejected', await evaluate(`fetch('/api/offline-canary').then(()=>false,()=>true)`));
   if (manual) {
     await send('Emulation.clearDeviceMetricsOverride', {}, session);
@@ -148,6 +232,18 @@ try {
     const terminal = createInterface({ input: process.stdin, output: process.stdout });
     try { await terminal.question('Network-blocked manual fixture ready. Use its fixture controls. Press Enter here when finished: '); }
     finally { terminal.close(); }
+  } else if (demoMode) {
+    const { verifyDemoUI } = await import('./demo-checks.mjs');
+    await verifyDemoUI({ evaluate, until, check, clickText, viewport, layout, key, send, session });
+    check('demo never loads the separate live application chunk', [...servedAssets].every(name=>demoEntryAssets.has(name)) && ![...servedAssets].some(name=>name.includes('LiveApplication')));
+    check('demo has no unexpected rejected resource requests', blocked.size===0 || (console.log([...blocked]),false));
+    check('demo has no uncaught browser/driver exceptions', exceptions.length===0 || (console.log(exceptions),false));
+    console.log(`${passedChecks} named disconnected demo checks passed. No authentication or backend integration claimed.`);
+  } else if (registrationMode) {
+    const { verifyRegistrationUI } = await import('./registration-checks.mjs');
+    await verifyRegistrationUI({ evaluate, until, check, clickText, viewport, layout, key, send, session });
+    check('no uncaught registration browser/driver exceptions', exceptions.length === 0 || (console.log(exceptions), false));
+    console.log(`${passedChecks} named registration browser checks passed.`);
   } else {
   await layout('settings desktop');
   await key('Tab');
@@ -214,6 +310,15 @@ try {
   await until(`Boolean(document.querySelector('[role="status"]')?.textContent.includes('Map tiles') || document.body.textContent.includes('Map tiles could not load'))`);
   check('blocked map tiles expose list fallback and retry', await evaluate(`document.body.textContent.includes('Map tiles could not load') && Boolean(${byText('button', 'Try again')})`));
   await layout('dashboard map 390px');
+  await evaluate(`document.querySelector('details summary').focus()`); await key('Enter');
+  await until(`document.querySelector('details').open`); await key('Tab');
+  check('map habitat filter is keyboard reachable and labelled', await evaluate(`document.activeElement.tagName==='SELECT' && document.activeElement.closest('label').textContent.includes('Habitat')`));
+  await key('ArrowDown');
+  check('pelagic filter remains keyboard selectable', await evaluate(`document.activeElement.value==='pelagic'`));
+  await key('ArrowDown');
+  check('demersal filter remains keyboard selectable', await evaluate(`document.activeElement.value==='demersal'`));
+  await key('Home'); await key('Escape');
+  check('filter Escape restores summary focus and preserves both habitats', await evaluate(`document.activeElement.tagName==='SUMMARY' && !document.querySelector('details').open && document.querySelector('details select').value==='both'`));
   await clickText('button', 'Areas');
   await until(`document.body.textContent.includes('No fishing areas available here yet')`);
   check('empty predictions remain empty with no fabricated targets', await evaluate(`document.querySelector('#fishing-areas ol')?.children.length===0`));
@@ -283,8 +388,8 @@ try {
   await viewport(640, 450);
   await evaluate(`fixture.route('/settings')`);
   await until(`Boolean(document.querySelector('#profile-heading'))`);
-  await layout('settings 640x450 equivalent to 1280x900 at 200% zoom');
-  console.log('True browser zoom, human visual review and screen-reader speech remain manual checks.');
+  await layout(zoom200 ? 'settings actual 200% browser zoom / 640x450 CSS viewport' : 'settings 640x450 reflow');
+  console.log('Human visual review, screen-reader speech and physical touch-device checks remain pending.');
   check('no uncaught browser/driver exceptions', exceptions.length === 0 || (console.log(exceptions), false));
   console.log(`${passedChecks} named browser checks passed, plus 39 forward/reverse Tab containment assertions.`);
   }

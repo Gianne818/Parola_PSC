@@ -19,25 +19,26 @@ export const STEPS: StepGuide[] = [
     id: "create-account",
     stepNumber: 1,
     category: "Account & Onboarding",
-    title: "How to create your first account",
+    title: "Try the registration demonstration",
     duration: "1 min",
     shortDesc:
-      "Use your mobile number, a password, and your preferred language.",
+      "Use synthetic accounts and a displayed demo code. No real verification or account is created.",
     actionUrl: "/register",
-    actionLabel: "Open Registration",
+    actionLabel: "Open Registration Demo",
     instructions: [
-      "Open Registration and enter your Philippine mobile number.",
-      "Create a password with at least six characters.",
-      "Choose English, Tagalog, Cebuano, or Hiligaynon as your system language.",
-      "Select Continue, then use the displayed demo code and Create account to continue. No verification SMS is sent; this does not verify phone ownership or enroll you in automatic advisories.",
+      "Open Registration Demo or the sign-in demo. Select a synthetic account; do not enter real personal details.",
+      "Select Show demo code. Enter the displayed 012345 and select Simulate verification. No phone is verified, SMS sent or authentication session established.",
+      "This demonstration uses English copy. Regional translations and spoken accessibility checks remain pending.",
+      "Choose a sample port and explicitly agree or decline the example messaging consent. Either choice allows a simulated save; no real permission or enrollment changes.",
+      "Select Simulate saving registration. A simulated save keeps the sample in memory only. Try Simulate a save failure and demo consent withdrawal. Reload or reset discards all choices. No offline account is created and protected backend data is unavailable.",
     ],
     operationalTip:
-      "Web registration needs internet access. Reading a delivered SMS needs an SMS-capable phone and cellular signal, without mobile data. A trusted person can help you use the web form.",
+      "Demo-only registration is the current budget scope. Real OTP/session integration is retained separately for later review. Assisted access and REG-01 scheduling remain unavailable in the demo. The disconnected local demo runner does not contact application services.",
     image: "/images/guide-registration-current.png",
     imageAlt:
-      "Current Parola registration form with mobile number, password, and language selection",
+      "Historical Parola registration form with mobile number, password, and language selection",
     imageCaption:
-      "Actual registration screen: mobile number, password, and system language. Account setup comes before home-port selection.",
+      "Historical password-form reference. It does not show the current synthetic demo or prove real verification, authentication or saves.",
   },
   {
     id: "complete-onboarding",

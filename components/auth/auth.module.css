@@ -58,6 +58,12 @@
 li[aria-current="step"] .stepNumber { background: var(--auth-green); border-color: var(--auth-green); color: white; }
 .complete .stepNumber { color: var(--auth-green); background: #e5f0e9; border-color: #b4d4c2; }
 .form { display: flex; flex-direction: column; gap: 20px; }
+.consent { min-width: 0; border: 1px solid var(--auth-line, #d5dfd8); border-radius: 9px; padding: 1rem; font-size: 0.875rem; line-height: 1.65; }
+.consent legend { font-weight: 600; padding-inline: 0.25rem; }
+.consent label { display: flex; align-items: flex-start; gap: 0.625rem; min-height: 44px; padding-block: 0.5rem; margin-block: 0.5rem; cursor: pointer; }
+.consent input { flex-shrink: 0; margin-top: 0.35rem; }
+.consentSettings { --auth-muted: #56665e; --auth-green: #087f5b; --auth-green-hover: #066b4c; --auth-error: #a12b26; --auth-line: #d5dfd8; display: grid; gap: 0.75rem; }
+.consentSettings :is(button, input):focus-visible { outline: 3px solid #087f5b; outline-offset: 4px; }
 .verification { opacity: 1; transform: translateY(0); transition: opacity 160ms ease, transform 160ms ease; }
 @starting-style {
   .verification { opacity: 0; transform: translateY(4px); }

@@ -9,9 +9,8 @@ import { fetchLiveWeather, UNAVAILABLE_WEATHER, type ClientWeatherTelemetry } fr
 import { isClientCoordinate, isClientTargetCoordinate } from '@/lib/frontend/coordinates';
 import { fetchHotspots } from "../services/supabaseHotspotService";
 import { fetchWeatherSafetyOverrides } from "../services/supabaseWeatherService";
-import { createUserProfile } from "../services/profileService";
-import { authHeaders } from "../utils/auth-fetch";
-import { fetchWithTimeout } from "../utils/fetchWithTimeout";
+import { useRegistration } from "../hooks/use-registration";
+import type { RegistrationInput } from "../services/registrationService";
 import { PHILIPPINE_REGIONS, detectPhilippineRegion, isCoordinateInRegion } from "../data/philippineRegions";
 
 export const MUNICIPAL_PORTS = [
@@ -90,9 +89,9 @@ interface AppContextType {
   toast: { message: string; type: "success" | "error" | "info" } | null;
   showToast: (message: string, type: "success" | "error" | "info") => void;
   hideToast: () => void;
-  login: (phone: string, pin: string) => Promise<{ ok: boolean; error?: string }>;
-  register: (profile: Partial<UserProfile>, password?: string) => Promise<{ ok: boolean; error?: string }>;
-  logout: () => void;
+  registration: ReturnType<typeof useRegistration>;
+  register: (input: RegistrationInput) => Promise<void>;
+  logout: () => Promise<boolean>;
   updateProfile: (profile: Partial<UserProfile>) => void | Promise<void>;
   changeLanguage: (lang: 'en' | 'tl' | 'ceb' | 'hil') => void;
   changeFontScale: (scale: number) => void;
@@ -110,62 +109,6 @@ interface AppContextType {
 
 const AppContext = createContext<AppContextType | undefined>(undefined);
 
-export interface RegisteredUserAccount {
-  phone: string;
-  password?: string;
-  vesselName: string;
-  licenseNo?: string;
-  port: string;
-  lat: number;
-  lng: number;
-}
-
-const DEFAULT_REGISTERED_USERS: RegisteredUserAccount[] = [
-  {
-    phone: "+63 912 345 6789",
-    password: "password123",
-    vesselName: "F/V Parola I",
-    licenseNo: "FL-2026-8893",
-    port: "Mercedes Fish Port",
-    lat: 14.0122,
-    lng: 123.0114
-  }
-];
-
-export const getLocalRegisteredUsers = (): RegisteredUserAccount[] => {
-  return storageService.getItem<RegisteredUserAccount[]>("parola-registered-users", DEFAULT_REGISTERED_USERS);
-};
-
-export const saveLocalRegisteredUser = (user: RegisteredUserAccount) => {
-  const users = getLocalRegisteredUsers();
-  const cleanTarget = user.phone.trim().replace(/\s+/g, '');
-  const existingIdx = users.findIndex(u => u.phone.trim().replace(/\s+/g, '') === cleanTarget);
-  let updatedUsers: RegisteredUserAccount[];
-  if (existingIdx >= 0) {
-    updatedUsers = [...users];
-    updatedUsers[existingIdx] = user;
-  } else {
-    updatedUsers = [user, ...users];
-  }
-  storageService.setItem("parola-registered-users", updatedUsers);
-};
-
-const DEFAULT_PROFILE: UserProfile = {
-  vesselName: "F/V Parola I",
-  licenseNo: "FL-2026-8893",
-  phone: "0912 345 6789",
-  boatType: "motorized",
-  speciesPreference: "pelagic",
-  port: "Mercedes Fish Port",
-  lat: 14.0122,
-  lng: 123.0114,
-  regionId: "reg-5",
-  regionName: "Region V (Bicol Region)",
-  province: "Camarines Norte",
-  fmaZone: "FMA 7 & 8 (San Miguel Bay & Lagonoy Gulf)",
-  regionalBounds: [[11.70, 122.30], [14.65, 124.60]],
-};
-
 const DEFAULT_WEATHER: ClientWeatherTelemetry = UNAVAILABLE_WEATHER;
 
 // TTL cache + in-flight dedupe for telemetry/hotspot loads (fixes sequential waterfall)
@@ -182,12 +125,14 @@ const telemetryCacheKey = (lat: number, lng: number) =>
   `${lat.toFixed(3)},${lng.toFixed(3)}`;
 
 export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const [isInitialized, setIsInitialized] = useState<boolean>(false);
-  const [isAuthenticated, setIsAuthenticated] = useState<boolean>(false);
+  const registration = useRegistration();
+  const [preferencesLoaded, setPreferencesLoaded] = useState(false);
+  const isInitialized = preferencesLoaded && registration.initialized;
+  const isAuthenticated = !!registration.owner && registration.profileStatus === 'saved';
+  const userProfile = registration.profile;
   const [language, setLanguage] = useState<'en' | 'tl' | 'ceb' | 'hil'>('en');
   const [fontScale, setFontScale] = useState<number>(0);
   const [theme, setTheme] = useState<'light' | 'dark'>('light');
-  const [userProfile, setUserProfile] = useState<UserProfile>(DEFAULT_PROFILE);
   const [notifications, setNotifications] = useState<AlertNotification[]>(INITIAL_NOTIFICATIONS);
   const [fuelPools, setFuelPools] = useState<FuelPool[]>(DEFAULT_POOLS);
   const [hotspots, setHotspots] = useState<Hotspot[]>([]);
@@ -199,26 +144,20 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
   // Load from localStorage on mount
   useEffect(() => {
-    setTimeout(() => {
-      setIsAuthenticated(storageService.getItem("parola-auth", false));
+    const timer = setTimeout(() => {
+      // Legacy local credentials/profile flags never establish an owner session.
+      storageService.removeItem("parola-auth");
+      storageService.removeItem("parola-profile");
+      storageService.removeItem("parola-registered-users");
       setLanguage(storageService.getItem("parola-language", "en"));
       setFontScale(storageService.getItem("parola-font-scale", 0));
       setTheme("light");
-      const storedProfile = storageService.getItem("parola-profile", DEFAULT_PROFILE);
-      if (storedProfile && (!storedProfile.regionId || !storedProfile.regionalBounds)) {
-        const detected = detectPhilippineRegion(storedProfile.lat || 14.0122, storedProfile.lng || 123.0114, storedProfile.port);
-        storedProfile.regionId = detected.id;
-        storedProfile.regionName = detected.name;
-        storedProfile.province = detected.provinces[0] || storedProfile.port;
-        storedProfile.fmaZone = detected.fmaZone;
-        storedProfile.regionalBounds = detected.bounds;
-      }
-      setUserProfile(storedProfile);
       setNotifications(storageService.getItem("parola-notifications-clean", INITIAL_NOTIFICATIONS));
       setFuelPools(storageService.getItem("parola-fuelpools", DEFAULT_POOLS));
       setManualOverrideHold(storageService.getItem("parola-manual-override-hold", false));
-      setIsInitialized(true);
+      setPreferencesLoaded(true);
     }, 0);
+    return () => clearTimeout(timer);
   }, []);
 
   useEffect(() => {
@@ -384,208 +323,15 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     }
   }, []);
 
-  const login = async (phone: string, pin: string): Promise<{ ok: boolean; error?: string }> => {
-    if (!phone || !pin) {
-      const error = "Please enter both phone number and password.";
-      showToast(error, "error");
-      return { ok: false, error };
-    }
-
-    const cleanedPhone = phone.trim();
-    const compactPhone = cleanedPhone.replace(/\s+/g, '');
-
-    let res: Response | null = null;
-    let errData: any = {};
-
+  const register = registration.register;
+  const logout = registration.logout;
+  const updateProfile = async (patch: Partial<UserProfile>) => {
     try {
-      // 8s AbortController timeout + 1 retry; AbortError falls through to the
-      // local offline credential check below, preserving offline login.
-      res = await fetchWithTimeout('/api/users/login', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          phone_number: cleanedPhone,
-          password: pin,
-        }),
-        timeoutMs: 8000,
-        retries: 1,
-      });
-
-      if (res.ok) {
-        const userData = await res.json();
-        const profile: UserProfile = {
-          ...userProfile,
-          phone: userData.phone_number,
-          vesselName: userData.full_name || userProfile.vesselName,
-          port: userData.home_port_name || userProfile.port,
-          lat: userData.latitude || userProfile.lat,
-          lng: userData.longitude || userProfile.lng,
-        };
-        setIsAuthenticated(true);
-        storageService.setItem("parola-auth", true);
-        setUserProfile(profile);
-        storageService.setItem("parola-profile", profile);
-        showToast(`Welcome back, ${profile.vesselName || 'Captain'}!`, "success");
-        return { ok: true };
-      } else {
-        errData = await res.json().catch(() => ({}));
-      }
-    } catch (err) {
-      console.warn("Backend login fetch error:", err);
-    }
-
-    // Explicit API response errors from running backend (e.g. 404 account not found or 401 wrong password)
-    if (res && res.status !== 503 && !errData.offline) {
-      const errorMessage = errData.error || (res.status === 401 ? "Incorrect password. Please try again." : "Account not found for this phone number. Please register first.");
-      showToast(errorMessage, "error");
-      return { ok: false, error: errorMessage };
-    }
-
-    // Backend is offline (503 / fetch error): perform local offline credential verification against registered accounts
-    const localUsers = getLocalRegisteredUsers();
-    const matchedUser = localUsers.find(
-      u => u.phone.trim().replace(/\s+/g, '') === compactPhone
-    );
-
-    if (!matchedUser) {
-      const errorMessage = "Account not found for this phone number. Please register first.";
-      showToast(errorMessage, "error");
-      return { ok: false, error: errorMessage };
-    }
-
-    if (matchedUser.password && matchedUser.password !== pin) {
-      const errorMessage = "Incorrect password. Please try again.";
-      showToast(errorMessage, "error");
-      return { ok: false, error: errorMessage };
-    }
-
-    // Local offline sign in success
-    const profile: UserProfile = {
-      ...userProfile,
-      phone: matchedUser.phone,
-      vesselName: matchedUser.vesselName,
-      licenseNo: matchedUser.licenseNo || userProfile.licenseNo,
-      port: matchedUser.port || userProfile.port,
-      lat: matchedUser.lat || userProfile.lat,
-      lng: matchedUser.lng || userProfile.lng,
-    };
-    setIsAuthenticated(true);
-    storageService.setItem("parola-auth", true);
-    setUserProfile(profile);
-    storageService.setItem("parola-profile", profile);
-    showToast(`Welcome back, ${profile.vesselName || 'Captain'}!`, "success");
-    return { ok: true };
-  };
-
-  const updateUserWithBackend = async (prof: UserProfile) => {
-    try {
-      if (!prof.phone) return;
-      await fetchWithTimeout('/api/users/profile', {
-        method: 'PUT',
-        headers: await authHeaders({ 'Content-Type': 'application/json' }),
-        body: JSON.stringify({
-          phone_number: prof.phone,
-          full_name: prof.vesselName || 'Captain',
-          home_port_name: prof.port || 'Mercedes Fish Port',
-          latitude: prof.lat || 14.0122,
-          longitude: prof.lng || 123.0114,
-          preferred_advisory_time: '05:00:00',
-        }),
-        timeoutMs: 8000,
-        retries: 1,
-      });
-    } catch (err) {
-      console.warn('Profile update sync deferred:', err);
-    }
-  };
-
-  const register = async (profile: Partial<UserProfile>, password?: string): Promise<{ ok: boolean; error?: string }> => {
-    const updated = { ...DEFAULT_PROFILE, ...profile };
-    if (!updated.phone) {
-      const errorMsg = "Phone number is required for registration.";
-      showToast(errorMsg, "error");
-      return { ok: false, error: errorMsg };
-    }
-
-    const cleanedPhone = updated.phone.trim();
-    const compactPhone = cleanedPhone.replace(/\s+/g, '');
-    const userFullName = (updated.vesselName && updated.vesselName !== "F/V Parola I") ? updated.vesselName : cleanedPhone;
-
-    try {
-      // 8s timeout + 1 retry; network/timeout errors fall through to local
-      // offline registration below, preserving offline sign-up.
-      const res = await fetchWithTimeout('/api/users/register', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          phone_number: cleanedPhone,
-          full_name: userFullName,
-          home_port_name: updated.port || 'Mercedes Fish Port',
-          latitude: updated.lat || 14.0122,
-          longitude: updated.lng || 123.0114,
-          preferred_advisory_time: '05:00:00',
-          password: password || undefined,
-        }),
-        timeoutMs: 8000,
-        retries: 1,
-      });
-
-      if (!res.ok) {
-        const errData = await res.json().catch(() => ({}));
-
-        // Explicit 400 or 409: duplicate phone number or invalid client data
-        if (res.status === 400 || res.status === 409) {
-          const errMsg = errData.error || "An account with this phone number already exists. Please sign in instead.";
-          showToast(errMsg, "error");
-          return { ok: false, error: errMsg };
-        }
-
-        // For upstream server/database connectivity issues, log and allow local offline registration
-        console.warn('Backend server registration fallback to local store:', errData);
-      }
-    } catch (err) {
-      console.warn('Registration network error, falling back to local registration:', err);
-    }
-
-    const finalProfile: UserProfile = {
-      ...updated,
-      phone: cleanedPhone,
-      vesselName: userFullName,
-    };
-
-    // Save to local registered accounts store
-    saveLocalRegisteredUser({
-      phone: cleanedPhone,
-      password: password || "password123",
-      vesselName: userFullName,
-      licenseNo: updated.licenseNo,
-      port: updated.port || 'Mercedes Fish Port',
-      lat: updated.lat || 14.0122,
-      lng: updated.lng || 123.0114,
-    });
-
-    setUserProfile(finalProfile);
-    storageService.setItem("parola-profile", finalProfile);
-    setIsAuthenticated(true);
-    storageService.setItem("parola-auth", true);
-    return { ok: true };
-  };
-
-  const logout = () => {
-    setIsAuthenticated(false);
-    storageService.setItem("parola-auth", false);
-    showToast("Logged out.", "info");
-  };
-
-  const updateProfile = async (profile: Partial<UserProfile>) => {
-    try {
-      const updated = { ...userProfile, ...profile };
-      setUserProfile(updated);
-      storageService.setItem("parola-profile", updated);
-      showToast("Vessel profile updated.", "success");
-      await updateUserWithBackend(updated);
-    } catch (err) {
-      console.warn("Failed to update profile backend sync:", err);
+      await registration.updateProfile(patch);
+      showToast("Home port saved by the server.", "success");
+    } catch (error) {
+      showToast(error instanceof Error ? error.message : "Profile save was not confirmed.", "error");
+      throw error;
     }
   };
 
@@ -791,7 +537,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         toast,
         showToast,
         hideToast,
-        login,
+        registration,
         register,
         logout,
         updateProfile,
