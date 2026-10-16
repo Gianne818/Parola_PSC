@@ -5,7 +5,7 @@ import secrets
 from datetime import date as date_type, datetime
 from calendar_dates import manila_today
 from typing import List, Optional
-from fastapi import FastAPI, Depends, HTTPException, Query, status, Request
+from fastapi import FastAPI, Depends, HTTPException, Query, status, Request, Response
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 from fastapi.security import APIKeyHeader
@@ -17,6 +17,7 @@ import models
 import schemas
 import hsi_calculator
 from species_catalog import resolve_species
+from prediction_ingestion import IngestionError, ingest_predictions, get_ingestion_run
 
 DEFAULT_SPECIES_SEED = [
     {
@@ -487,27 +488,22 @@ def get_user_by_phone(phone_number: str = Query(...), db: Session = Depends(get_
 
 
 @app.post("/api/predictions/ingest", status_code=status.HTTP_201_CREATED, tags=["Advisories"], dependencies=[Depends(require_api_key)])
-def ingest_daily_predictions(payload: schemas.BatchPredictionIngestRequest, db: Session = Depends(get_db)):
-    inserted_count = 0
-    for item in payload.predictions:
-        centroid_geom = func.ST_SetSRID(func.ST_MakePoint(item.lon, item.lat), 4326)
-        d = 0.005
-        grid_cell_geom = func.ST_MakeEnvelope(item.lon - d, item.lat - d, item.lon + d, item.lat + d, 4326)
+def ingest_daily_predictions(payload: schemas.BatchPredictionIngestRequest, response: Response, db: Session = Depends(get_db)):
+    try:
+        result = ingest_predictions(db, payload.predictions, payload.run_id)
+    except IngestionError as error:
+        raise HTTPException(status_code=error.status_code, detail=error.as_detail()) from None
+    response.status_code = 200 if result['replayed'] else 201
+    return result
 
-        pred = models.DailyGridPrediction(
-            prediction_date=item.prediction_date,
-            model_type=item.model_type,
-            grid_cell_geom=grid_cell_geom,
-            centroid_geom=centroid_geom,
-            catch_probability=item.catch_probability,
-            dbscan_cluster_id=item.dbscan_cluster_id,
-            sst=item.sst,
-            chl_a=item.chl_a
-        )
-        db.add(pred)
-        inserted_count += 1
-    db.commit()
-    return {"status": "success", "inserted_records": inserted_count}
+
+@app.get('/api/predictions/runs/{run_id}', tags=['Advisories'], dependencies=[Depends(require_api_key)])
+def prediction_ingestion_status(run_id: uuid.UUID, response: Response, db: Session = Depends(get_db)):
+    response.headers['Cache-Control'] = 'no-store'
+    try:
+        return get_ingestion_run(db, run_id)
+    except IngestionError as error:
+        raise HTTPException(status_code=error.status_code, detail=error.as_detail()) from None
 
 
 @app.get(

@@ -1,5 +1,22 @@
 # Son's six work packages
 
+**Current selection, October 17, 2026: Batch 2, OPS-01 ingestion reliability
+(SON-04 portion).** Branch `codex/son/ingestion-reliability`. API and CSV now share
+an upload ledger/identity, canonical retry handling, locked complete-batch writes,
+count verification, publication and safe failure/status responses. Both habitats
+are retained. The additive migration 05 is prepared, not applied; no legacy rows
+or advisory links are deleted or relabeled. Contract, integration limits and exact
+Toby/Tier handoffs: [prediction-ingestion-contract.md](prediction-ingestion-contract.md).
+Full OPS-01 remains partial: actual PostgreSQL concurrency/schema/privilege checks,
+scientific source-cell/run lineage, producer integration and coherent query run
+selection still need their separate acceptance evidence. Tier's frontend and
+Toby's producer files remain unchanged. No live DB, SMS, external service,
+installation, deployment or push is included.
+Validation: all 44 Python backend tests pass with mocked sessions/in-process
+requests; Python compilation and whitespace checks pass. Separate spec and
+standards reviews found no remaining blocker after adding safe run IDs/failure
+phases to API errors. These checks do not prove deployed database behavior.
+
 **Current selection, October 17, 2026: Batch 1, independent MAP-01/OPS-01 slice.**
 Branch `codex/son/api-foundations`. Prediction ingestion now requires finite
 numeric latitude/longitude in range and explicit ISO calendar dates. API and

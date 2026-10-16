@@ -1,14 +1,12 @@
 """Validated CSV ingestion. Importing this module never opens a database."""
 import csv
 import sys
+import argparse
 from pathlib import Path
-from sqlalchemy import text
+from uuid import UUID
 from calendar_dates import manila_today, parse_prediction_date
 from schemas import DailyGridPredictionItem
-
-
-class IngestionError(RuntimeError):
-    """An operator-safe error; never includes raw database or CSV contents."""
+from prediction_ingestion import IngestionError, ingest_predictions, prepare_batch
 
 
 def read_predictions(csv_path: str, prediction_date):
@@ -33,7 +31,10 @@ def read_predictions(csv_path: str, prediction_date):
                     dbscan_cluster_id=int(row.get('global_rank', '-1')),
                     sst=float(row['thetao']) if row.get('thetao', '').strip() else None,
                     chl_a=float(row['chl']) if row.get('chl', '').strip() else None,
+                    model_type=row.get('model_type', 'pelagic'),
                 ))
+                if len(items) > 10000:
+                    raise IngestionError('Use 1–10000 prediction records.', 'invalid_batch', 422)
     except IngestionError:
         raise
     except (OSError, UnicodeError, csv.Error, ValueError):
@@ -43,9 +44,11 @@ def read_predictions(csv_path: str, prediction_date):
     return items
 
 
-def ingest_csv(csv_path: str, prediction_date: str | None = None, *, session_factory=None) -> int:
+def ingest_csv(csv_path: str, prediction_date: str | None = None, *, run_id: UUID | None = None, session_factory=None) -> int:
     # Validate every record before creating a session or issuing a write.
     items = read_predictions(csv_path, prediction_date)
+    batch = prepare_batch(items, run_id)
+    print(f'Ingestion run ID: {batch.run_id}. Retain this ID to reconcile an interrupted upload.')
     if session_factory is None:
         try:
             from database import SessionLocal
@@ -55,46 +58,32 @@ def ingest_csv(csv_path: str, prediction_date: str | None = None, *, session_fac
     db = None
     try:
         db = session_factory()
-        for item in items:
-            # Preserve the existing legacy pelagic mapping and cell envelope.
-            # Source-cell/run identities and scientific mappings are separate work.
-            query = text("""
-                INSERT INTO public.daily_grid_predictions (
-                    prediction_date, model_type, grid_cell_geom, centroid_geom, catch_probability, dbscan_cluster_id, sst, chl_a, created_at
-                ) VALUES (
-                    :p_date, 'pelagic',
-                    ST_SetSRID(ST_MakeEnvelope(:lon - 0.005, :lat - 0.005, :lon + 0.005, :lat + 0.005), 4326),
-                    ST_SetSRID(ST_MakePoint(:lon, :lat), 4326),
-                    :prob, :cluster_id, :sst, :chl, NOW()
-                )
-            """)
-            db.execute(query, {'p_date': item.prediction_date, 'lat': item.lat, 'lon': item.lon,
-                               'prob': item.catch_probability, 'cluster_id': item.dbscan_cluster_id,
-                               'sst': item.sst, 'chl': item.chl_a})
-        db.commit()
+        result = ingest_predictions(db, items, batch.run_id)
+    except IngestionError:
+        raise
     except Exception:
-        if db is not None:
-            try:
-                db.rollback()
-            except Exception:
-                pass  # Preserve the redacted primary failure, not driver details.
-        raise IngestionError('Database ingestion failed. Verify transaction state before retrying; no success was reported.') from None
+        raise IngestionError('Database session unavailable; no success was reported.') from None
     finally:
         if db is not None:
             try:
                 db.close()
             except Exception:
                 raise IngestionError('Database session cleanup failed. Verify transaction state before retrying.') from None
-    print(f'Successfully ingested {len(items)} prediction records for date {items[0].prediction_date.isoformat()} into Supabase PostGIS.')
-    return len(items)
+    if result['replayed']:
+        print(f"Run already published; inserted 0 additional records ({result['total_records']} total).")
+    else:
+        print(f'Successfully ingested {len(items)} prediction records for date {items[0].prediction_date.isoformat()} into Supabase PostGIS.')
+    return result['inserted_records']
 
 
 def main(argv=None) -> int:
-    args = sys.argv[1:] if argv is None else argv
-    path = args[0] if args else 'parola_daily_advisories.csv'
-    day = args[1] if len(args) > 1 else None
+    parser = argparse.ArgumentParser(description='Validated, retry-safe prediction ingestion (requires migration 05).')
+    parser.add_argument('path', nargs='?', default='parola_daily_advisories.csv')
+    parser.add_argument('day', nargs='?', help='YYYY-MM-DD (default: Manila today)')
+    parser.add_argument('--run-id', type=UUID, help='Stable upload UUID; reuse it for retries')
+    args = parser.parse_args(sys.argv[1:] if argv is None else argv)
     try:
-        ingest_csv(path, day)
+        ingest_csv(args.path, args.day, run_id=args.run_id)
     except IngestionError as error:
         print(f'Error: {error}', file=sys.stderr)
         return 1
