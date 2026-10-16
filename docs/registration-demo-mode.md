@@ -8,7 +8,7 @@ migration. This replaces the earlier proposed separate demo table/browser-only s
 
 ```dotenv
 PAROLA_AUTH_MODE="demo"
-PAROLA_DEMO_SESSION_SECRET="a-private-random-value-of-at-least-32-characters"
+PAROLA_DEMO_SESSION_SECRET="" # Set privately to a random value of at least 32 characters.
 ```
 
 A dedicated random secret and demo flag are configured in ignored .env.local;
