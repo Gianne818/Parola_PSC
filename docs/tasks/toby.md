@@ -118,7 +118,26 @@ Each original assignment maps once below. Historical labels do not establish cur
 
 ### Urgent task: minimum hotspot score of 50% — October 17, 2026
 
-- **Latest user-requested replacement:** The initial 11,007 inserted IDs were
+- **Latest user-requested daily pipeline deployment (October 17, 2026):**
+  Toby explicitly authorized integrating and deploying the updated Pelagic +
+  Demersal daily hotspot prediction pipeline from
+  `/Users/gianne/Development/Python/Parola/AWS_DEPLOYMENT_HANDOFF.md` and
+  `/Users/gianne/Development/Python/Parola/run_daily_predictions.py` into
+  `backend/aws-inference/` (including `backend/aws-inference/requirements.txt`)
+  with a daily-prediction toggle (`ENABLE_DAILY_PREDICTIONS = True` in code and
+  `PAROLA_ENABLE_DAILY_PREDICTIONS=true` in Lambda env vars, plus `{"enabled": false}`
+  and `{"force": true}` event overrides). Built and deployed the ARM64 OCI
+  container image (`sha256:838e73c6eb0dde38d4752356914d0c7ab5bfca85c5af496d6f693331c23ccbb7`,
+  tag `daily-pipeline-20261017-838e73c6eb0d`) to `parola-ParolaInferenceFunction-OjglErBmhUc2`
+  with `EphemeralStorage=2048 MB` and updated `ParolaDailyInferenceSchedule` to
+  `cron(0 21 * * ? *)` (05:00 AM Philippine Time daily). Verified in AWS Lambda:
+  1) `{"enabled": false, "date": "2026-10-17"}` returned HTTP 200 with
+     `{"status": "skipped", "reason": "daily_predictions_disabled"}`;
+  2) `{"date": "2026-10-17"}` completed in 70.8s (max memory 1823 MB) and
+     synced 637 hotspots (`568` pelagic + `69` demersal) to Supabase.
+  39 focused Python unit tests pass.
+
+- **Prior user-requested replacement:** The initial 11,007 inserted IDs were
   backed up, deleted and marked withdrawn in the AWS manifest. Toby explicitly
   selected a fresh run with historical corroboration. Fresh AWS scoring run
   `20261017T075119Z-bde19907d30a` was filtered using notebook cell 8's historical

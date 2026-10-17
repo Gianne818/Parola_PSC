@@ -545,9 +545,12 @@ def _legacy_simulated_handler(event, context):
         raise e
 
 def handler(event, context):
-    """Production scoring requires dated, hashed real inputs; no simulation fallback."""
-    from validated_csv_handler import handler as real_handler
-    return real_handler(event, context)
+    """Production daily Pelagic + Demersal hotspot pipeline entrypoint."""
+    if isinstance(event, dict) and event.get("mode") == "validated_csv":
+        from validated_csv_handler import handler as real_handler
+        return real_handler(event, context)
+    from run_daily_predictions import lambda_handler as daily_handler
+    return daily_handler(event, context)
 
 
 if __name__ == "__main__":

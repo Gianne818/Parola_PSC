@@ -49,6 +49,18 @@ task's scoped existing-schema publication exception to the verified replacement.
 Preserve source coordinates, calibrated-score limitations, missing-input
 exclusions and the older September records; no frontend redesign or SMS work.
 
+### User-requested daily hotspot pipeline integration and AWS deployment
+
+Toby explicitly authorized integrating the updated Pelagic + Demersal daily
+hotspot prediction pipeline specified in
+`/Users/gianne/Development/Python/Parola/AWS_DEPLOYMENT_HANDOFF.md` and
+`/Users/gianne/Development/Python/Parola/run_daily_predictions.py` into
+`backend/aws-inference/`, adding an explicit code/environment toggle (enabled by
+default) to pause or skip daily prediction runs when desired, updating
+`backend/aws-inference/requirements.txt` (task-specific shared dependency
+manifest exception), and deploying the updated container image and schedule
+configuration to the existing AWS Lambda (`parola-ParolaInferenceFunction-OjglErBmhUc2`).
+
 Most-specific path wins. New files use the matching scope; any unlisted/ambiguous integration path needs Son to record its owner before edits. Ownership grants no authority beyond the selected assignment. Existing user changes must be preserved.
 
 | Owner | Owned paths / exceptions |

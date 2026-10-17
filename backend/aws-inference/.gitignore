@@ -1,1 +1,6 @@
 artifacts/
+parola_pelagic_model_v2.txt
+parola_demersal_model.txt
+vbd_gridded_presence.parquet
+demersal_lightgbm_ready.csv
+gadm41_PHL_0.json
