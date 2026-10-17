@@ -70,7 +70,7 @@ export default function DashboardWorkspace(props: WorkspaceProps) {
   const displayedAreas = areasOnDay(areas, selectedDate);
   const filtersRef = useRef<HTMLDetailsElement>(null);
   const selected = displayedAreas.find(area => area.id === selectedId) || null;
-  const filtered = habitat !== 'both' || Boolean(species) || selectedDate !== 'all';
+  const filtered = habitat !== 'both' || Boolean(species) || selectedDate !== 'all' || minThreshold !== DEFAULT_THRESHOLD_PERCENT;
   const panelVisible = viewport === 'desktop' || (viewport === 'mobile' && mobileView === 'areas') || (viewport === 'tablet' && drawerOpen) || showWeather;
   const panelTitle = showWeather ? copy.weatherDetails : selected?.name || copy.areas;
   useEffect(() => {
@@ -141,7 +141,7 @@ export default function DashboardWorkspace(props: WorkspaceProps) {
               {earlierPredictions && <p className={styles.predictionNotice}>{latestDate < (manilaDate(new Date()) || '') ? `${text.lastPredictions} · ${formattedPredictionDate}` : text.earlierDates}</p>}
               {props.areaMetadata?.capped && <p className={styles.panelDescription}>{text.capped.replace('{returned}', String(props.areaMetadata.returnedCount)).replace('{total}', String(props.areaMetadata.eligibleCount))}</p>}
               <FishingAreas areas={displayedAreas} loading={loading} failed={failed} retry={retry} limit={limit} showMore={() => setLimit(previous => previous === 3 ? 10 : previous + 10)}
-                select={select} filtered={filtered} clearFilters={() => updateFilters('both', '')} hold={state === 'hold'} speciesUnavailable={Boolean(species && areas.length && !areas.some(area => area.speciesAdjusted))} copy={copy} />
+                select={select} filtered={filtered} clearFilters={clearAllFilters} hold={state === 'hold'} speciesUnavailable={Boolean(species && areas.length && !areas.some(area => area.speciesAdjusted))} copy={copy} />
             </>}
       </div>
     </div>
@@ -189,14 +189,37 @@ export default function DashboardWorkspace(props: WorkspaceProps) {
                 <label>{copy.habitat}<select value={habitat} onChange={event => updateFilters(event.target.value as Hotspot['type'], species)}><option value="both">{copy.all}</option><option value="pelagic">{copy.surface}</option><option value="demersal">{copy.bottom}</option></select></label>
                 <label>{copy.targetFish}<select value={species} aria-describedby="species-support-note" onChange={event => updateFilters(habitat, event.target.value)}><option value="">{copy.anyFish}</option>{[...CATEGORIZED_SPECIES.pelagic, ...CATEGORIZED_SPECIES.demersal].map(fish => <option key={fish.name} value={fish.name}>{fish.name}</option>)}</select></label>
                 <p id="species-support-note" className={styles.panelDescription} lang="en">These existing fish-name choices are requests, not a verified species catalog. The server may reject an unsupported or ambiguous name. Habitat selection is separate; adjustment never confirms fish presence.</p>
-                {filtered && <button type="button" className={styles.textButton} onClick={() => updateFilters('both', '')}>{copy.clearFilters}</button>}
+                <label htmlFor="popover-threshold-slider" className={styles.popoverThresholdField}>
+                  <span className={styles.popoverThresholdHeader}>
+                    <span>{copy.minThreshold}</span>
+                    <strong className={styles.thresholdValue}>≥ {minThreshold}%</strong>
+                  </span>
+                  <input
+                    id="popover-threshold-slider"
+                    type="range"
+                    className={styles.thresholdSlider}
+                    min={MIN_THRESHOLD_PERCENT}
+                    max={MAX_THRESHOLD_PERCENT}
+                    step={5}
+                    value={minThreshold}
+                    aria-valuetext={`≥ ${minThreshold}% ${copy.modelEstimate.toLowerCase()}`}
+                    onChange={event => updateMinThreshold(Number(event.target.value))}
+                    style={sliderStyle}
+                  />
+                  <span className={styles.thresholdScale} aria-hidden="true">
+                    <span>{MIN_THRESHOLD_PERCENT}%</span>
+                    <span>50%</span>
+                    <span>{MAX_THRESHOLD_PERCENT}%</span>
+                  </span>
+                </label>
+                {filtered && <button type="button" className={styles.textButton} onClick={clearAllFilters}>{copy.clearFilters}</button>}
               </div>
             </details>
           </div>
         </div>
         {predictionControls}
-        {filtered && <div className={styles.activeFilters}><span>{[habitat === 'pelagic' ? copy.surface : habitat === 'demersal' ? copy.bottom : '', species].filter(Boolean).join(' · ')}
-          {selectedDate !== 'all' && <span lang="en"> · {selectedDate === 'unknown' ? 'Prediction date unavailable' : selectedDate}</span>}</span><button type="button" className={styles.textButton} onClick={() => updateFilters('both', '')}>{copy.clearFilters}</button></div>}
+        {filtered && <div className={styles.activeFilters}><span>{[habitat === 'pelagic' ? copy.surface : habitat === 'demersal' ? copy.bottom : '', species, minThreshold !== DEFAULT_THRESHOLD_PERCENT ? `${copy.minThreshold}: ≥ ${minThreshold}%` : ''].filter(Boolean).join(' · ')}
+          {selectedDate !== 'all' && <span lang="en"> · {selectedDate === 'unknown' ? 'Prediction date unavailable' : selectedDate}</span>}</span><button type="button" className={styles.textButton} onClick={clearAllFilters}>{copy.clearFilters}</button></div>}
         {tilesFailed && <div className={styles.mapError} role="status"><span>{copy.mapFailed}</span><button type="button" className={styles.textButton} onClick={retryMap}>{copy.retry}</button></div>}
         <div className={styles.mapCanvas}>
           <DashboardMap key={mapRevision} areas={displayedAreas} selected={selected} select={select} region={region} lat={lat} lng={lng} viewMode={viewMode} tileError={() => setTilesFailed(true)} retry={retryMap} copy={copy} />
