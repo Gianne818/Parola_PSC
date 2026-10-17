@@ -1,5 +1,5 @@
 export const GENERAL_PELAGIC_SHADES: SpeciesShades = {
-  light: "#94A3B8",   // 60-69%: Light Slate (Steel Blue)
+  light: "#94A3B8",   // 50-69%: Light Slate (Steel Blue)
   medium: "#64748B",  // 70-79%: Medium Slate
   dark: "#475569",    // 80-89%: Dark Slate
   deepest: "#1E293B", // 90-100%: Deep Navy Slate
@@ -7,7 +7,7 @@ export const GENERAL_PELAGIC_SHADES: SpeciesShades = {
 export const GENERAL_PELAGIC_COLOR = GENERAL_PELAGIC_SHADES.medium; // #64748B
 
 export const GENERAL_DEMERSAL_SHADES: SpeciesShades = {
-  light: "#D6D3D1",   // 60-69%: Light Warm Stone
+  light: "#D6D3D1",   // 50-69%: Light Warm Stone
   medium: "#A8A29E",  // 70-79%: Medium Stone
   dark: "#78716C",    // 80-89%: Dark Stone
   deepest: "#44403C", // 90-100%: Deep Seabed Stone
@@ -15,7 +15,7 @@ export const GENERAL_DEMERSAL_SHADES: SpeciesShades = {
 export const GENERAL_DEMERSAL_COLOR = GENERAL_DEMERSAL_SHADES.medium; // #A8A29E
 
 export interface SpeciesShades {
-  light: string;   // 60-69% (Light Shade)
+  light: string;   // 50-69% (Light Shade)
   medium: string;  // 70-79% (Medium Shade)
   dark: string;    // 80-89% (Dark Shade)
   deepest: string; // 90-100% (Deepest/Darkest Shade)
@@ -44,7 +44,7 @@ export const CATEGORIZED_SPECIES: { pelagic: SpeciesConfig[]; demersal: SpeciesC
       desc: "Upper Ocean Pelagic",
       color: "#F97316", // Medium Orange
       shades: {
-        light: "#FFB74D",   // 60-69%: Light Orange
+        light: "#FFB74D",   // 50-69%: Light Orange
         medium: "#F97316",  // 70-79%: Medium Orange
         dark: "#EA580C",    // 80-89%: Dark Orange
         deepest: "#9A3412", // 90-100%: Deep/Darkest Orange
@@ -62,7 +62,7 @@ export const CATEGORIZED_SPECIES: { pelagic: SpeciesConfig[]; demersal: SpeciesC
       desc: "Upper & Coastal Water",
       color: "#10B981", // Medium Emerald Green
       shades: {
-        light: "#6EE7B7",   // 60-69%: Light Emerald
+        light: "#6EE7B7",   // 50-69%: Light Emerald
         medium: "#10B981",  // 70-79%: Medium Emerald
         dark: "#047857",    // 80-89%: Dark Emerald
         deepest: "#064E3B", // 90-100%: Deep Emerald
@@ -80,7 +80,7 @@ export const CATEGORIZED_SPECIES: { pelagic: SpeciesConfig[]; demersal: SpeciesC
       desc: "Oceanic Pelagic",
       color: "#2563EB", // Medium Royal Blue
       shades: {
-        light: "#93C5FD",   // 60-69%: Light Royal Blue
+        light: "#93C5FD",   // 50-69%: Light Royal Blue
         medium: "#2563EB",  // 70-79%: Medium Royal Blue
         dark: "#1D4ED8",    // 80-89%: Dark Royal Blue
         deepest: "#1E3A8A", // 90-100%: Deep Navy Blue
@@ -98,7 +98,7 @@ export const CATEGORIZED_SPECIES: { pelagic: SpeciesConfig[]; demersal: SpeciesC
       desc: "Coastal Surface Water",
       color: "#8B5CF6", // Medium Violet / Purple
       shades: {
-        light: "#DDD6FE",   // 60-69%: Light Violet
+        light: "#DDD6FE",   // 50-69%: Light Violet
         medium: "#8B5CF6",  // 70-79%: Medium Violet
         dark: "#6D28D9",    // 80-89%: Dark Violet
         deepest: "#4C1D95", // 90-100%: Deep Purple
@@ -116,7 +116,7 @@ export const CATEGORIZED_SPECIES: { pelagic: SpeciesConfig[]; demersal: SpeciesC
       desc: "Surface Water Column",
       color: "#06B6D4", // Medium Cyan / Teal
       shades: {
-        light: "#A5F3FC",   // 60-69%: Light Cyan
+        light: "#A5F3FC",   // 50-69%: Light Cyan
         medium: "#06B6D4",  // 70-79%: Medium Teal
         dark: "#0E7490",    // 80-89%: Dark Teal
         deepest: "#164E63", // 90-100%: Deep Cyan-Blue
@@ -136,7 +136,7 @@ export const CATEGORIZED_SPECIES: { pelagic: SpeciesConfig[]; demersal: SpeciesC
       desc: "Coral Reef & Rocky Seabed",
       color: "#D97706", // Medium Amber / Gold
       shades: {
-        light: "#FDE68A",   // 60-69%: Light Amber
+        light: "#FDE68A",   // 50-69%: Light Amber
         medium: "#D97706",  // 70-79%: Medium Amber
         dark: "#B45309",    // 80-89%: Dark Amber
         deepest: "#78350F", // 90-100%: Deep Golden-Brown
@@ -154,7 +154,7 @@ export const CATEGORIZED_SPECIES: { pelagic: SpeciesConfig[]; demersal: SpeciesC
       desc: "Deep Reef Floor",
       color: "#EF4444", // Medium Red
       shades: {
-        light: "#FCA5A5",   // 60-69%: Light Red
+        light: "#FCA5A5",   // 50-69%: Light Red
         medium: "#EF4444",  // 70-79%: Medium Red
         dark: "#B91C1C",    // 80-89%: Dark Red
         deepest: "#7F1D1D", // 90-100%: Deep Crimson
@@ -172,7 +172,7 @@ export const CATEGORIZED_SPECIES: { pelagic: SpeciesConfig[]; demersal: SpeciesC
       desc: "Mud & Sand Seabed",
       color: "#EC4899", // Medium Pink / Rose
       shades: {
-        light: "#FBCFE8",   // 60-69%: Light Pink
+        light: "#FBCFE8",   // 50-69%: Light Pink
         medium: "#EC4899",  // 70-79%: Medium Pink
         dark: "#BE185D",    // 80-89%: Dark Rose
         deepest: "#831843", // 90-100%: Deep Magenta
@@ -190,7 +190,7 @@ export const CATEGORIZED_SPECIES: { pelagic: SpeciesConfig[]; demersal: SpeciesC
       desc: "Reef & Seagrass Beds",
       color: "#65A30D", // Medium Lime / Chartreuse
       shades: {
-        light: "#D9F99D",   // 60-69%: Light Lime
+        light: "#D9F99D",   // 50-69%: Light Lime
         medium: "#65A30D",  // 70-79%: Medium Lime
         dark: "#4D7C0F",    // 80-89%: Dark Olive
         deepest: "#365314", // 90-100%: Deep Forest Green
@@ -208,7 +208,7 @@ export const CATEGORIZED_SPECIES: { pelagic: SpeciesConfig[]; demersal: SpeciesC
       desc: "Deep Shelf Seabed",
       color: "#6366F1", // Medium Indigo
       shades: {
-        light: "#C7D2FE",   // 60-69%: Light Indigo
+        light: "#C7D2FE",   // 50-69%: Light Indigo
         medium: "#6366F1",  // 70-79%: Medium Indigo
         dark: "#4338CA",    // 80-89%: Dark Indigo
         deepest: "#312E81", // 90-100%: Deep Navy Indigo
@@ -293,9 +293,9 @@ export function getGeneralDemersalProbabilityColor(catchProbability?: number): s
 
 /**
  * Returns the exact shade hex color for a species based on its catch probability.
- * Catch probability can be passed as a fraction (0.60 to 1.00) or percentage (60 to 100).
+ * Catch probability can be passed as a fraction (0.50 to 1.00) or percentage (50 to 100).
  * Brackets:
- *  - 60-69% => Light
+ *  - 50-69% => Light
  *  - 70-79% => Medium
  *  - 80-89% => Dark
  *  - 90-100% => Deepest
@@ -320,7 +320,7 @@ export function getSpeciesProbabilityColor(
   if (probPct >= 90) return config.shades.deepest;
   if (probPct >= 80) return config.shades.dark;
   if (probPct >= 70) return config.shades.medium;
-  return config.shades.light; // 60-69% (or lower)
+  return config.shades.light; // 50-69% (or lower)
 }
 
 /**

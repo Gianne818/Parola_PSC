@@ -11,7 +11,43 @@ Updated October 17, 2026. [Hub](../../fixplan.md) | [Tier](tier.md) | [Son](son.
 5. Missing contracts/data/another member's work create a handoff; work only on independent selected portions. Never finish someone else's task to unblock yours, impersonate them, or spawn a subagent to bypass scope.
 6. User-requested documentation maintenance may update the agreed coordination documents; it never authorizes implementing their application backlog. These instructions guide agents, not operating-system access permissions.
 
+## Urgent hotspot threshold exception — October 17, 2026
+
+Toby identified themselves in the current chat and explicitly authorized this task as lead programmer: lower hotspot eligibility from 60% to an inclusive 50%, align the dashboard map legend, and recalculate today's hotspots in AWS. For this task only, Toby may edit Tier's `components/features/hotspots/MapComponent.tsx` and `utils/speciesColors.ts`, Son's `lib/regional-predictions.ts` and `app/api/advisories/nearest/route.ts`, and directly related threshold tests, alongside Toby's inference files. Existing owners retain all other scope. No backlog package is selected or completed by this exception. The scoped October 17 pelagic deployment, invocation and database/API evidence are recorded in the [scientific run report](../../backend/aws-inference/REAL_INPUT_RUN.md); this grants no broader backlog or release authority.
+
+The user's subsequent explicit request to update Copernicus credentials extends this task's exception to the ignored root `.env.local` and the identified inference Lambda's Copernicus environment settings. Preserve unrelated settings and AWS revision checks. Never put credential values in coordination documents, tracked source or command output. Credential configuration alone does not establish real-data ingestion or authorize representing synthetic results as actual observations.
+
+The user subsequently saved AWS credentials in `.env.local` and requested direct AWS work instead of further CloudShell commands. This task includes reading those local credentials and correcting the local AWS region/model-bucket settings from verified deployment metadata. Keep credentials in the ignored file and preserve unrelated values.
+
+For the same requested real recalculation, Toby is implementing the necessary owned inference workflow: reconstruct the current month's 2015–2025 baseline from the original notebook, prepare dated real Copernicus inputs, update the existing ARM64 Lambda's application source, and publish its verified result to the existing prediction table. This task-specific operational scope uses the existing schema and preserves other dates/models and any conflicting existing same-day work. It does not select or complete the broader DATA/OPS/GEO packages, introduce shared dependency changes, or authorize SMS dispatches.
+
+Toby subsequently requested help testing the local application after the sign-in screen reported a missing `PAROLA_DEMO_SESSION_SECRET`. This follow-up covers configuring that missing server-only secret in ignored `.env.local` and checking that the existing local demo authentication rejects an unsigned request normally. Preserve the existing account/password checks and auth mode; no auth implementation, account creation, database migration, live SMS or hosted configuration changes are selected.
+
+Local configuration check: generated a random secret in mode-0600 `.env.local`, preserving all other values. The running local server picked it up: `/api/users/profile` with an invalid demo cookie returned HTTP 401, `Sign in again to continue.`, rather than the missing-secret error. No account sign-in or full browser journey is claimed by this check.
+
 ## Exact file ownership
+
+### User-requested withdrawal of the October 17 run
+
+Toby explicitly requested updating Supabase and deleting the previous predictions
+created by this session. This authorizes withdrawing only the 11,007 prediction
+IDs recorded for run `20261016T184655Z-bb3d5095ad6e`, after checking row identity,
+dependencies and saving a recoverable backup. Preserve other runs/dates/models.
+The exported October 17 CSV contains those same scores, not a corrected result;
+replacement source/method is being clarified before inserting replacement data.
+Never relabel the original July 10 CSV as today's predictions. Record the final
+withdrawal/publication evidence in Toby's run documentation.
+
+Toby selected a fresh run rather than importing the July CSV. The replacement
+uses current-day real inputs and the notebook's filtering variant (cell 8:
+historical haversine DBSCAN, eps 0.001 radians, min_samples 15, sampled to
+100,000 rows with seed 42, retain candidates within 15 km of a cluster mean),
+with the requested inclusive 50% score floor. Reconstruct the historical
+reference from the surviving positive-presence Parquet and record its lineage;
+do not claim byte identity with the missing merged dataset. This extends the
+task's scoped existing-schema publication exception to the verified replacement.
+Preserve source coordinates, calibrated-score limitations, missing-input
+exclusions and the older September records; no frontend redesign or SMS work.
 
 Most-specific path wins. New files use the matching scope; any unlisted/ambiguous integration path needs Son to record its owner before edits. Ownership grants no authority beyond the selected assignment. Existing user changes must be preserved.
 

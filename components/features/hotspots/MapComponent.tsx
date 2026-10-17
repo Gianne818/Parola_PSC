@@ -152,9 +152,9 @@ export const MapComponent: React.FC<MapComponentProps> = ({
                     <span className="truncate">General Pelagic Model</span>
                   </div>
                   <div className="grid grid-cols-4 gap-1 text-[7.5px] font-black text-center pt-0.5">
-                    <div className="flex flex-col items-center" title="60-69%">
+                    <div className="flex flex-col items-center" title="50-69%">
                       <span className="w-full h-1.5 rounded-xs mb-0.5 shadow-2xs" style={{ backgroundColor: GENERAL_PELAGIC_SHADES.light }} />
-                      <span className="text-gray-400">60-69%</span>
+                      <span className="text-gray-400">50-69%</span>
                     </div>
                     <div className="flex flex-col items-center" title="70-79%">
                       <span className="w-full h-1.5 rounded-xs mb-0.5 shadow-2xs" style={{ backgroundColor: GENERAL_PELAGIC_SHADES.medium }} />
@@ -177,9 +177,9 @@ export const MapComponent: React.FC<MapComponentProps> = ({
                     <span className="truncate">General Demersal Model</span>
                   </div>
                   <div className="grid grid-cols-4 gap-1 text-[7.5px] font-black text-center pt-0.5">
-                    <div className="flex flex-col items-center" title="60-69%">
+                    <div className="flex flex-col items-center" title="50-69%">
                       <span className="w-full h-1.5 rounded-xs mb-0.5 shadow-2xs" style={{ backgroundColor: GENERAL_DEMERSAL_SHADES.light }} />
-                      <span className="text-gray-400">60-69%</span>
+                      <span className="text-gray-400">50-69%</span>
                     </div>
                     <div className="flex flex-col items-center" title="70-79%">
                       <span className="w-full h-1.5 rounded-xs mb-0.5 shadow-2xs" style={{ backgroundColor: GENERAL_DEMERSAL_SHADES.medium }} />
@@ -215,9 +215,9 @@ export const MapComponent: React.FC<MapComponentProps> = ({
                       
                       {/* 4-tier probability gradient swatches */}
                       <div className="grid grid-cols-4 gap-1 text-[7.5px] font-black text-center pt-0.5">
-                        <div className="flex flex-col items-center" title="60-69% Catch Probability">
+                        <div className="flex flex-col items-center" title="50-69% Catch Probability">
                           <span className="w-full h-2 rounded-xs mb-0.5 shadow-2xs" style={{ backgroundColor: cfg.shades.light }} />
-                          <span className="text-gray-400">60-69%</span>
+                          <span className="text-gray-400">50-69%</span>
                         </div>
                         <div className="flex flex-col items-center" title="70-79% Catch Probability">
                           <span className="w-full h-2 rounded-xs mb-0.5 shadow-2xs" style={{ backgroundColor: cfg.shades.medium }} />

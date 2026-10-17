@@ -3,7 +3,7 @@ Transform: AWS::Serverless-2016-10-31
 Description: >
   parola-inference-pipeline
   
-  SAM Template for the Parola Project Pelagic Model inference pipeline with Parola cloud features.
+  SAM template for Parola pelagic scoring of validated, dated real environmental inputs.
 
 Parameters:
   ModelBucketName:
@@ -28,7 +28,7 @@ Resources:
     Properties:
       PackageType: Image
       Architectures:
-        - x86_64
+        - arm64
       MemorySize: 3008
       Timeout: 900
       FunctionUrlConfig:
@@ -58,7 +58,7 @@ Resources:
           Properties:
             Schedule: 'rate(6 hours)'
             Name: ParolaSixHourInferenceSchedule
-            Description: Automatically trigger model inference & weather workflow every 6 hours
+            Description: Trigger pelagic scoring using current Manila-day real inputs in S3
         ApiTrigger:
           Type: Api
           Properties:

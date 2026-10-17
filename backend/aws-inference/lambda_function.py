@@ -356,13 +356,13 @@ def download_model_if_needed():
 
 def sync_to_database(df_hotspots, safety_override, model_type='pelagic', clear_old=True):
     """
-    Syncs daily predictions (>= 0.60 probability) and weather overrides to Supabase PostGIS DB.
+    Syncs daily predictions (>= 0.50 probability) and weather overrides to Supabase PostGIS DB.
     """
     if not DATABASE_URL:
         logger.info("DATABASE_URL not configured. Skipping PostGIS database sync.")
         return
 
-    logger.info(f"Syncing daily {model_type} predictions (>= 0.60 probability) to Supabase PostgreSQL...")
+    logger.info(f"Syncing daily {model_type} predictions (>= 0.50 probability) to Supabase PostgreSQL...")
     try:
         import psycopg2
 
@@ -416,7 +416,7 @@ def sync_to_database(df_hotspots, safety_override, model_type='pelagic', clear_o
                 ))
                 inserted_count += 1
 
-            logger.info(f"Persisted {inserted_count} {model_type} predictions (>= 0.60 probability) to Supabase PostGIS!")
+            logger.info(f"Persisted {inserted_count} {model_type} predictions (>= 0.50 probability) to Supabase PostGIS!")
 
         conn.commit()
         cursor.close()
@@ -429,9 +429,10 @@ def sync_to_database(df_hotspots, safety_override, model_type='pelagic', clear_o
 # 4. MAIN LAMBDA HANDLER
 # ============================================================================
 
-def handler(event, context):
+def _legacy_simulated_handler(event, context):
     """
-    Main AWS Lambda handler for executing the daily Parola ML pipeline.
+    Archived local pipeline; not used by the production entrypoint.
+    This implementation contains simulated inputs and cannot publish real runs.
     Orchestrates model loading, weather data fetching, safety evaluation,
     ocean data processing, and database syncing.
     """
@@ -469,7 +470,7 @@ def handler(event, context):
                 logger.info("Scoring grid with heuristic pelagic model...")
                 df_pelagic['catch_probability'] = (df_pelagic['chl'] * 0.2 + df_pelagic['sst_frontal_gradient'] * 0.8).clip(0.1, 0.95)
 
-            probable_pelagic = df_pelagic[df_pelagic['catch_probability'] >= 0.60].copy()
+            probable_pelagic = df_pelagic[df_pelagic['catch_probability'] >= 0.50].copy()
             probable_pelagic = probable_pelagic.sort_values(by='catch_probability', ascending=False)
             probable_pelagic['global_rank'] = range(1, len(probable_pelagic) + 1)
             probable_pelagic['dbscan_cluster_id'] = (probable_pelagic['global_rank'] // 10)
@@ -505,7 +506,7 @@ def handler(event, context):
                 logger.info("Scoring grid with heuristic demersal model...")
                 df_demersal['catch_probability'] = (df_demersal['rugosity'] * 0.4 + df_demersal['slope'] * 0.1).clip(0.1, 0.95)
 
-            probable_demersal = df_demersal[df_demersal['catch_probability'] >= 0.60].copy()
+            probable_demersal = df_demersal[df_demersal['catch_probability'] >= 0.50].copy()
             probable_demersal = probable_demersal.sort_values(by='catch_probability', ascending=False)
             probable_demersal['global_rank'] = range(1, len(probable_demersal) + 1)
             probable_demersal['dbscan_cluster_id'] = (probable_demersal['global_rank'] // 10)
@@ -542,6 +543,12 @@ def handler(event, context):
     except Exception as e:
         logger.error(f"Error during Parola AWS inference lambda execution: {e}")
         raise e
+
+def handler(event, context):
+    """Production scoring requires dated, hashed real inputs; no simulation fallback."""
+    from validated_csv_handler import handler as real_handler
+    return real_handler(event, context)
+
 
 if __name__ == "__main__":
     res = handler({}, None)

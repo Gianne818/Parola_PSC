@@ -26,7 +26,7 @@ export const REGIONAL_PREDICTIONS_SQL = `
     FROM public.daily_grid_predictions
     WHERE (prediction_date >= CURRENT_DATE - INTERVAL '2 days'
       OR prediction_date = (SELECT MAX(prediction_date) FROM public.daily_grid_predictions))
-      AND catch_probability >= 0.60
+      AND catch_probability >= 0.50
       AND ($5::text IS NULL OR model_type = $5)
       AND ST_Contains(ST_GeomFromText($1, 4326), centroid_geom)
   ), areas AS (
