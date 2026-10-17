@@ -62,6 +62,9 @@ interface MapComponentProps {
   minHeight?: number;
   /** Limit navigation to a viewport-sized Philippine overview. */
   constrainToPhilippines?: boolean;
+  /** Minimum catch probability percentage threshold (25 to 95, default 50). */
+  minThreshold?: number;
+  onMinThresholdChange?: (value: number) => void;
 }
 
 export const MapComponent: React.FC<MapComponentProps> = ({
@@ -85,15 +88,34 @@ export const MapComponent: React.FC<MapComponentProps> = ({
   presentation = 'default',
   onTileError,
   labels,
+  minThreshold: controlledThreshold,
+  onMinThresholdChange,
 }) => {
   const { userProfile, updateProfile, showToast, manualOverrideHold } = useApp();
   const [customWaypoint, setCustomWaypoint] = useState<{ lat: number; lng: number } | null>(null);
   const [currentZoom, setCurrentZoom] = useState<number>(10);
-  const selectedHotspot = candidate && isClientTargetCoordinate(candidate.lat, candidate.lng) ? candidate : null;
+  const [internalThreshold, setInternalThreshold] = useState<number>(50);
+  const activeThreshold = controlledThreshold ?? internalThreshold;
+  const handleThresholdChange = (val: number) => {
+    const clamped = Math.min(Math.max(val, 25), 95);
+    if (onMinThresholdChange) onMinThresholdChange(clamped);
+    else setInternalThreshold(clamped);
+  };
+  const filteredHotspots = presentation === 'dashboard' && controlledThreshold === undefined
+    ? hotspots
+    : hotspots.filter((h) => {
+        if (h.catchProbability === undefined || !Number.isFinite(h.catchProbability)) return true;
+        const pct = h.catchProbability <= 1 ? h.catchProbability * 100 : h.catchProbability;
+        return pct + 1e-6 >= activeThreshold;
+      });
+  const selectedHotspot = candidate && isClientTargetCoordinate(candidate.lat, candidate.lng)
+    && filteredHotspots.some((h) => h.id === candidate.id)
+    ? candidate
+    : null;
   const validHome = isClientCoordinate(userProfile.lat, userProfile.lng);
 
   if (presentation === 'dashboard') return (
-    <BriefingMapInner hotspots={hotspots} selectedHotspot={selectedHotspot} onSelectHotspot={onSelectHotspot}
+    <BriefingMapInner hotspots={filteredHotspots} selectedHotspot={selectedHotspot} onSelectHotspot={onSelectHotspot}
       filterType="both" selectedSpecies={[]} userProfile={userProfile} customWaypoint={null}
       setCustomWaypoint={setCustomWaypoint} showToast={showToast} manualOverrideHold={manualOverrideHold}
       center={center} activeRegion={activeRegion} showRegionBoundary={showRegionBoundary} showVesselMarkers={false}
@@ -107,7 +129,7 @@ export const MapComponent: React.FC<MapComponentProps> = ({
       {/* ECDIS Nautical Chart Container */}
       <div className="relative flex-1 bg-blue-50/50 w-full h-full" style={{ minHeight }}>
         <MapInner
-          hotspots={hotspots}
+          hotspots={filteredHotspots}
           selectedHotspot={selectedHotspot}
           onSelectHotspot={onSelectHotspot}
           filterType={filterType}
@@ -143,6 +165,29 @@ export const MapComponent: React.FC<MapComponentProps> = ({
             </span>
           </div>
 
+          <div className="bg-slate-50 dark:bg-teal-950/50 p-2 rounded-xl border border-slate-200/80 dark:border-teal-900/60 space-y-1">
+            <label htmlFor="map-legend-threshold-slider" className="flex items-center justify-between font-black text-[9px] text-slate-900 dark:text-white cursor-pointer">
+              <span>Min Threshold</span>
+              <span className="text-emerald-700 dark:text-emerald-400">≥ {activeThreshold}%</span>
+            </label>
+            <input
+              id="map-legend-threshold-slider"
+              type="range"
+              min={25}
+              max={95}
+              step={5}
+              value={activeThreshold}
+              aria-valuetext={`≥ ${activeThreshold}% minimum model estimate`}
+              onChange={(e) => handleThresholdChange(Number(e.target.value))}
+              className="w-full accent-emerald-700 cursor-pointer"
+            />
+            <div className="flex justify-between text-[7.5px] font-bold text-gray-400" aria-hidden="true">
+              <span>25%</span>
+              <span>50%</span>
+              <span>95%</span>
+            </div>
+          </div>
+
           <div className="space-y-1.5 font-bold text-gray-700 dark:text-gray-200">
             {(!selectedSpecies || selectedSpecies.length === 0) && (
               <div className="space-y-2 pt-1">
@@ -152,9 +197,9 @@ export const MapComponent: React.FC<MapComponentProps> = ({
                     <span className="truncate">General Pelagic Model</span>
                   </div>
                   <div className="grid grid-cols-4 gap-1 text-[7.5px] font-black text-center pt-0.5">
-                    <div className="flex flex-col items-center" title="50-69%">
+                    <div className="flex flex-col items-center" title="25-69%">
                       <span className="w-full h-1.5 rounded-xs mb-0.5 shadow-2xs" style={{ backgroundColor: GENERAL_PELAGIC_SHADES.light }} />
-                      <span className="text-gray-400">50-69%</span>
+                      <span className="text-gray-400">25-69%</span>
                     </div>
                     <div className="flex flex-col items-center" title="70-79%">
                       <span className="w-full h-1.5 rounded-xs mb-0.5 shadow-2xs" style={{ backgroundColor: GENERAL_PELAGIC_SHADES.medium }} />
@@ -177,9 +222,9 @@ export const MapComponent: React.FC<MapComponentProps> = ({
                     <span className="truncate">General Demersal Model</span>
                   </div>
                   <div className="grid grid-cols-4 gap-1 text-[7.5px] font-black text-center pt-0.5">
-                    <div className="flex flex-col items-center" title="50-69%">
+                    <div className="flex flex-col items-center" title="25-69%">
                       <span className="w-full h-1.5 rounded-xs mb-0.5 shadow-2xs" style={{ backgroundColor: GENERAL_DEMERSAL_SHADES.light }} />
-                      <span className="text-gray-400">50-69%</span>
+                      <span className="text-gray-400">25-69%</span>
                     </div>
                     <div className="flex flex-col items-center" title="70-79%">
                       <span className="w-full h-1.5 rounded-xs mb-0.5 shadow-2xs" style={{ backgroundColor: GENERAL_DEMERSAL_SHADES.medium }} />
@@ -215,9 +260,9 @@ export const MapComponent: React.FC<MapComponentProps> = ({
                       
                       {/* 4-tier probability gradient swatches */}
                       <div className="grid grid-cols-4 gap-1 text-[7.5px] font-black text-center pt-0.5">
-                        <div className="flex flex-col items-center" title="50-69% Catch Probability">
+                        <div className="flex flex-col items-center" title="25-69% Catch Probability">
                           <span className="w-full h-2 rounded-xs mb-0.5 shadow-2xs" style={{ backgroundColor: cfg.shades.light }} />
-                          <span className="text-gray-400">50-69%</span>
+                          <span className="text-gray-400">25-69%</span>
                         </div>
                         <div className="flex flex-col items-center" title="70-79% Catch Probability">
                           <span className="w-full h-2 rounded-xs mb-0.5 shadow-2xs" style={{ backgroundColor: cfg.shades.medium }} />

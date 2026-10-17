@@ -1,10 +1,20 @@
 'use client';
 
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useState, type CSSProperties } from 'react';
 import dynamic from 'next/dynamic';
 import { ArrowLeft, ChevronDown, List, SlidersHorizontal } from 'lucide-react';
 import type { Hotspot, PhilippineRegion, Language } from '@/types';
-import { manilaDate, type AdvisoryState, type DashboardWeather, type FishingArea, type FishingAreaMetadata } from '@/lib/dashboard';
+import {
+  DEFAULT_THRESHOLD_PERCENT,
+  MAX_THRESHOLD_PERCENT,
+  MIN_THRESHOLD_PERCENT,
+  manilaDate,
+  meetsThreshold,
+  type AdvisoryState,
+  type DashboardWeather,
+  type FishingArea,
+  type FishingAreaMetadata,
+} from '@/lib/dashboard';
 import type { MapViewMode } from '@/components/features/hotspots/MapComponent';
 import { CATEGORIZED_SPECIES } from '@/utils/speciesColors';
 import { WeatherDetails } from './Advisory';
@@ -24,14 +34,18 @@ interface WorkspaceProps {
   areas: FishingArea[]; loading: boolean; failed: boolean; retry: () => void; region: PhilippineRegion; lat: number; lng: number;
   areaMetadata: FishingAreaMetadata | null;
   habitat: Hotspot['type']; species: string; setFilters: (habitat: Hotspot['type'], species: string) => void;
+  minThreshold?: number; setMinThreshold?: (value: number) => void;
   state: AdvisoryState; weather: DashboardWeather | null; weatherStale: boolean; phone: string; port: string;
   copy: DashboardCopy; language: Language; showWeather: boolean; closeWeather: () => void;
 }
 
 export default function DashboardWorkspace(props: WorkspaceProps) {
-  const { areas, loading, failed, retry, region, lat, lng, habitat, species, setFilters, state, weather, weatherStale, phone, port, copy, language, showWeather, closeWeather } = props;
+  const { areas: rawAreas, loading, failed, retry, region, lat, lng, habitat, species, setFilters, state, weather, weatherStale, phone, port, copy, language, showWeather, closeWeather } = props;
   const viewport = useWorkspaceViewport();
   const [forecastCache] = useState(() => new Map<string, DashboardWeather>());
+  const [internalThreshold, setInternalThreshold] = useState(DEFAULT_THRESHOLD_PERCENT);
+  const minThreshold = props.minThreshold ?? internalThreshold;
+  const areas = rawAreas.filter(area => meetsThreshold(area.catchProbability, minThreshold));
   const text = GUIDANCE_COPY[language];
   const dates = [...new Set((props.areaMetadata?.predictionDates || areas.map(area => area.predictionDate))
     .map(predictionDay).filter((date): date is string => date !== null))].sort().reverse();
@@ -47,7 +61,7 @@ export default function DashboardWorkspace(props: WorkspaceProps) {
   const [tilesFailed, setTilesFailed] = useState(false);
   const filtersRef = useRef<HTMLDetailsElement>(null);
   const selected = areas.find(area => area.id === selectedId) || null;
-  const filtered = habitat !== 'both' || Boolean(species);
+  const filtered = habitat !== 'both' || Boolean(species) || minThreshold !== DEFAULT_THRESHOLD_PERCENT;
   const panelVisible = viewport === 'desktop' || (viewport === 'mobile' && mobileView === 'areas') || (viewport === 'tablet' && drawerOpen) || showWeather;
   const panelTitle = showWeather ? copy.weatherDetails : selected?.name || copy.areas;
   useEffect(() => {
@@ -66,9 +80,25 @@ export default function DashboardWorkspace(props: WorkspaceProps) {
   const select = (area: Hotspot | null) => {
     setSelectedId(area?.id || null); closeWeather(); setDrawerOpen(true); setMobileView('areas'); focusPanel();
   };
+  const updateMinThreshold = (nextValue: number) => {
+    const clamped = Math.min(Math.max(nextValue, MIN_THRESHOLD_PERCENT), MAX_THRESHOLD_PERCENT);
+    setLimit(3);
+    setSelectedId(null);
+    if (props.setMinThreshold) props.setMinThreshold(clamped);
+    else setInternalThreshold(clamped);
+  };
   const updateFilters = (nextHabitat: Hotspot['type'], nextSpecies: string) => {
     setLimit(3); setSelectedId(null); setFilters(nextHabitat, nextSpecies);
   };
+  const clearAllFilters = () => {
+    updateFilters('both', '');
+    updateMinThreshold(DEFAULT_THRESHOLD_PERCENT);
+  };
+  const sliderStyle = {
+    '--control-value': minThreshold,
+    '--attr-min': MIN_THRESHOLD_PERCENT,
+    '--attr-max': MAX_THRESHOLD_PERCENT,
+  } as CSSProperties;
   const returnAreas = () => { closeWeather(); setSelectedId(null); setMobileView('areas'); setDrawerOpen(true); focusPanel(); };
   const closePanel = () => { closeWeather(); setDrawerOpen(false); setMobileView('map'); };
   const retryMap = () => { setTilesFailed(false); setMapRevision(previous => previous + 1); };
@@ -87,7 +117,7 @@ export default function DashboardWorkspace(props: WorkspaceProps) {
               {earlierPredictions && <p className={styles.predictionNotice}>{latestDate < (manilaDate(new Date()) || '') ? `${text.lastPredictions} · ${formattedPredictionDate}` : text.earlierDates}</p>}
               {props.areaMetadata?.capped && <p className={styles.panelDescription}>{text.capped.replace('{returned}', String(props.areaMetadata.returnedCount)).replace('{total}', String(props.areaMetadata.eligibleCount))}</p>}
               <FishingAreas areas={areas} loading={loading} failed={failed} retry={retry} limit={limit} showMore={() => setLimit(previous => previous === 3 ? 10 : previous + 10)}
-                select={select} filtered={filtered} clearFilters={() => updateFilters('both', '')} hold={state === 'hold'} speciesUnavailable={Boolean(species && areas.length && !areas.some(area => area.speciesAdjusted))} copy={copy} />
+                select={select} filtered={filtered} clearFilters={clearAllFilters} hold={state === 'hold'} speciesUnavailable={Boolean(species && areas.length && !areas.some(area => area.speciesAdjusted))} copy={copy} />
             </>}
       </div>
     </div>
@@ -108,6 +138,24 @@ export default function DashboardWorkspace(props: WorkspaceProps) {
             <button type="button" aria-pressed={viewMode === 'region'} onClick={() => setViewMode('region')}>{copy.advisoryArea}</button>
           </div>
           <div className={styles.toolbarActions}>
+            <div className={styles.thresholdControl}>
+              <label htmlFor="dashboard-threshold-slider" className={styles.thresholdLabel}>
+                <span>{copy.minThreshold}</span>
+                <strong className={styles.thresholdValue}>≥ {minThreshold}%</strong>
+              </label>
+              <input
+                id="dashboard-threshold-slider"
+                type="range"
+                className={styles.thresholdSlider}
+                min={MIN_THRESHOLD_PERCENT}
+                max={MAX_THRESHOLD_PERCENT}
+                step={5}
+                value={minThreshold}
+                aria-valuetext={`≥ ${minThreshold}% ${copy.modelEstimate.toLowerCase()}`}
+                onChange={event => updateMinThreshold(Number(event.target.value))}
+                style={sliderStyle}
+              />
+            </div>
             {viewport === 'tablet' && <button type="button" className={styles.textButton} onClick={() => { setDrawerOpen(true); closeWeather(); }}><List size={16} aria-hidden="true" />{copy.areasView}</button>}
             <details ref={filtersRef} className={styles.filters} onKeyDown={event => {
               if (event.key === 'Escape' && filtersRef.current) { filtersRef.current.open = false; filtersRef.current.querySelector('summary')?.focus(); }
@@ -116,12 +164,35 @@ export default function DashboardWorkspace(props: WorkspaceProps) {
               <div className={styles.filterPopover}>
                 <label>{copy.habitat}<select value={habitat} onChange={event => updateFilters(event.target.value as Hotspot['type'], species)}><option value="both">{copy.all}</option><option value="pelagic">{copy.surface}</option><option value="demersal">{copy.bottom}</option></select></label>
                 <label>{copy.targetFish}<select value={species} onChange={event => updateFilters(habitat, event.target.value)}><option value="">{copy.anyFish}</option>{[...CATEGORIZED_SPECIES.pelagic, ...CATEGORIZED_SPECIES.demersal].map(fish => <option key={fish.name} value={fish.name}>{fish.name}</option>)}</select></label>
-                {filtered && <button type="button" className={styles.textButton} onClick={() => updateFilters('both', '')}>{copy.clearFilters}</button>}
+                <label htmlFor="popover-threshold-slider" className={styles.popoverThresholdField}>
+                  <span className={styles.popoverThresholdHeader}>
+                    <span>{copy.minThreshold}</span>
+                    <strong className={styles.thresholdValue}>≥ {minThreshold}%</strong>
+                  </span>
+                  <input
+                    id="popover-threshold-slider"
+                    type="range"
+                    className={styles.thresholdSlider}
+                    min={MIN_THRESHOLD_PERCENT}
+                    max={MAX_THRESHOLD_PERCENT}
+                    step={5}
+                    value={minThreshold}
+                    aria-valuetext={`≥ ${minThreshold}% ${copy.modelEstimate.toLowerCase()}`}
+                    onChange={event => updateMinThreshold(Number(event.target.value))}
+                    style={sliderStyle}
+                  />
+                  <span className={styles.thresholdScale} aria-hidden="true">
+                    <span>{MIN_THRESHOLD_PERCENT}%</span>
+                    <span>50%</span>
+                    <span>{MAX_THRESHOLD_PERCENT}%</span>
+                  </span>
+                </label>
+                {filtered && <button type="button" className={styles.textButton} onClick={clearAllFilters}>{copy.clearFilters}</button>}
               </div>
             </details>
           </div>
         </div>
-        {filtered && <div className={styles.activeFilters}><span>{[habitat === 'pelagic' ? copy.surface : habitat === 'demersal' ? copy.bottom : '', species].filter(Boolean).join(' · ')}</span><button type="button" className={styles.textButton} onClick={() => updateFilters('both', '')}>{copy.clearFilters}</button></div>}
+        {filtered && <div className={styles.activeFilters}><span>{[habitat === 'pelagic' ? copy.surface : habitat === 'demersal' ? copy.bottom : '', species, minThreshold !== DEFAULT_THRESHOLD_PERCENT ? `${copy.minThreshold}: ≥ ${minThreshold}%` : ''].filter(Boolean).join(' · ')}</span><button type="button" className={styles.textButton} onClick={clearAllFilters}>{copy.clearFilters}</button></div>}
         {tilesFailed && <div className={styles.mapError} role="status"><span>{copy.mapFailed}</span><button type="button" className={styles.textButton} onClick={retryMap}>{copy.retry}</button></div>}
         <div className={styles.mapCanvas}>
           <DashboardMap key={mapRevision} areas={areas} selected={selected} select={select} region={region} lat={lat} lng={lng} viewMode={viewMode} tileError={() => setTilesFailed(true)} retry={retryMap} copy={copy} />

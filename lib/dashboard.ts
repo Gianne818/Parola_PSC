@@ -80,11 +80,29 @@ export function retainWeather(previous: DashboardWeather | null, next: Dashboard
   };
 }
 
-export function nearbyAreas(areas: FishingArea[], region: PhilippineRegion, lat: number, lng: number, habitat: Hotspot['type']): FishingArea[] {
+export const MIN_THRESHOLD_PERCENT = 25;
+export const DEFAULT_THRESHOLD_PERCENT = 50;
+export const MAX_THRESHOLD_PERCENT = 95;
+
+export function meetsThreshold(value: number | undefined, minThresholdPercent = DEFAULT_THRESHOLD_PERCENT): boolean {
+  if (value === undefined || !Number.isFinite(value)) return true;
+  const pct = value <= 1 ? value * 100 : value;
+  return pct + 1e-6 >= minThresholdPercent;
+}
+
+export function nearbyAreas(
+  areas: FishingArea[],
+  region: PhilippineRegion,
+  lat: number,
+  lng: number,
+  habitat: Hotspot['type'],
+  minThresholdPercent = DEFAULT_THRESHOLD_PERCENT
+): FishingArea[] {
   if (!isClientCoordinate(lat, lng)) return [];
   return areas.filter(area => isClientTargetCoordinate(area.lat, area.lng)
     && isCoordinateInRegion(area.lat, area.lng, region.id)
-    && (habitat === 'both' || (area.habitatKnown && (area.type === habitat || area.type === 'both'))))
+    && (habitat === 'both' || (area.habitatKnown && (area.type === habitat || area.type === 'both')))
+    && meetsThreshold(area.catchProbability, minThresholdPercent))
     .map(area => ({ ...area, distanceKm: calculateDistance(lat, lng, area.lat, area.lng), compassBearing: calculateBearing(lat, lng, area.lat, area.lng) }))
     .sort((a, b) => a.distanceKm - b.distanceKm || a.id.localeCompare(b.id));
 }

@@ -179,21 +179,26 @@ function SelectionViewController({ center, region, viewMode, constrainToPhilippi
   const map = useMap();
   const lat = center?.[0];
   const lng = center?.[1];
+  const prevFrameKeyRef = useRef<string | null>(null);
+  const hasFramedNearbyRef = useRef<boolean>(false);
   useEffect(() => {
+    const applyPhilippinesConstraint = () => {
+      if (!constrainToPhilippines) return;
+      const countryBounds = L.latLngBounds(PHILIPPINE_NAVIGATION_BOUNDS);
+      const size = map.getSize();
+      if (size.x <= 48 || size.y <= 48) return;
+      // Project at zoom zero so a previous minimum cannot clamp the resize calculation.
+      const span = map.project(countryBounds.getSouthEast(), 0)
+        .subtract(map.project(countryBounds.getNorthWest(), 0));
+      const scale = Math.min((size.x - 48) / Math.abs(span.x), (size.y - 48) / Math.abs(span.y));
+      const overviewZoom = Math.floor(map.getScaleZoom(scale, 0) * 4) / 4;
+      // Raising Leaflet's minimum would otherwise start an implicit zoom animation.
+      if (overviewZoom > map.getZoom()) map.setZoom(overviewZoom, { animate: false });
+      map.setMinZoom(overviewZoom);
+    };
     const frameSelection = () => {
       const countryBounds = L.latLngBounds(PHILIPPINE_NAVIGATION_BOUNDS);
-      if (constrainToPhilippines) {
-        const size = map.getSize();
-        if (size.x <= 48 || size.y <= 48) return;
-        // Project at zoom zero so a previous minimum cannot clamp the resize calculation.
-        const span = map.project(countryBounds.getSouthEast(), 0)
-          .subtract(map.project(countryBounds.getNorthWest(), 0));
-        const scale = Math.min((size.x - 48) / Math.abs(span.x), (size.y - 48) / Math.abs(span.y));
-        const overviewZoom = Math.floor(map.getScaleZoom(scale, 0) * 4) / 4;
-        // Raising Leaflet's minimum would otherwise start an implicit zoom animation.
-        if (overviewZoom > map.getZoom()) map.setZoom(overviewZoom, { animate: false });
-        map.setMinZoom(overviewZoom);
-      }
+      applyPhilippinesConstraint();
       if (lat === undefined || lng === undefined) {
         map.fitBounds(constrainToPhilippines ? countryBounds : [[4.5, 116], [21.5, 127]], {
           padding: [24, 24], maxZoom: constrainToPhilippines ? undefined : 6, animate: false,
@@ -207,9 +212,21 @@ function SelectionViewController({ center, region, viewMode, constrainToPhilippi
         map.setView([lat, lng], 13, { animate: false });
       }
     };
-    frameSelection();
-    map.on('resize', frameSelection);
-    return () => { map.off('resize', frameSelection); };
+    const frameKey = `${lat ?? ''}:${lng ?? ''}:${region?.id ?? ''}:${viewMode}:${constrainToPhilippines}`;
+    const hasNearby = Boolean(nearbyPositions?.length);
+    if (prevFrameKeyRef.current !== frameKey) {
+      prevFrameKeyRef.current = frameKey;
+      hasFramedNearbyRef.current = hasNearby;
+      frameSelection();
+    } else if (viewMode === 'port' && !hasFramedNearbyRef.current && hasNearby) {
+      hasFramedNearbyRef.current = true;
+      frameSelection();
+    }
+    const handleResize = () => {
+      if (constrainToPhilippines) frameSelection();
+    };
+    map.on('resize', handleResize);
+    return () => { map.off('resize', handleResize); };
   }, [map, lat, lng, region, viewMode, constrainToPhilippines, nearbyPositions]);
   return null;
 }

@@ -64,6 +64,9 @@ class DailyPredictionsPipelineChecks(unittest.TestCase):
         peaks = module.spatial_nms(df, 'grid_lat', 'grid_lon', 'catch_probability', radius_km=16.5)
         self.assertEqual(peaks['catch_probability'].tolist(), [0.90, 0.70])
 
+    def test_minimum_catch_probability_is_25_percent(self):
+        self.assertEqual(module.MINIMUM_CATCH_PROBABILITY, 0.25)
+
 
 if __name__ == '__main__':
     unittest.main()

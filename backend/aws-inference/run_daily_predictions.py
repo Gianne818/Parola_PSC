@@ -14,6 +14,10 @@ from zoneinfo import ZoneInfo
 # ==============================================================================
 ENABLE_DAILY_PREDICTIONS = True
 
+# Lowest catch_probability stored in Supabase so users can adjust the map slider
+# down to 25% (default displayed threshold in the UI remains >= 50%).
+MINIMUM_CATCH_PROBABILITY = 0.25
+
 # Directory where static model/reference assets live (defaults to script directory)
 ASSET_DIR = os.environ.get("PAROLA_ASSET_DIR", os.path.dirname(os.path.abspath(__file__)))
 # Scratch directory for temporary NetCDF files (/tmp for AWS Lambda compatibility)
@@ -38,6 +42,7 @@ import geopandas as gpd
 import lightgbm as lgb
 from scipy.spatial import cKDTree
 from sklearn.cluster import DBSCAN
+from sklearn.neighbors import BallTree
 try:
     import psycopg
 except ImportError:
@@ -280,25 +285,27 @@ def run_pipeline(requested_today=None, force=False, event_enabled=None):
     df_today["catch_probability"] = np.minimum(model_pel.predict(df_today[pel_features]), 0.95)
 
     presence = pd.read_parquet(os.path.join(ASSET_DIR, "vbd_gridded_presence.parquet"))
-    sampled = presence.sample(n=100000, random_state=42).copy()
-    sampled[["grid_lat", "grid_lon"]] = sampled[["grid_lat", "grid_lon"]].astype(np.float32)
-    labels = DBSCAN(eps=0.001, min_samples=15, metric="haversine", algorithm="ball_tree").fit_predict(
-        np.radians(sampled[["grid_lat", "grid_lon"]].values)
+    grouped_vbd = (
+        presence.groupby(["grid_lat", "grid_lon"], as_index=False)
+        .size()
+        .rename(columns={"size": "detections"})
     )
-    sampled["cluster_id"] = labels
-    clusters = sampled[sampled.cluster_id >= 0].groupby("cluster_id").agg(
+    grouped_vbd[["grid_lat", "grid_lon"]] = grouped_vbd[["grid_lat", "grid_lon"]].astype(np.float32)
+    labels = DBSCAN(eps=0.001, min_samples=15, metric="haversine", algorithm="ball_tree").fit_predict(
+        np.radians(grouped_vbd[["grid_lat", "grid_lon"]].values),
+        sample_weight=grouped_vbd["detections"].values,
+    )
+    grouped_vbd["cluster_id"] = labels
+    clusters = grouped_vbd[grouped_vbd.cluster_id >= 0].groupby("cluster_id").agg(
         latitude=("grid_lat", "mean"), longitude=("grid_lon", "mean")
     ).reset_index()
 
-    cand = df_today[df_today["catch_probability"] >= 0.50].copy()
+    cand = df_today[df_today["catch_probability"] >= MINIMUM_CATCH_PROBABILITY].copy()
     ref = np.radians(clusters[["latitude", "longitude"]].to_numpy(dtype=float))
     pts = np.radians(cand[["grid_lat", "grid_lon"]].to_numpy(dtype=float))
-    dlat = ref[:, 0] - pts[:, 0, None]
-    dlon = ref[:, 1] - pts[:, 1, None]
-    a = np.sin(dlat / 2) ** 2 + np.cos(pts[:, 0, None]) * np.cos(ref[:, 0]) * np.sin(dlon / 2) ** 2
-    km = 2 * 6371.0 * np.arcsin(np.sqrt(np.clip(a, 0, 1)))
-    cand["km_to_nearest_hotspot"] = km.min(axis=1)
-    cand["dbscan_cluster_id"] = clusters.cluster_id.to_numpy()[km.argmin(axis=1)]
+    dist_rad, nearest_idx = BallTree(ref, metric="haversine").query(pts, k=1)
+    cand["km_to_nearest_hotspot"] = dist_rad[:, 0] * 6371.0
+    cand["dbscan_cluster_id"] = clusters.cluster_id.to_numpy()[nearest_idx[:, 0]]
 
     pel_grounded = cand[cand["km_to_nearest_hotspot"] <= 15.0].copy()
     pel_offshore = filter_offshore(pel_grounded, "grid_lat", "grid_lon", 3.0, ph_land, ph_boundary)
@@ -330,7 +337,7 @@ def run_pipeline(requested_today=None, force=False, event_enabled=None):
     dem_unique["thetao_live"] = live_matched["thetao"].values
     dem_unique["chl_live"] = live_matched["chl"].values
 
-    dem_candidates = dem_unique[dem_unique["catch_probability"] >= 0.50].copy()
+    dem_candidates = dem_unique[dem_unique["catch_probability"] >= MINIMUM_CATCH_PROBABILITY].copy()
     dem_offshore = filter_offshore(dem_candidates, "decimalLatitude", "decimalLongitude", 1.2, ph_land, ph_boundary)
     dem_peaks = spatial_nms(dem_offshore, "decimalLatitude", "decimalLongitude", "catch_probability", radius_km=12.0)
 

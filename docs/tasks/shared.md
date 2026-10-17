@@ -61,6 +61,17 @@ default) to pause or skip daily prediction runs when desired, updating
 manifest exception), and deploying the updated container image and schedule
 configuration to the existing AWS Lambda (`parola-ParolaInferenceFunction-OjglErBmhUc2`).
 
+Toby subsequently authorized lowering the stored and queryable hotspot
+threshold floor from `0.50` (50%) to `0.25` (25%) in the daily prediction
+pipeline (`run_daily_predictions.py`), Supabase (`public.daily_grid_predictions`),
+and backend regional/nearest advisory queries (`lib/regional-predictions.ts`,
+`app/api/advisories/nearest/route.ts`), while keeping the default displayed
+threshold at `>= 50%` and adding a user-adjustable minimum threshold slider
+(`25%`–`90%`, default `50%`) to the map and dashboard UI (`components/dashboard/**`,
+`components/features/hotspots/**`, `lib/dashboard.ts`, `utils/speciesColors.ts`,
+and associated tests) so municipalities without `>= 50%` hotspots can access
+lower-threshold predictions down to 25%.
+
 Most-specific path wins. New files use the matching scope; any unlisted/ambiguous integration path needs Son to record its owner before edits. Ownership grants no authority beyond the selected assignment. Existing user changes must be preserved.
 
 | Owner | Owned paths / exceptions |
