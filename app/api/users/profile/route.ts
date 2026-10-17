@@ -1,6 +1,6 @@
 import { checkSameOrigin, demoOwner, DEMO_OWNER_CONDITION, hasDemoCookie } from '@/lib/demo-account';
 import { getAuthMode } from '@/lib/auth-mode';
-import { phoneE164, registrationBody, registrationJson, registrationOwner, registrationResponse, registryQuery, RegistrationError, type RegistryProfile } from '@/lib/registration';
+import { phoneE164, registrationBody, registrationJson, registrationOwner, registrationResponse, registryQuery, RegistrationError, VERIFIED_PROFILE_SQL, type RegistryProfile } from '@/lib/registration';
 import { ADVISORY_PREFERENCE_FIELDS, advisoryPreferenceInput, withAdvisorySchedule } from '@/lib/advisory-preferences';
 
 const profileColumns = `u.id, u.phone_number, u.full_name, u.home_port_name,
@@ -15,8 +15,9 @@ export async function GET(request: Request) {
   return registrationResponse(async () => {
     const demo = hasDemoCookie(request) && getAuthMode() === 'demo' && !request.headers.has('authorization');
     const owner = demo ? demoOwner(request) : await registrationOwner(request);
-    const result = await registryQuery<RegistryProfile>(demo ? 'profile_demo' : 'profile_live', `SELECT ${profileColumns} FROM public.users u
-      ${demo ? '' : 'JOIN auth.users a ON a.id = u.auth_user_id'} WHERE ${demo ? DEMO_OWNER_CONDITION : ownerCondition};`, [owner.id, phoneE164(owner.phone)]);
+    const result = await registryQuery<RegistryProfile>(demo ? 'profile_demo' : 'profile_live', demo
+      ? `SELECT ${profileColumns} FROM public.users u WHERE ${DEMO_OWNER_CONDITION};`
+      : VERIFIED_PROFILE_SQL, [owner.id, phoneE164(owner.phone)]);
     if (!result.rows[0]) throw new RegistrationError(404, 'Verified registration not found.');
     return registrationJson(withAdvisorySchedule({ ...result.rows[0], ...(demo ? { auth_mode: 'demo', contact_verified: false, messaging_eligible: false } : {}) }));
   });

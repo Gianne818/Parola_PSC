@@ -1,5 +1,43 @@
 # Son's six work packages
 
+**SON-01 follow-up, October 17, 2026: account response compatibility.**
+Live signup now reads the saved owner profile through the existing `profile_live`
+operation before returning success. This supplies the coordinates required by
+Tier's profile reader with both PostgreSQL and the already-installed HTTPS RPC,
+including when verification links a demo account whose saved port differs from
+the submitted defaults. No migration or hosted-function update is required.
+If readback fails after the save, the response tells the user to sign in instead
+of retrying registration; the completed write is never repeated automatically.
+Demo password login now includes the same derived schedule metadata as reload,
+so saved preferences are available immediately. Existing owner, consent, expired/
+forged-session and demo no-OTP guards are retained. The seven new regression
+cases cover the real frontend reader, all three habitats, readback failures,
+PostgreSQL/HTTPS responses and login schedule hydration.
+Validation: 396 network-denied tests in 32 files, full TypeScript, tracked secret
+scan and whitespace checks passed. A subsequent isolated browser run passed all
+30 TIER-01 checks: saved preferences/port/habitat restoration, pause/five-day
+limits, failed saves/retries, duplicate submission, malformed responses, reload,
+cache failure and responsive accessibility. It used existing cached Vite and
+temporary headless Chrome flags to work around local dependency/GPU restrictions;
+the fixture denied networking, created no real account and removed its temporary
+browser profile. These checks do not prove real database round-trips or the full
+register/onboarding/sign-out/password-sign-in journey. Broader
+PRIV-01 report/fleet/delegation, retention and tamper-evident audit work remains
+partial; no new permissions or assisted operations are enabled. No live account
+writes, OTP/SMS, dependency install or deployment was performed.
+
+SON-01 closure checklist (current account slice versus full package):
+
+- [x] Complete live registration response compatible with Tier's profile reader.
+- [x] Demo password login supplies persisted schedule metadata immediately.
+- [x] Mocked session/owner/consent guards and isolated browser preference/reload checks.
+- [ ] Actual database-backed account journey, login/logout/reload and preference readback.
+- [ ] PRIV-01 dependent report/fleet/delegation controls and reviewed access/retention
+  design (REPORT-02, ENT-01 and D09/C08); no purge period or new role is invented.
+
+The focused compatibility implementation is complete. SON-01 remains partial;
+the last two checks are not established by the automated evidence above.
+
 **User-selected PostgreSQL setting:** `DB_SSL_INSECURE=true` in the ignored
 `.env` and `.env.example`. The app honors the explicit override in development
 and production without needing a local CA file. Optional verified-CA support

@@ -5,6 +5,7 @@ vi.mock('@/lib/rate-limit', async original => ({ ...await original<typeof import
 import { getDbPool } from '@/lib/db';
 import { getSupabaseUser } from '@/lib/route-auth';
 import { matchesAccountPassword } from '@/lib/demo-account';
+import { readProfile, readSchedule } from '@/lib/frontend/profile-client';
 import { POST as register } from './route';
 import { POST as login } from '../login/route';
 import { GET as profile, PUT as update } from '../profile/route';
@@ -25,6 +26,7 @@ function session(response: Response) { return response.headers.get('set-cookie')
 
 beforeEach(() => {
   vi.clearAllMocks();
+  fetcher.mockReset();
   vi.stubEnv('PAROLA_REGISTRY_TRANSPORT', 'https');
   vi.stubEnv('PAROLA_AUTH_MODE', 'demo');
   vi.stubEnv('PAROLA_DEMO_SESSION_SECRET', 'test-signing-secret-at-least-32-characters');
@@ -116,6 +118,41 @@ describe('accounts over HTTPS with direct PostgreSQL unavailable', () => {
     expect(rpc().p_values[0]).toBe(id);
     expect(rpc().p_values[7]).toBe(false);
     expect(getDbPool).not.toHaveBeenCalled();
+  });
+
+  it.each(['pelagic', 'demersal', 'both'])('returns the canonical %s profile after the existing live RPC omits coordinates', async habitat => {
+    vi.stubEnv('PAROLA_AUTH_MODE', 'live');
+    vi.mocked(getSupabaseUser).mockResolvedValue({ id, phone: saved.phone_number });
+    const persisted = { ...saved, home_port_name: 'Saved Port', latitude: 14.1, longitude: 122.9,
+      habitat_preference: habitat, advisory_days: [1, 3, 5], preferred_language: 'ceb', preferred_advisory_time: '04:30:17',
+      messaging_consent: false, messaging_eligible: false };
+    const { latitude: _lat, longitude: _lng, ...acknowledgement } = persisted;
+    fetcher.mockResolvedValueOnce(Response.json([{ ...acknowledgement, messaging_consent: true, messaging_eligible: true }]))
+      .mockResolvedValueOnce(Response.json([persisted]));
+    const response = await register(request({ ...input, messaging_consent: false, consent_version: 'messaging-v1' }));
+    expect(response.status).toBe(201);
+    const account = await response.json();
+    expect(readProfile(account)).toMatchObject({ id, port: 'Saved Port', lat: 14.1, lng: 122.9, speciesPreference: habitat });
+    expect(readSchedule(account)).toMatchObject({ advisory_days: [1, 3, 5], preferred_language: 'ceb', preferred_advisory_time: '04:30:17' });
+    expect(account).toMatchObject({ contact_verified: true, messaging_eligible: false });
+    expect(rpc(1)).toEqual({ p_operation: 'profile_live', p_values: [id, saved.phone_number] });
+    expect(fetcher).toHaveBeenCalledTimes(2);
+    expect(getDbPool).not.toHaveBeenCalled();
+  });
+
+  it.each(['missing', 'unavailable'])('does not repeat a saved registration when profile readback is %s', async failure => {
+    vi.stubEnv('PAROLA_AUTH_MODE', 'live');
+    vi.mocked(getSupabaseUser).mockResolvedValue({ id, phone: saved.phone_number });
+    fetcher.mockResolvedValueOnce(Response.json([saved]));
+    if (failure === 'missing') fetcher.mockResolvedValueOnce(Response.json([]));
+    else fetcher.mockRejectedValueOnce(new Error('private connection details'));
+    const response = await register(request({ ...input, messaging_consent: false, consent_version: 'messaging-v1' }));
+    expect(response.status).toBe(503);
+    expect(await response.json()).toMatchObject({ code: 'profile_readback_unavailable', error: expect.stringContaining('Sign in') });
+    expect(fetcher).toHaveBeenCalledTimes(2);
+    expect(rpc().p_operation).toBe('register_live');
+    expect(rpc(1).p_operation).toBe('profile_live');
+    expect(response.headers.has('set-cookie')).toBe(false);
   });
 
   it('uses live owner operations for profile and consent and rejects a demo cookie after mode switch', async () => {

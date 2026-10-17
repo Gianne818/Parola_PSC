@@ -121,6 +121,16 @@ export interface RegistryProfile extends AdvisoryPreferences {
   [key: string]: unknown;
 }
 
+// Shared by reload and post-registration readback; return the persisted port,
+// including when live verification links an existing demo account.
+export const VERIFIED_PROFILE_SQL = `SELECT u.id, u.phone_number, u.full_name, u.home_port_name,
+  ST_Y(u.home_port_geom) AS latitude, ST_X(u.home_port_geom) AS longitude,
+  u.advisory_days, u.preferred_advisory_time::text, u.preferred_language, u.habitat_preference,
+  u.is_active, u.messaging_consent, u.messaging_consent_version, u.messaging_consent_at
+  FROM public.users u JOIN auth.users a ON a.id = u.auth_user_id
+  WHERE u.auth_user_id = $1 AND u.phone_e164 = $2 AND a.phone_confirmed_at IS NOT NULL
+    AND public.parola_phone_e164(a.phone) = $2;`;
+
 export async function registryQuery<R extends QueryResultRow = QueryResultRow>(operation: RegistryOperation, sql: string, values: unknown[]): Promise<{ rows: R[] }> {
   const transport = process.env.PAROLA_REGISTRY_TRANSPORT ?? 'postgres';
   if (transport === 'postgres') return registryDb().query<R>(sql, values);

@@ -88,6 +88,12 @@ working DNS and HTTPS access. This is not an offline account store.
 
 ## Authentication and scope
 
+- Live signup returns an owner-checked canonical profile after the account write,
+  using the existing `profile_live` operation. This includes saved coordinates
+  even with the original installed registration RPC. No migration is needed for
+  this compatibility fix. A failed readback returns `profile_readback_unavailable`
+  and tells the user to sign in before registering again; the saved write is not
+  retried. Demo password login includes schedule metadata immediately.
 - Demo accepts the existing 1–6 digit code and does not call OTP/Auth providers.
   Saved accounts remain unverified, without a Supabase Auth identity or messaging
   consent. Only the signed server cookie authorizes the account's demo profile.
@@ -108,6 +114,14 @@ working DNS and HTTPS access. This is not an offline account store.
   mock setting. See [demo/live limits](registration-demo-mode.md#hosted-hook-and-verification-limits).
 
 ## Validation and remaining acceptance
+
+The account-compatibility follow-up passed 396 network-denied tests, full
+TypeScript and 30 isolated TIER-01 browser checks. The latter cover real profile/
+settings components with mocked account responses, including saves, reload,
+habitats, pause/weekday limits and honest failures. They do not exercise the
+database or the complete registration-to-password-login journey. The browser
+used existing cached dependencies and temporary launch flags; app configuration
+and frontend source were unchanged.
 
 Mocked route tests prohibit PostgreSQL access while exercising HTTPS signup,
 password login, reload, preferences, ownership/consent guards, live-mode routing,

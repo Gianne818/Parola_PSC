@@ -3,6 +3,7 @@ import { checkSameOrigin, demoSessionResponse, matchesAccountPassword, requireDe
 import { phoneE164, registryQuery, registrationBody, registrationResponse, type RegistryProfile } from '@/lib/registration';
 import { NextResponse } from 'next/server';
 import { RATE_LIMITS, checkRateLimit, rateLimitExceededResponse } from '@/lib/rate-limit';
+import { withAdvisorySchedule } from '@/lib/advisory-preferences';
 
 export async function POST(request: Request) {
   return registrationResponse(async () => {
@@ -52,7 +53,7 @@ export async function POST(request: Request) {
         return NextResponse.json({ error: 'Incorrect phone number or password.' }, { status: 401 });
       }
       const { password_hash: _passwordHash, ...profile } = account;
-      return demoSessionResponse(profile);
+      return demoSessionResponse(withAdvisorySchedule(profile));
     }
     const apiUrl = process.env.PAROLA_API_URL || 'http://localhost:8000';
     const controller = new AbortController();

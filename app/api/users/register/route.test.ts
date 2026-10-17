@@ -6,6 +6,7 @@ import { getDbPool } from '@/lib/db';
 import { getSupabaseUser } from '@/lib/route-auth';
 import { checkRateLimit } from '@/lib/rate-limit';
 import { POST } from './route';
+import { readProfile, readSchedule } from '@/lib/frontend/profile-client';
 
 const query = vi.fn();
 const owner = { id: '11111111-1111-4111-8111-111111111111', phone: '+639171234567' };
@@ -25,6 +26,21 @@ beforeEach(() => {
 afterEach(() => { vi.unstubAllGlobals(); vi.unstubAllEnvs(); });
 
 describe('verified registration', () => {
+  it('returns the owner-checked saved profile for frontend hydration after a PostgreSQL insert', async () => {
+    const persisted = { ...defaults, id: owner.id, phone_number: owner.phone, full_name: 'Saved Name',
+      home_port_name: 'Saved Port', latitude: 0, longitude: 0, is_active: true, messaging_consent: true };
+    query.mockResolvedValueOnce({ rows: [{ id: owner.id, messaging_eligible: true }] })
+      .mockResolvedValueOnce({ rows: [persisted] });
+    const response = await POST(request(valid));
+    expect(response.status).toBe(201);
+    const account = await response.json();
+    expect(readProfile(account)).toMatchObject({ id: owner.id, port: 'Saved Port', lat: 0, lng: 0, speciesPreference: 'both' });
+    expect(readSchedule(account)).toMatchObject({ routine_paused: true, next_routine_at: null });
+    expect(account.messaging_eligible).toBe(true);
+    expect(query.mock.calls[1][1]).toEqual([owner.id, owner.phone]);
+    expect(query).toHaveBeenCalledTimes(2);
+    expect(fetch).not.toHaveBeenCalled();
+  });
   it('registers only the verified actor with explicit consent and no provider tokens in the response', async () => {
     const response = await POST(request(valid));
     expect(response.status).toBe(201);
