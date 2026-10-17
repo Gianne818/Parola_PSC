@@ -9,12 +9,13 @@ import { isClientCoordinate } from '@/lib/frontend/coordinates';
 import { DASHBOARD_COPY } from '@/components/dashboard/dashboard-copy';
 import { APPLICATION_COPY } from '@/components/application/application-copy';
 import type { Language } from '@/types';
+import AdvisoryPreferencesEditor from '@/components/settings/AdvisoryPreferencesEditor';
 import styles from '@/components/application/application.module.css';
 
-const anchorSections: Record<string, string> = { profile: 'profile', port: 'profile', vessel: 'profile', advisories: 'sms', readability: 'preferences', preferences: 'preferences' };
+const anchorSections: Record<string, string> = { profile: 'profile', port: 'profile', vessel: 'profile', advisories: 'advisory-preferences', readability: 'preferences', preferences: 'preferences' };
 
 export default function SettingsPage() {
-  const { userProfile, language, changeLanguage, fontScale, changeFontScale, isInitialized } = useApp();
+  const { userProfile, advisorySchedule, saveAdvisoryPreferences, reloadProfile, language, changeLanguage, fontScale, changeFontScale, isInitialized, isAuthenticated } = useApp();
   const copy = DASHBOARD_COPY[language];
   const text = APPLICATION_COPY[language];
   useEffect(() => {
@@ -30,11 +31,14 @@ export default function SettingsPage() {
   const rows = [[text.operator, userProfile.vesselName], [text.registeredPhone, userProfile.phone], [text.boatType, userProfile.boatType], [text.licence, userProfile.licenseNo], [copy.homePort, userProfile.port], [copy.advisoryArea, userProfile.regionName]];
   return <AuthLayout variant="application">
     <div className={`${styles.page} ${styles.settings}`}>
+      <div className={styles.settingsTools}>
       <section id="profile" className={styles.settingsSection} aria-labelledby="profile-heading">
         <div className={styles.panelHeading}><h2 id="profile-heading">{text.profilePort}</h2><Link href="/onboarding?from=profile" className={styles.link}>{copy.changePort}</Link></div><p className={styles.muted}>{text.savedDetails}</p>
         <dl className={`${styles.details} ${styles.profileDetails}`}>{rows.map(([label, value]) => <div key={label}><dt>{label}</dt><dd>{value?.trim() || text.notProvided}</dd></div>)}</dl>
         <details className={styles.disclosure}><summary>{copy.coordinates}</summary><dl className={styles.details}><div><dt>{copy.homePort}</dt><dd>{isClientCoordinate(userProfile.lat, userProfile.lng) ? `${userProfile.lat.toFixed(6)}, ${userProfile.lng.toFixed(6)}` : text.notProvided}</dd></div>{userProfile.fmaZone && <div><dt>FMA</dt><dd>{userProfile.fmaZone}</dd></div>}</dl></details>
       </section>
+      {isInitialized && isAuthenticated && <AdvisoryPreferencesEditor key={userProfile.id} schedule={advisorySchedule ?? null} save={saveAdvisoryPreferences} reload={reloadProfile} />}
+      </div>
       <div className={styles.settingsTools}>
       <section id="preferences" className={styles.settingsSection} aria-labelledby="preferences-heading">
         <div className={styles.panelHeading}><h2 id="preferences-heading">{text.languageSize}</h2></div><p className={styles.muted}>{text.immediate}</p>
