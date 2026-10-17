@@ -8,6 +8,7 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { createInterface } from 'node:readline/promises';
 import { build } from 'vite';
+import { runTier01Checks } from './tier-01-checks.mjs';
 
 const root = fileURLToPath(new URL('../../../', import.meta.url));
 const directory = path.join(root, 'tests/frontend/browser').replaceAll('\\', '/');
@@ -18,6 +19,7 @@ const blocked = new Set();
 const exceptions = [];
 let passedChecks = 0;
 const manual = process.argv.includes('--manual');
+const tier01 = process.argv.includes('--tier-01');
 let browser;
 let profile;
 let sequence = 0;
@@ -74,18 +76,27 @@ try {
     resolve: { alias: { '@': root } }, esbuild: { jsx: 'automatic' },
     plugins: [{ name: 'offline-boundaries', enforce: 'pre',
       resolveId(id) {
-        if (/(^|\/)context\/AppContext$/.test(id)) return stateModule;
+        if (!tier01 && /(^|\/)context\/AppContext$/.test(id)) return stateModule;
+        if (tier01 && /(^|\/)lib\/supabase$/.test(id)) return '\0tier01:supabase';
+        if (tier01 && /(^|\/)services\/(weatherService|supabaseHotspotService|supabaseWeatherService)$/.test(id)) return '\0tier01:' + id.split('/').at(-1);
         if (['next/navigation', 'next/link', 'next/dynamic'].includes(id)) return '\0offline:' + id;
         if (/(^|\/)services\/(geocodingService|dashboardService)$/.test(id)) return '\0offline:' + id.split('/').at(-1);
       },
       load(id) {
+        if (id === '\0tier01:supabase') return `export const supabase={auth:{getSession:async()=>({data:{session:null}})}};`;
+        if (id === '\0tier01:weatherService') return `export const UNAVAILABLE_WEATHER={temp:null,windSpeed:null,windDirection:null,waveHeight:null,tide:null,stormSignal:null}; export async function fetchLiveWeather(){return UNAVAILABLE_WEATHER}`;
+        if (id === '\0tier01:supabaseHotspotService') return `export async function fetchHotspots(){return []}`;
+        if (id === '\0tier01:supabaseWeatherService') return `export async function fetchWeatherSafetyOverrides(){return []}`;
+        if (tier01 && id === '\0offline:next/link') return `import React from 'react';export default function Link({href,children,onClick,...props}){return React.createElement('a',{...props,href,onClick:e=>{onClick?.(e);if(!e.defaultPrevented){e.preventDefault();window.fixture.route(href)}}},children)}`;
+        if (tier01 && id === '\0offline:next/navigation') return `const router={push:path=>window.fixture.route(path),replace:path=>window.fixture.route(path)};export const useRouter=()=>router;export const usePathname=()=>location.pathname;export const useSearchParams=()=>new URLSearchParams(location.search);`;
+        if (tier01 && id === '\0offline:next/dynamic') return `import React from 'react';export default function dynamic(){return ()=>React.createElement('div',{'aria-label':'Offline map placeholder',style:{height:300}},'Map disabled in offline fixture')}`;
         if (id === '\0offline:next/link') return `import React from 'react'; import {useApp} from ${JSON.stringify(stateModule)}; export default function Link({href,children,onClick,...props}){const {route}=useApp();return React.createElement('a',{...props,href,onClick:e=>{onClick?.(e);if(!e.defaultPrevented){e.preventDefault();route(href)}}},children)}`;
         if (id === '\0offline:next/navigation') return `import {useApp} from ${JSON.stringify(stateModule)}; export const useRouter=()=>{const {route}=useApp();return {push:route,replace:route}}; export const usePathname=()=>location.pathname;export const useSearchParams=()=>new URLSearchParams(location.search);`;
         if (id === '\0offline:next/dynamic') return `import React from 'react'; export default function dynamic(loader, options){const Component=React.lazy(async()=>{const value=await loader();return {default:value.default||value}});return props=>React.createElement(React.Suspense,{fallback:options.loading?React.createElement(options.loading):null},React.createElement(Component,props))}`;
         if (id === '\0offline:geocodingService') return `export async function searchLocations(){return []} export async function reverseGeocode(){throw new Error('Offline fixture: no geocoder')}`;
         if (id === '\0offline:dashboardService') return `export async function loadDashboardWeather(){throw new Error('Offline fixture: no weather')} export async function loadFishingAreaResult(){throw new Error('Offline fixture: no predictions')} export async function requestWeatherSms(){throw new Error('Offline fixture: SMS disabled')}`;
       } }],
-    build: { write: false, minify: false, cssCodeSplit: false, sourcemap: false, rollupOptions: { input: path.join(directory, 'fixture.tsx') } } });
+    build: { write: false, minify: false, cssCodeSplit: false, sourcemap: false, rollupOptions: { input: path.join(directory, tier01 ? 'tier-01-fixture.tsx' : 'fixture.tsx') } } });
   for (const item of output.output) assets.set('/' + item.fileName, Buffer.from(item.type === 'chunk' ? item.code : item.source));
   const entry = output.output.find(item => item.type === 'chunk' && item.isEntry).fileName;
   const css = output.output.filter(item => item.fileName.endsWith('.css')).map(item => `<link rel="stylesheet" href="/${item.fileName}">`).join('');
@@ -148,6 +159,10 @@ try {
     const terminal = createInterface({ input: process.stdin, output: process.stdout });
     try { await terminal.question('Network-blocked manual fixture ready. Use its fixture controls. Press Enter here when finished: '); }
     finally { terminal.close(); }
+  } else if (tier01) {
+    await runTier01Checks({ evaluate, until, check, clickText, viewport, layout, key });
+    check('no uncaught browser/driver exceptions', exceptions.length === 0 || (console.log(exceptions), false));
+    console.log(`${passedChecks} TIER-01 named browser checks passed. No real account or provider was used.`);
   } else {
   await layout('settings desktop');
   await key('Tab');

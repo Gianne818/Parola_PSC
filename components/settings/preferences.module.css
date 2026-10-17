@@ -1,0 +1,10 @@
+.fields { border: 0; padding: 0; margin: 24px 0 0; min-width: 0; }
+.fields legend { font-weight: 700; margin-bottom: 12px; }
+.fields legend span { font-weight: 400; }
+.weekdays { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 145px), 1fr)); gap: 8px 16px; margin-bottom: 12px; }
+.weekdays label { display: flex; align-items: center; gap: 10px; min-height: 44px; cursor: pointer; }
+.weekdays input { width: 20px; height: 20px; accent-color: var(--green); flex-shrink: 0; }
+.fields input:focus-visible, .fields select:focus-visible, .weekdays input:focus-visible { outline: 3px solid var(--green); outline-offset: 3px; }
+.notice, .error { margin-top: 16px !important; overflow-wrap: anywhere; }
+.notice { font-size: .875em; color: var(--muted); }
+.error { color: #a12b26; font-weight: 600; }

@@ -44,7 +44,7 @@ export function OnboardingLoading() {
 
 function PortSelectionContent({ fromProfile }: { fromProfile: boolean }) {
   const router = useRouter();
-  const { userProfile, updateProfile, language } = useApp();
+  const { userProfile, updateProfile, language, showToast } = useApp();
   const copy = AUTH_COPY[language] ?? AUTH_COPY.en;
   const [selection, setSelection] = useState<PortSelection | null>(() => {
     if (!fromProfile || !isInCoverage(userProfile.lat, userProfile.lng)) return null;
@@ -206,7 +206,12 @@ function PortSelectionContent({ fromProfile }: { fromProfile: boolean }) {
         regionName: selection.region.name, fmaZone: selection.region.fmaZone,
         regionalBounds: JSON.stringify(selection.region.bounds),
       };
-      for (const [key, value] of Object.entries(values)) localStorage.setItem(`profile-${key}`, value);
+      try {
+        for (const [key, value] of Object.entries(values)) localStorage.setItem(`profile-${key}`, value);
+      } catch {
+        // The server-confirmed profile remains authoritative if the device cache is full.
+        showToast('Home port saved. This device could not cache the location.', 'info');
+      }
       router.push(fromProfile ? '/profile' : '/dashboard');
       saved = true;
     } catch {
@@ -288,7 +293,7 @@ function PortSelectionContent({ fromProfile }: { fromProfile: boolean }) {
             <button className={styles.confirm} type="button" disabled={!selection || resolving || saving} onClick={() => void savePort()}>{saving ? <LoaderCircle className={styles.spinner} size={17} aria-hidden="true" /> : <ArrowRight size={17} aria-hidden="true" />}<span aria-live="polite">{saving ? 'Saving home port…' : fromProfile ? 'Save home port' : 'Confirm home port'}</span></button>
             {(selection || resolving) && <button className={styles.clearPin} type="button" disabled={saving} onClick={clearSelection}>Clear selection</button>}
           </div>
-          <p className={styles.hint} lang="en">Home-port changes are kept on this device. This screen does not confirm a backend save, phone verification, automatic messaging or fishing permission.</p>
+          <p className={styles.hint} lang="en">Your home port is saved only after server confirmation. A failed save keeps your selection here so you can retry. Saving a port does not verify your phone, enable automatic messaging or grant fishing permission.</p>
         </section>
         <section className={styles.mapArea} aria-label="Home-port selection map">
           <MapComponent hotspots={NO_HOTSPOTS} selectedHotspot={null} onSelectHotspot={ignoreHotspot} filterType="both" selectedSpecies={NO_SPECIES} hideSidebar hideLegend center={coordinates || undefined} onMapClick={(lat, lng) => { void resolvePin(lat, lng); }} activeRegion={selection?.region || null} showRegionBoundary={!!selection} showVesselMarkers={false} isolateRegion={false} viewMode={viewMode} boundaryMaskOpacity={0.18} minHeight={300} constrainToPhilippines />
