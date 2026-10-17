@@ -116,10 +116,54 @@ Each original assignment maps once below. Historical labels do not establish cur
 
 ## Delivery log and integration handoffs
 
+### Urgent task: minimum hotspot score of 50% — October 17, 2026
+
+- **Latest user-requested daily pipeline deployment (October 17, 2026):**
+  Toby explicitly authorized integrating and deploying the updated Pelagic +
+  Demersal daily hotspot prediction pipeline from
+  `/Users/gianne/Development/Python/Parola/AWS_DEPLOYMENT_HANDOFF.md` and
+  `/Users/gianne/Development/Python/Parola/run_daily_predictions.py` into
+  `backend/aws-inference/` (including `backend/aws-inference/requirements.txt`)
+  with a daily-prediction toggle (`ENABLE_DAILY_PREDICTIONS = True` in code and
+  `PAROLA_ENABLE_DAILY_PREDICTIONS=true` in Lambda env vars, plus `{"enabled": false}`
+  and `{"force": true}` event overrides). Built and deployed the ARM64 OCI
+  container image (`sha256:838e73c6eb0dde38d4752356914d0c7ab5bfca85c5af496d6f693331c23ccbb7`,
+  tag `daily-pipeline-20261017-838e73c6eb0d`) to `parola-ParolaInferenceFunction-OjglErBmhUc2`
+  with `EphemeralStorage=2048 MB` and updated `ParolaDailyInferenceSchedule` to
+  `cron(0 21 * * ? *)` (05:00 AM Philippine Time daily). Verified in AWS Lambda:
+  1) `{"enabled": false, "date": "2026-10-17"}` returned HTTP 200 with
+     `{"status": "skipped", "reason": "daily_predictions_disabled"}`;
+  2) `{"date": "2026-10-17"}` completed in 70.8s (max memory 1823 MB) and
+     synced 637 hotspots (`568` pelagic + `69` demersal) to Supabase.
+  39 focused Python unit tests pass.
+
+- **Prior user-requested replacement:** The initial 11,007 inserted IDs were
+  backed up, deleted and marked withdrawn in the AWS manifest. Toby explicitly
+  selected a fresh run with historical corroboration. Fresh AWS scoring run
+  `20261017T075119Z-bde19907d30a` was filtered using notebook cell 8's historical
+  DBSCAN reference and 15 km proximity rule at the inclusive 50% score floor.
+  Published 2,241 pelagic candidates (618 below 60%); all initial IDs remain
+  absent, and all 2,232 older rows match their pre-withdrawal full-row hash.
+  Central Visayas returns 51 uncapped candidates from the replacement run.
+  Added `historical_hotspots.py` and focused tests; the publisher verifies
+  historical selection/lineage and rejects withdrawn runs. 34 focused Python
+  tests pass. Cordova's missing-input gap and future automation remain pending;
+  no parent package is completed. See the
+  [replacement report](../../backend/aws-inference/HISTORICAL_FILTERED_RUN_2026-10-17.md).
+
+- **Scope:** Separate high-priority user request outside the backlog packages, on `codex/toby/hotspot-threshold-50`. Toby identified themselves and authorized the task as lead programmer; the task-specific UI/API/configuration and operational exceptions are recorded in [shared rules](shared.md#urgent-hotspot-threshold-exception--october-17-2026). No parent package is checked off.
+- **Owned delivery: complete for the urgent threshold and real-input pelagic refresh.** Dashboard legend/color documentation starts at 50–69%; regional/national SQL uses >= 0.50. The default inference entrypoint now requires dated, hashed real inputs and preserves the trained model scores. Added the reproducible baseline/input producer, validated AWS scorer, source-only ARM64 image helper and transactional PostGIS publisher, with focused tests. Docker copies the scorer; the local SAM architecture now matches ARM64.
+- **Integrated evidence: verified for October 17 pelagic results.** AWS executed run `20261016T184655Z-bb3d5095ad6e` over 39,328 complete real Copernicus input cells. Published 11,007 scores >= 50% to the existing Supabase table, including 3,951 below 60%; the same model/inputs yield 7,056 at >= 60%. Validated source-cell geometry and SRIDs; older September 25 groups (1,582 pelagic and 650 demersal) remain unchanged. Live local national/regional/species-filtered APIs returned rows from that exact run. Central Visayas returned 126 rows, including 9 below 60%, with October 17 dates and no cap.
+- **Recovered science lineage:** The user directed inspection of `/Users/gianne/Development/Python/Parola`. Its original model matches the deployed bytes, and `copernicus.ipynb` records the feature definitions and 2015–2025 baseline. Reconstructed October's temperature climatology from all 341 October days on the original source grid and saved it in S3. Real daily analysis/forecast fields replace random input generation. The original missing NetCDF/training CSV was not fabricated or relabelled. Retained explicit model-calibration, reconstructed-baseline and coarse wet-mask limitations.
+- **Configuration and deployment:** Direct AWS account verification and Copernicus authentication passed. Copernicus keys were updated on the existing Lambda using its revision ID while preserving other variables. Local credentials stay in ignored mode-0600 `.env.local`; no values entered tracked files or command output. Deployed only reviewed application source over the pinned ARM64 image, preserving runtime dependencies, role, URL auth and schedule. No repository dependency manifests, shared schema, authentication UI or SMS dispatch changed.
+- **Checks:** 28 focused Python tests passed; 41 focused frontend/API tests, focused ESLint and TypeScript checks passed. Python compilation and `git diff --check` passed. Actual AWS invocation, atomic database publication, independent read-only database verification and three live local API paths were exercised. No browser journey or remote frontend deployment is claimed.
+- **Remaining work:** Future-day real-input generation/publication still needs scheduling; the scorer fails visibly if a day's real inputs are absent. This refresh covers pelagic only; a fresh demersal inference needs its own supported inputs. Shared API run-provenance and automatic advisory/SMS integration remain separate. Broader TOBY/DATA/OPS/GEO parent acceptance remains unchecked.
+- **Detailed files, artifact hashes, S3 keys and limits:** [Scientific run report](../../backend/aws-inference/REAL_INPUT_RUN.md). The earlier live Lambda was independently inspected and proven to generate 5,000 random rows with a strict > 0.5 filter and S3-only output; this run replaced that production entrypoint after source/model verification. Application changes remain uncommitted on the task branch.
+
 Log selected portions with package/legacy IDs, changed files, automated/manual evidence, remaining work and PR. Mark only proven-complete member delivery; integration may stay pending. Never mark another owner complete.
 
 | From package / portion | Producer → consumer | Missing interface and example | Integration status / evidence |
 | --- | --- | --- |
-| None newly asserted by this documentation change | — | Carry forward relevant historical handoffs after checking current code; consolidate by actual interface. | Needs verification |
+| Urgent 50% refresh: future daily operation | Toby's real-input producer + Son's shared-runtime coordination → AWS scorer/publication job | Schedule generation and publication of `inputs/real-pelagic/YYYY-MM-DD/features.csv` plus its validated manifest, using the current provider runtime. The existing scorer requires this exact dated input and fails when missing. Coordinate any shared dependency changes; no such manifest changes were made in this task. | October 17 pelagic integration verified; subsequent-day automation remains unimplemented. See the run report for the concrete producer/consumer example. |
 
 Historical requests remain preserved in the archive. Add each still-applicable interface here once with its producer/consumer and acceptance evidence. Do not copy blanket gates onto every package.

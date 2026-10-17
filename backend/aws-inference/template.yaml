@@ -3,7 +3,7 @@ Transform: AWS::Serverless-2016-10-31
 Description: >
   parola-inference-pipeline
   
-  SAM Template for the Parola Project Pelagic Model inference pipeline with Parola cloud features.
+  SAM template for Parola pelagic scoring of validated, dated real environmental inputs.
 
 Parameters:
   ModelBucketName:
@@ -22,15 +22,25 @@ Parameters:
     NoEcho: true
     Description: Supabase Postgres connection string (pooler). Pass via --parameter-overrides, never commit.
 
+  EnableDailyPredictions:
+    Type: String
+    Default: "true"
+    AllowedValues:
+      - "true"
+      - "false"
+    Description: Set to false to pause daily hotspot prediction runs without deleting the schedule.
+
 Resources:
   ParolaInferenceFunction:
     Type: AWS::Serverless::Function
     Properties:
       PackageType: Image
       Architectures:
-        - x86_64
+        - arm64
       MemorySize: 3008
-      Timeout: 900
+      Timeout: 300
+      EphemeralStorage:
+        Size: 2048
       FunctionUrlConfig:
         # IAM auth: invoking the function URL requires SigV4 credentials with
         # permission to call it. Never use AuthType NONE (public internet).
@@ -39,9 +49,14 @@ Resources:
         Variables:
           MODEL_BUCKET_NAME: !Ref ModelBucketName
           MODEL_KEY: "models/parola_pelagic_model_v2.txt"
+          COPERNICUSMARINE_SERVICE_USERNAME: !Ref CopernicusUsername
+          COPERNICUSMARINE_SERVICE_PASSWORD: !Ref CopernicusPassword
           COPERNICUS_USERNAME: !Ref CopernicusUsername
           COPERNICUS_PASSWORD: !Ref CopernicusPassword
           DATABASE_URL: !Ref DatabaseUrl
+          PAROLA_ENABLE_DAILY_PREDICTIONS: !Ref EnableDailyPredictions
+          PAROLA_ASSET_DIR: "/var/task"
+          PAROLA_WORK_DIR: "/tmp"
           OPEN_METEO_MARINE_API_URL: "https://marine-api.open-meteo.com/v1/marine"
           OPEN_METEO_FORECAST_API_URL: "https://api.open-meteo.com/v1/forecast"
           PAGASA_BULLETIN_API_URL: "https://pagasa.chlod.net/api/v1/bulletin/list"
@@ -53,12 +68,13 @@ Resources:
         - S3WritePolicy:
             BucketName: !Ref ModelBucketName
       Events:
-        SixHourInferenceSchedule:
+        DailyInferenceSchedule:
           Type: Schedule
           Properties:
-            Schedule: 'rate(6 hours)'
-            Name: ParolaSixHourInferenceSchedule
-            Description: Automatically trigger model inference & weather workflow every 6 hours
+            Schedule: 'cron(0 21 * * ? *)'
+            Name: ParolaDailyInferenceSchedule
+            Description: Trigger daily Pelagic + Demersal hotspot pipeline at 05:00 AM Philippine Time (21:00 UTC)
+            Enabled: true
         ApiTrigger:
           Type: Api
           Properties:
