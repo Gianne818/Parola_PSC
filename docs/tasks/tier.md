@@ -6,9 +6,9 @@ Owner: **Tier only**. Updated October 17, 2026. [Hub](../../fixplan.md) | [Share
 
 - Use identity explicitly stated in this chat; otherwise ask **Who are you working as: Tier, Son, or Toby?** and wait.
 - Select one package or requested portion. A legacy ID selects only its mapped portion. For general continue requests, propose a ready owned portion and establish selection before coding.
-- Read current code first and reuse completed work. This checkout is PR #2 (c91a3f2); later branch-only work is historical/recoverable, not assumed present.
+- Read current code first and reuse completed work. This branch includes PR #14 merge `50ac338` and preserves PR #2 frontend work; other branch-only work remains historical/recoverable.
 - Missing producer runtime does not block owned fixture-tested implementation. Record the exact integration need; never edit another owner to unblock yourself.
-- Preserve branded screens, onboarding/navigation, habitats and the [PR #11 authentication baseline](shared.md#preservation-and-authentication-baseline). A task is not permission to redesign auth.
+- Preserve branded screens, onboarding/navigation, habitats and the [PR #14 authentication baseline](shared.md#preservation-and-authentication-baseline). A task is not permission to redesign auth.
 - Use `codex/tier/<package>` branches and focused PRs. A package can span several PRs. No installs, paid services, real SMS or deployments without explicit authorization.
 
 ## Allowed files
@@ -23,13 +23,13 @@ All packages remain unchecked: reorganization is not implementation evidence. **
 <a id="tier-01"></a>
 ### TIER-01: Account, onboarding and settings
 
-- [ ] **TIER-01 | P0 | Delivery: needs verification | Integration: needs verification**
+- [ ] **TIER-01 | P0 | Delivery: independent selected frontend portions complete | Integration: pending runtime/manual acceptance**
 - **Covers:** [REG-01-TIER](tier-history.md#reg-01-tier), [REG-02-TIER](tier-history.md#reg-02-tier).
 - **Allowed files:** UI, CLIENT above, limited by the exact shared ownership map.
 - **Work:** Preserve branded registration/sign-in and the agreed demo OTP journey. Complete home-port, weekday/time, habitat, language and settings forms with honest draft/save/error states.
 - **Start / prerequisites:** Existing UI/responses now; isolated editor work needs no new backend. C03 applies only to new persisted fields or changed authority.
 - **Acceptance:** Registration → onboarding → dashboard; password-only later sign-in; logout/reload; approved weekday limits including sixth-day errors; port edits retain habitat/settings.
-- **Integration handoff:** SON-01: canonical profile/preferences, authority, consent and persistence. Preserve PR #11, do not rebuild auth.
+- **Integration handoff:** SON-01: canonical profile/preferences, authority, consent and persistence. Preserve PR #14, do not rebuild auth.
 
 <a id="tier-02"></a>
 ### TIER-02: Dashboard, maps and prediction presentation
@@ -134,8 +134,30 @@ Each original assignment maps once below. Historical labels do not establish cur
 
 Log selected portions with package/legacy IDs, changed files, automated/manual evidence, remaining work and PR. Mark only proven-complete member delivery; integration may stay pending. Never mark another owner complete.
 
+### TIER-01 / REG-01-TIER, REG-02-TIER — October 17, 2026
+
+Selected frontend portions only. Review branch: `codex/tier/tier-01`, based on refreshed `origin/main` at PR #14 merge `50ac338`. Tier authorized committing, pushing and opening a draft PR into main; merge remains unauthorized. TIER-02 and unrelated uncommitted work remain in the original checkout, outside this PR.
+
+**Integrated baseline:** Fetched `origin/main`, inspected PR #14 head `3b847152721aa30163f000f269627598674d1d4d`, and fast-forwarded to its merge `50ac338` without a merge commit. This supersedes the older PR #2-only checkout notes. All six pre-existing modified documents and six untracked restoration files were backed up and hash-verified. The sole overlap, `docs/tasks/son.md`, was resolved with explicit user approval: keep the compact plan and append the remote notes/checklist verbatim. Other original files were preserved; the untracked restoration files remain unused and unchanged.
+
+- [x] **Frontend delivery: profile/preferences portion.** Settings now edits 0–5 distinct weekdays, Manila time (retaining existing seconds), message language and pelagic/demersal/both. Sixth-day attempts are rejected visibly; zero days pauses routine messages only. Draft, saving, confirmed, unavailable, discard, reload and recoverable failure states are separate. Device readability remains immediate and separate from message language. English fallback/unreviewed translations, critical-warning independence and lack of SMS enrollment/delivery confirmation are explicit.
+- [x] **Frontend delivery: home-port/readback portion.** Server account ID, habitat and regional location are hydrated. Writes consume actual server readback; port-only payloads omit unrelated fields. Failed saves preserve drafts; malformed acknowledgements cannot claim success. Duplicate requests and stale/cross-account acknowledgements cannot apply. Missing schedules stay unavailable and unsupported habitats never default to `both`. Device-cache failure after a confirmed port save is reported as a cache issue.
+- **Reused:** PR #14's branded auth screens, 1–6 digit demo code without OTP/provider calls, password sign-in and cookie-based account restoration; PR #2 onboarding, dashboard/navigation and accessibility. No auth screen, normal route replacement, API, shared type, dependency, configuration or migration was implemented in this frontend portion.
+- **Application files:** `app/settings/page.tsx`, `components/settings/AdvisoryPreferencesEditor.tsx`, `components/settings/preferences.module.css`, `components/onboarding/HomePortOnboarding.tsx`, `context/AppContext.tsx`, `lib/frontend/profile-client.ts`.
+- **Checks/files:** `tests/frontend/profile-client.test.ts`, `tests/frontend/browser/tier-01-fixture.tsx`, `tests/frontend/browser/tier-01-checks.mjs`, plus `--tier-01` in the existing browser runner. Earlier isolated checks passed; the exact PR checkout was rechecked as recorded below. Offline Chromium: 30 TIER-01 named checks; existing regression suite: 85 named checks plus 39 forward/reverse Tab assertions. Real provider/settings/onboarding run against in-memory owner responses; external services, map loading and Next routing are isolated. Cases cover sixth-day rejection, keyboard focus, failed save/retry, duplicate submission, pause, port/preference retention, provider remount, malformed/unknown responses, cache failure, desktop/390px/320px and enlarged root-text/zoom-equivalent viewports. These do not prove real Next routing or authentication/database integration.
+- **PR verification:** Full checkout TypeScript (`tsc --noEmit --incremental false`) passes with no exclusions or diagnostics. Scoped ESLint on all changed TS/TSX/MJS files reports zero errors and one existing `react-hooks/exhaustive-deps` cleanup warning in `AppContext.tsx`. Whitespace check passes. Offline Chrome 155: 30 TIER-01 checks; 85 existing regression checks plus 39 forward/reverse Tab assertions. Initial sandbox Chrome startup failed in Crashpad; the same guarded runner passed with process execution approval and removed its temporary profiles. No dependencies installed. No production build or live Next-route/database test was run. Unit-test commands/results are recorded in the PR preparation entry below.
+- **Remaining:** Real registration → demo code → onboarding → dashboard → sign-out → password sign-in → dashboard; real database save/readback/reload and demo/live authorization; actual browser 200% zoom, screen-reader speech, human touch/visual and pilot-language review. No live SMS, database operations, installs, paid services or deployments. Commit/push/draft-PR publication is authorized for this review batch only. Successful synthetic responses exist only in tests. Full TIER-01 remains unchecked; scoped frontend completion is separate from parent/integrated acceptance.
+
 | From package / portion | Producer → consumer | Missing interface and example | Integration status / evidence |
-| --- | --- | --- |
-| None newly asserted by this documentation change | — | Carry forward relevant historical handoffs after checking current code; consolidate by actual interface. | Needs verification |
+| --- | --- | --- | --- |
+| TIER-01 / REG-01-TIER, REG-02-TIER | SON-01 → Tier | C03 profile/preferences interface is available in PR #14 and `advisory-preferences-contract.md`; no new wire contract is needed. Remaining evidence: authenticated zero/five-day save/readback, seconds/language/all habitats retained after port-only updates and reload, 401/403/503/config/migration failures remain errors, and real cookie registration/password/login/logout account ownership. | Pending runtime; isolated frontend checks pass. Consolidates the earlier REG-01 C03 profile handoff. No database/provider or real Next-route operations were run. |
 
 Historical requests remain preserved in the archive. Add each still-applicable interface here once with its producer/consumer and acceptance evidence. Do not copy blanket gates onto every package.
+
+### TIER-01 draft-PR preparation — October 17, 2026
+
+- **Separation:** Created isolated checkout `scratch/tier-01-review` on the existing `codex/tier/tier-01` branch. Copied the ten application/test files from the hash-recorded pre-TIER-02 snapshot; curated this log from `origin/main` plus the TIER-01 entry. Shared browser runner contains only its TIER-01 extension. The original 36 changed/untracked files were backed up and hash-recorded before preparation; their bytes are preserved. No TIER-02 dashboard/map/adapter changes, unused auth-restoration files, shared rules, Son/Toby logs, root configuration or dependency manifests are included.
+- **Focused tests:** 92 tests pass in 10 suites: `tests/frontend/{profile-client,coordinates,accessibility,claims,provenance,map-presentation,weather-presentation}.test.ts`, `app/onboarding/home-port.test.ts`, `lib/frontend/registration-client.test.ts` and `lib/advisory-preferences.test.ts`. Registration tests use mocked fetch, explicitly covering 1–6 digit demo codes with no OTP call; existing password-only sign-in paths and API/auth files are unchanged. All 92 passed in this isolated checkout.
+- **Checks:** From this checkout, run the installed Vitest CLI on those ten suites with `--maxWorkers=1`; TypeScript CLI with `--noEmit --incremental false`; ESLint on changed TS/TSX/MJS; `node tests/frontend/browser/run.mjs --tier-01`; `node tests/frontend/browser/run.mjs`; and `git diff --check`. Installed packages resolve from the parent workspace; no install, copied environment or dependency change is required.
+- **Deployment inspection:** Refreshed `origin/main` contains active `.github/workflows/deploy.yml`, triggered by a push to `main`, with a GitHub Pages deployment job. A merge into main therefore triggers that deployment workflow; build/deployment success is not established. Draft creation and this branch push do not match that Pages trigger. CI runs on pushes/PRs. No deployment configuration changed; external hosting hooks could not be inspected with the available GitHub permission.
+- **Review requirements:** Keep the PR draft until human visual/touch, true browser 200% zoom, screen-reader speech and terminology review are completed, and SON-01 runtime evidence confirms authenticated profile persistence/ownership/error handling and the full PR #14 registration/onboarding/password-sign-in/logout journey. Missing demo-session configuration remains a real server error, never a frontend success. This PR completes selected frontend delivery; it does not certify integrated or manual acceptance.

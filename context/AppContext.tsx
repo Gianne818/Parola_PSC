@@ -10,10 +10,11 @@ import { isClientCoordinate, isClientTargetCoordinate } from '@/lib/frontend/coo
 import { fetchHotspots } from "../services/supabaseHotspotService";
 import { fetchWeatherSafetyOverrides } from "../services/supabaseWeatherService";
 import { accountRequest } from '@/lib/frontend/registration-client';
+import { profilePatch, readProfile, readSchedule, requestProfile, validatePreferences } from '@/lib/frontend/profile-client';
+import type { AdvisoryPreferences, AdvisorySchedule } from '@/types';
 import { supabase } from '@/lib/supabase';
 import type { AuthMode } from '@/lib/auth-mode';
 import { authHeaders } from "../utils/auth-fetch";
-import { fetchWithTimeout } from "../utils/fetchWithTimeout";
 import { PHILIPPINE_REGIONS, detectPhilippineRegion, isCoordinateInRegion } from "../data/philippineRegions";
 
 export const MUNICIPAL_PORTS = [
@@ -86,6 +87,9 @@ interface AppContextType {
   fontScale: number; // -2 to 4
   theme: 'light' | 'dark';
   userProfile: UserProfile;
+  advisorySchedule: AdvisorySchedule | null;
+  saveAdvisoryPreferences: (preferences: AdvisoryPreferences) => Promise<AdvisorySchedule>;
+  reloadProfile: () => Promise<AdvisorySchedule | null>;
   notifications: AlertNotification[];
   weather: ClientWeatherTelemetry;
   manualOverrideHold: boolean;
@@ -192,6 +196,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode; authMode?: AuthM
   const [fontScale, setFontScale] = useState<number>(0);
   const [theme, setTheme] = useState<'light' | 'dark'>('light');
   const [userProfile, setUserProfile] = useState<UserProfile>(DEFAULT_PROFILE);
+  const [advisorySchedule, setAdvisorySchedule] = useState<AdvisorySchedule | null>(null);
   const [notifications, setNotifications] = useState<AlertNotification[]>(INITIAL_NOTIFICATIONS);
   const [fuelPools, setFuelPools] = useState<FuelPool[]>(DEFAULT_POOLS);
   const [hotspots, setHotspots] = useState<Hotspot[]>([]);
@@ -202,11 +207,11 @@ export const AppProvider: React.FC<{ children: React.ReactNode; authMode?: AuthM
 
 
   const accountGeneration = useRef(0);
+  const profileSavePending = useRef(false);
   const applyAccount = useCallback((account: Record<string, any>) => {
-    const profile: UserProfile = { ...DEFAULT_PROFILE, phone: account.phone_number,
-      vesselName: account.full_name || account.phone_number, port: account.home_port_name || DEFAULT_PROFILE.port,
-      lat: account.latitude ?? DEFAULT_PROFILE.lat, lng: account.longitude ?? DEFAULT_PROFILE.lng };
+    const profile = readProfile(account);
     setUserProfile(profile);
+    setAdvisorySchedule(readSchedule(account));
     storageService.setItem('parola-profile', profile);
     storageService.setItem('parola-account-mode', account.auth_mode || 'live');
     setIsAuthenticated(true);
@@ -429,22 +434,29 @@ export const AppProvider: React.FC<{ children: React.ReactNode; authMode?: AuthM
     }
   };
 
-  const updateUserWithBackend = async (prof: UserProfile) => {
-    if (!prof.phone) throw new Error('Phone number is required to save the profile.');
-      const response = await fetchWithTimeout('/api/users/profile', {
-        method: 'PUT',
-        headers: authMode === 'demo' ? { 'Content-Type': 'application/json' } : await authHeaders({ 'Content-Type': 'application/json' }),
-        body: JSON.stringify({
-          phone_number: prof.phone,
-          full_name: prof.vesselName || 'Captain',
-          home_port_name: prof.port || 'Mercedes Fish Port',
-          latitude: prof.lat ?? 14.0122,
-          longitude: prof.lng ?? 123.0114,
-        }),
-        timeoutMs: 8000,
-        retries: 0,
-      });
-      if (!response.ok) throw new Error('Profile was not saved. Please try again.');
+  const confirmProfile = async (fields?: Record<string, unknown>, requireSchedule = false) => {
+    if (!isAuthenticated || !userProfile.id) throw new Error('Sign in before editing your profile.');
+    if (profileSavePending.current) throw new Error('Wait for the current profile request to finish.');
+    profileSavePending.current = true;
+    const generation = accountGeneration.current;
+    try {
+      const headers = authMode === 'demo' ? {} : await authHeaders();
+      const snapshot = await requestProfile(fields ? { phone_number: userProfile.phone, ...fields } : undefined, headers);
+      if (generation !== accountGeneration.current || snapshot.profile.id !== userProfile.id) throw new Error('The account changed. Reload your saved details.');
+      if (requireSchedule && !snapshot.schedule) throw new Error('The server did not confirm the preferences. Reload saved details before retrying.');
+      setUserProfile(snapshot.profile);
+      setAdvisorySchedule(snapshot.schedule);
+      storageService.setItem('parola-profile', snapshot.profile);
+      return snapshot;
+    } finally { profileSavePending.current = false; }
+  };
+
+  const reloadProfile = async () => (await confirmProfile()).schedule;
+  const saveAdvisoryPreferences = async (preferences: AdvisoryPreferences) => {
+    const error = validatePreferences(preferences);
+    if (error) throw new Error(error);
+    const snapshot = await confirmProfile({ ...preferences }, true);
+    return snapshot.schedule!;
   };
 
   const register = async (profile: Partial<UserProfile>, password?: string, options?: RegistrationOptions): Promise<{ ok: boolean; error?: string }> => {
@@ -479,17 +491,15 @@ export const AppProvider: React.FC<{ children: React.ReactNode; authMode?: AuthM
     void fetch('/api/users/logout', { method: 'POST', credentials: 'same-origin' }).catch(() => showToast('Sign-out could not reach the server. Please retry.', 'error'));
     if (authMode === 'live') void supabase.auth.signOut({ scope: 'local' });
     setIsAuthenticated(false);
+    setAdvisorySchedule(null);
     storageService.setItem("parola-auth", false);
     showToast("Logged out.", "info");
   };
 
   const updateProfile = async (profile: Partial<UserProfile>) => {
     try {
-      const updated = { ...userProfile, ...profile };
-      await updateUserWithBackend(updated);
-      setUserProfile(updated);
-      storageService.setItem("parola-profile", updated);
-      showToast("Vessel profile updated.", "success");
+      await confirmProfile(profilePatch(profile));
+      showToast("Profile saved.", "success");
     } catch (err) {
       showToast('Profile was not saved. Please try again.', 'error');
       throw err;
@@ -690,6 +700,9 @@ export const AppProvider: React.FC<{ children: React.ReactNode; authMode?: AuthM
         fontScale,
         theme,
         userProfile,
+        advisorySchedule,
+        saveAdvisoryPreferences,
+        reloadProfile,
         notifications,
         weather,
         manualOverrideHold,
