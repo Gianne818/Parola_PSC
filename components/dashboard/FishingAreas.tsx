@@ -6,6 +6,7 @@ import { manilaDate, predictionPercent, type FishingArea } from '@/lib/dashboard
 import type { DashboardCopy } from './dashboard-copy';
 import styles from './dashboard.module.css';
 import PredictionProvenance from './PredictionProvenance';
+import { predictionDayLabel } from '@/lib/frontend/prediction-presentation';
 
 export function AreaDetails({ area, copy, weather }: { area: FishingArea; copy: DashboardCopy; weather?: ReactNode }) {
   const percent = area.source === 'model' ? predictionPercent(area.catchProbability) : null;
@@ -45,7 +46,7 @@ export default function FishingAreas({ areas, loading, failed, retry, limit, sho
         <span className={styles.areaText}><strong>{area.name}</strong><span className={styles.areaMeta}><Compass size={14} aria-hidden="true" />{area.distanceKm.toFixed(1)} km · {area.compassBearing}</span>
           <span className={styles.areaHabitat}>{area.habitatKnown ? area.type === 'pelagic' ? copy.surface : area.type === 'demersal' ? copy.bottom : copy.mixed : copy.unavailable}</span>
           {area.source === 'sample' ? <span className={styles.timestamp}>{copy.sample}</span> : !area.predictionDate ? <span className={styles.timestamp}>{copy.dateUnknown}</span>
-            : manilaDate(area.predictionDate) !== today && <span className={styles.timestamp}>{copy.olderPrediction} · {area.predictionDate.slice(0, 10)}</span>}
+            : <span className={styles.timestamp} lang="en">{predictionDayLabel(area.predictionDate, today)}</span>}
         </span><ChevronRight size={17} aria-hidden="true" />
       </button>
     </li>)}</ol>
