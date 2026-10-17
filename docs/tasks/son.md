@@ -1,5 +1,36 @@
 # Son's six work packages
 
+**User-selected PostgreSQL setting:** `DB_SSL_INSECURE=true` in the ignored
+`.env` and `.env.example`. The app honors the explicit override in development
+and production without needing a local CA file. Optional verified-CA support
+remains available when false. All 29 focused database/HTTPS/registration tests
+pass with mocked network calls. HTTPS registry and demo mode are preserved.
+
+**Current follow-up, October 17, 2026: SON-01 account HTTPS transport.**
+Branch `codex/son/registry-https`. Prepared a backend-only HTTPS path for the same
+users, demo password sessions, live registration, owner profile/preferences,
+consent and recipient eligibility. The user supplied independent PostgreSQL SSL
+timeouts and reachable unauthenticated HTTPS; the dashboard allows all IPs. The
+carrier is not proven responsible. Default PostgreSQL transport is unchanged.
+Migration 06 was applied through the user's authorized Supabase MCP connection:
+health/internal role guard, empty search path and browser/service-role execution
+grants passed; the existing account count remained two. The supplied backend key
+is stored privately in ignored `.env`; local transport is now `https` and
+auth remains `demo`. The agent's HTTPS probe was denied with `EACCES`; the user's
+subsequent ordinary-terminal health check passed, confirming backend credentials
+and registry HTTPS health acceptance. The user then reported browser demo signup
+working; login/reload/preference round-trips remain unverified. At the user's
+request, `.env.local` was merged into `.env` with local overrides winning both
+overlaps; all 29 effective settings stayed identical and a Git-ignored backup was
+kept. No secrets were added to tracked files.
+See [setup, limits and integration handoff](../registration-https.md). Tier's
+screens and Toby's science remain unchanged. Actual function grants, database
+round-trips and mobile-network acceptance remain pending; mocked checks cannot
+establish these. No account changes, OTP, SMS, dependency install or app deployment.
+Validation: 367 network-denied tests in 30 files, full TypeScript, script syntax,
+Python compilation and whitespace checks passed. The Node 24 health helper passed
+with mocked HTTPS. Separate spec and standards reviews found no remaining blocker.
+
 **Current selection, October 17, 2026: Batch 2, OPS-01 ingestion reliability
 (SON-04 portion).** Branch `codex/son/ingestion-reliability`. API and CSV now share
 an upload ledger/identity, canonical retry handling, locked complete-batch writes,

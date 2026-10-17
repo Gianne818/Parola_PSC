@@ -30,6 +30,7 @@ function cookie(response: Response) { return response.headers.get('set-cookie')!
 beforeEach(() => {
   vi.clearAllMocks();
   vi.stubEnv('PAROLA_AUTH_MODE', 'demo');
+  vi.stubEnv('PAROLA_REGISTRY_TRANSPORT', 'postgres');
   vi.stubEnv('PAROLA_DEMO_SESSION_SECRET', 'test-signing-secret-at-least-32-characters');
   vi.mocked(getDbPool).mockReturnValue({ query } as never);
   vi.mocked(getSupabaseUser).mockResolvedValue(null);
@@ -82,6 +83,41 @@ describe('existing-table demo registration', () => {
     expect(response.status).toBe(503);
     expect(await response.text()).not.toContain('private');
     expect(response.headers.has('set-cookie')).toBe(false);
+  });
+  it('shows only a safe diagnostic in development when database TLS fails', async () => {
+    vi.stubEnv('NODE_ENV', 'development');
+    query.mockRejectedValueOnce(Object.assign(new Error('private connection credentials'), { code: 'SELF_SIGNED_CERT_IN_CHAIN' }));
+    const response = await register(request(input));
+    expect(response.status).toBe(503);
+    expect(await response.json()).toMatchObject({ diagnostic_code: 'SELF_SIGNED_CERT_IN_CHAIN',
+      error: expect.stringContaining('SELF_SIGNED_CERT_IN_CHAIN') });
+    expect(response.headers.has('set-cookie')).toBe(false);
+  });
+  it.each(['production', 'development'])('never exposes arbitrary driver details in %s', async mode => {
+    vi.stubEnv('NODE_ENV', mode);
+    query.mockRejectedValueOnce({ code: 'private-database-url', message: 'private connection credentials' });
+    const response = await register(request(input));
+    const body = await response.json();
+    expect(response.status).toBe(503);
+    expect(JSON.stringify(body)).not.toContain('private');
+    if (mode === 'production') {
+      expect(body).not.toHaveProperty('diagnostic_code');
+      expect(body.error).toBe('Registration service unavailable. Please try again.');
+    } else expect(body.diagnostic_code).toBe('UNEXPECTED_ERROR');
+  });
+  it.each([
+    [new Error('Connection terminated unexpectedly'), 'DB_CONNECTION_CLOSED'],
+    [new Error('SASL: SCRAM-SERVER-FIRST-MESSAGE: client password must be a string'), 'DB_PASSWORD_MISSING'],
+    [Object.assign(new Error('private database details'), { code: 'XX000' }), 'DB_XX000'],
+    [new TypeError('private runtime details'), 'TYPE_ERROR'],
+    [new Error('private wrapper', { cause: { code: 'ECONNRESET' } }), 'ECONNRESET'],
+  ])('classifies an unlabelled or wrapped error safely as %s', async (error, code) => {
+    vi.stubEnv('NODE_ENV', 'development');
+    query.mockRejectedValueOnce(error);
+    const response = await register(request(input));
+    const body = await response.json();
+    expect(body.diagnostic_code).toBe(code);
+    expect(JSON.stringify(body)).not.toContain('private');
   });
   it('rejects cross-origin writes before insertion', async () => {
     expect((await register(request(input, undefined, { origin: 'https://other.test' }))).status).toBe(403);

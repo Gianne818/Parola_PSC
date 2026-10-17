@@ -15,6 +15,7 @@ function request(body: unknown) { return new Request('http://localhost/api/users
 beforeEach(() => {
   vi.resetAllMocks();
   vi.stubEnv('PAROLA_AUTH_MODE', 'live');
+  vi.stubEnv('PAROLA_REGISTRY_TRANSPORT', 'postgres');
   vi.mocked(getSupabaseUser).mockResolvedValue(owner);
   vi.mocked(getDbPool).mockReturnValue({ query } as never);
   vi.mocked(checkRateLimit).mockResolvedValue({ allowed: true } as never);

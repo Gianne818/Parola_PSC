@@ -4,6 +4,9 @@ import { getSupabaseUser, type AuthUser } from '@/lib/route-auth';
 import { getDbPool } from '@/lib/db';
 import { isValidPhilippineMobile } from '@/lib/philippine-mobile';
 import { boundedJson, RequestBodyError } from '@/lib/request-body';
+import type { QueryResultRow } from 'pg';
+import type { AdvisoryPreferences } from '@/types';
+import { registryHttpsQuery, RegistryHttpsError, type RegistryOperation } from '@/lib/registry-https';
 
 export const MESSAGING_CONSENT_VERSION = 'messaging-v1';
 export const MESSAGING_CONSENT_TEXT = 'I agree to receive Parola fishing advisories and safety alerts by SMS at my verified phone number. I can withdraw this messaging consent in the portal. Sponsor messages are not included.';
@@ -18,12 +21,48 @@ export function registrationJson(body: unknown, status = 200) {
   return Response.json(body, { status, headers: { 'Cache-Control': 'no-store' } });
 }
 
+// Local diagnosis only. Never echo driver messages, SQL, connection URLs or PII.
+const LOCAL_FAILURE_CODES = new Set([
+  'EACCES', 'EPERM', 'ENOTFOUND', 'EAI_AGAIN', 'ECONNREFUSED', 'ECONNRESET', 'ETIMEDOUT',
+  'SELF_SIGNED_CERT_IN_CHAIN', 'DEPTH_ZERO_SELF_SIGNED_CERT', 'UNABLE_TO_VERIFY_LEAF_SIGNATURE',
+  'CERT_HAS_EXPIRED', 'ERR_TLS_CERT_ALTNAME_INVALID', 'ERR_INVALID_URL',
+  '23502', '23503', '23514', '42703', '42P01', '42883', '42501', '28P01', '3D000', '53300', '57P01',
+]);
+
+function localFailureCode(error: unknown, depth = 0): string {
+  if (!error || typeof error !== 'object' || depth > 3) return 'UNEXPECTED_ERROR';
+  const value = error as { code?: unknown; message?: unknown; name?: unknown; cause?: unknown; errors?: unknown[] };
+  if (typeof value.code === 'string') {
+    if (LOCAL_FAILURE_CODES.has(value.code)) return value.code;
+    if (/^[0-9A-Z]{5}$/.test(value.code)) return `DB_${value.code}`;
+  }
+  // These labels come from known driver conditions; raw messages stay private.
+  if (typeof value.message === 'string') {
+    if (/connection terminated unexpectedly/i.test(value.message)) return 'DB_CONNECTION_CLOSED';
+    if (/connection timeout|timeout exceeded when trying to connect|timeout expired/i.test(value.message)) return 'DB_CONNECTION_TIMEOUT';
+    if (/client password must be/i.test(value.message)) return 'DB_PASSWORD_MISSING';
+    if (/server signature does not match/i.test(value.message)) return 'DB_PASSWORD_REJECTED';
+    if (/tenant or user not found/i.test(value.message)) return 'DB_POOLER_USER_NOT_FOUND';
+    if (/max clients|maxclients|too many clients/i.test(value.message)) return 'DB_POOL_FULL';
+    if (/Cannot use a pool after calling end/i.test(value.message)) return 'DB_POOL_ENDED';
+  }
+  const nested = [value.cause, ...(Array.isArray(value.errors) ? value.errors.slice(0, 3) : [])];
+  for (const cause of nested) {
+    const code = localFailureCode(cause, depth + 1);
+    if (code !== 'UNEXPECTED_ERROR') return code;
+  }
+  return value.name === 'TypeError' ? 'TYPE_ERROR' : value.name === 'RangeError' ? 'RANGE_ERROR' : 'UNEXPECTED_ERROR';
+}
+
 export async function registrationResponse(action: () => Promise<Response>): Promise<Response> {
   try { return await action(); }
   catch (error) {
     if (error instanceof RegistrationError || error instanceof RequestBodyError) return registrationJson({ error: error.message, code: error.code,
       ...(error instanceof RegistrationError && error.field ? { field: error.field } : {}), message_language: 'en' }, error.status);
-    return registrationJson({ error: 'Registration service unavailable. Please try again.', code: 'service_unavailable', message_language: 'en' }, 503);
+    const diagnostic = process.env.NODE_ENV === 'development'
+      ? localFailureCode(error) : undefined;
+    return registrationJson({ error: `Registration service unavailable. Please try again.${diagnostic ? ` (Diagnostic: ${diagnostic})` : ''}`,
+      code: 'service_unavailable', message_language: 'en', ...(diagnostic ? { diagnostic_code: diagnostic } : {}) }, 503);
   }
 }
 
@@ -75,6 +114,26 @@ export function registryDb() {
   return db;
 }
 
+export interface RegistryProfile extends AdvisoryPreferences {
+  id: string;
+  phone_number: string;
+  password_hash?: unknown;
+  [key: string]: unknown;
+}
+
+export async function registryQuery<R extends QueryResultRow = QueryResultRow>(operation: RegistryOperation, sql: string, values: unknown[]): Promise<{ rows: R[] }> {
+  const transport = process.env.PAROLA_REGISTRY_TRANSPORT ?? 'postgres';
+  if (transport === 'postgres') return registryDb().query<R>(sql, values);
+  if (transport !== 'https') throw new RegistrationError(503, 'Invalid account storage transport.', 'registry_transport_invalid');
+  try { return await registryHttpsQuery<R>(operation, values); }
+  catch (error) {
+    if (error instanceof RegistryHttpsError && error.code !== '23505') {
+      throw new RegistrationError(503, error.message, error.code);
+    }
+    throw error;
+  }
+}
+
 export const REGISTER_VERIFIED_USER_SQL = `
   INSERT INTO public.users (
     id, auth_user_id, phone_number, full_name, home_port_name, home_port_geom,
@@ -101,7 +160,7 @@ export const REGISTER_VERIFIED_USER_SQL = `
 `;
 
 export async function smsRecipientEligible(phone: string, ownerId?: string): Promise<boolean> {
-  const result = await registryDb().query<{ eligible: boolean }>(
+  const result = await registryQuery<{ eligible: boolean }>('sms_eligibility',
     `SELECT public.parola_sms_recipient_eligible($1, $2, $3) AS eligible;`,
     [phoneE164(phone), MESSAGING_CONSENT_VERSION, ownerId || null],
   );

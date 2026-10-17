@@ -1,9 +1,9 @@
-import { consentInput, MESSAGING_CONSENT_TEXT, MESSAGING_CONSENT_VERSION, phoneE164, registrationBody, registrationJson, registrationOwner, registrationResponse, registryDb, RegistrationError } from '@/lib/registration';
+import { consentInput, MESSAGING_CONSENT_TEXT, MESSAGING_CONSENT_VERSION, phoneE164, registrationBody, registrationJson, registrationOwner, registrationResponse, registryQuery, RegistrationError } from '@/lib/registration';
 
 export async function GET(request: Request) {
   return registrationResponse(async () => {
     const owner = await registrationOwner(request);
-    const result = await registryDb().query(`
+    const result = await registryQuery('consent_read', `
       SELECT messaging_consent, messaging_consent_version, messaging_consent_at
       FROM public.users WHERE auth_user_id = $1 AND phone_e164 = $2;`, [owner.id, phoneE164(owner.phone)]);
     return registrationJson({
@@ -18,7 +18,7 @@ export async function PUT(request: Request) {
     const owner = await registrationOwner(request);
     const body = await registrationBody(request, ['messaging_consent', 'consent_version']);
     const consent = consentInput(body);
-    const result = await registryDb().query(`
+    const result = await registryQuery('consent_write', `
       UPDATE public.users u SET messaging_consent = $3,
         messaging_consent_version = $4, messaging_consent_at = CASE
           WHEN u.messaging_consent IS DISTINCT FROM $3 OR u.messaging_consent_version IS DISTINCT FROM $4
