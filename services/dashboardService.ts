@@ -1,6 +1,7 @@
 import type { DashboardWeather, FishingArea, FishingAreaResult, FishingAreaMetadata } from '@/lib/dashboard';
 import { isClientCoordinate, isClientTargetCoordinate } from '@/lib/frontend/coordinates';
 import { predictionDay, recordTimestamp } from '@/lib/frontend/timestamps';
+import { AreaLoadError } from '@/lib/frontend/prediction-presentation';
 
 function isReading(value: unknown): boolean {
   if (!value || typeof value !== 'object') return false;
@@ -64,48 +65,78 @@ interface Prediction {
   prediction_date?: string | null;
   created_at?: string | null;
   sst?: number;
+  chl_a?: number;
+  environment_provenance?: unknown;
+  dbscan_cluster_id?: unknown;
 }
 
 function isPrediction(value: unknown): value is Prediction {
   if (!value || typeof value !== 'object') return false;
   const item = value as Record<string, unknown>;
-  return (typeof item.grid_id === 'number' || typeof item.grid_id === 'string')
+  return ((typeof item.grid_id === 'number' && Number.isFinite(item.grid_id)) || (typeof item.grid_id === 'string' && Boolean(item.grid_id.trim())))
     && isClientTargetCoordinate(item.target_lat, item.target_lon);
 }
 
+function latestAtEachLocation(predictions: Prediction[]): Prediction[] {
+  const locations = new Map<string, Prediction>();
+  for (const prediction of predictions) {
+    const key = `${prediction.target_lat},${prediction.target_lon},${prediction.model_type}`;
+    const previous = locations.get(key);
+    const day = predictionDay(prediction.prediction_date) || '';
+    const previousDay = predictionDay(previous?.prediction_date) || '';
+    if (!previous || day > previousDay || (day === previousDay
+      && (Date.parse(recordTimestamp(prediction.created_at) || '') || 0) > (Date.parse(recordTimestamp(previous.created_at) || '') || 0))) {
+      locations.set(key, prediction);
+    }
+  }
+  // Updating an existing key retains server selection order across distinct locations.
+  return [...locations.values()];
+}
+
 export async function loadFishingAreaResult(lat: number, lng: number, species: string, signal: AbortSignal, regionId?: string): Promise<FishingAreaResult> {
-  if (!isClientCoordinate(lat, lng)) throw new Error('Home-port coordinates are unavailable or invalid.');
+  if (!isClientCoordinate(lat, lng)) throw new AreaLoadError('invalid_coordinates');
   const params = new URLSearchParams({ lat: String(lat), lon: String(lng), limit: '1000' });
   if (regionId) params.set('region', regionId);
   if (species) params.set('species', species);
-  const data = await readResponse(await fetch(`/api/advisories/nearest?${params}`, { signal, cache: 'no-store' }));
+  const response = await fetch(`/api/advisories/nearest?${params}`, { signal, cache: 'no-store' });
+  const payload = await response.json();
+  if (!response.ok || !payload || typeof payload !== 'object' || payload.error) {
+    const code = payload?.code;
+    throw new AreaLoadError(code === 'species_unsupported' || code === 'species_catalog_unavailable' ? code : 'unavailable');
+  }
+  const data = payload as Record<string, unknown>;
   if (!Array.isArray(data.hotspots)) throw new Error('Fishing-area response could not be read.');
   if (data.hotspots.length && !data.hotspots.some(isPrediction)) throw new Error('Fishing-area coordinates are unavailable or invalid.');
-  const seen = new Set<string>();
   const retrievedAt = new Date().toISOString(); // Client response receipt, never prediction age.
-  const areas: FishingArea[] = data.hotspots.filter(isPrediction).filter(item => {
-    const key = `${item.target_lat},${item.target_lon},${item.model_type}`;
-    if (seen.has(key)) return false;
-    seen.add(key);
-    return true;
-  })
+  const valid = data.hotspots.filter(isPrediction);
+  const adjusted = data.species_hsi_applied === true
+    || (Boolean(species.trim()) && typeof data.species_hsi_applied === 'string' && data.species_hsi_applied === species);
+  const label = (value: unknown): string | null => typeof value === 'string' && value.trim() ? value : null;
+  const areas: FishingArea[] = latestAtEachLocation(valid)
     .map(item => ({
       id: String(item.grid_id), name: `Zone ${item.grid_id}`, lat: item.target_lat, lng: item.target_lon,
       type: item.model_type === 'pelagic' || item.model_type === 'demersal' ? item.model_type : 'both',
       // Legacy shared depth is required numeric; nonfinite means unavailable in client displays.
       species: [], depth: Number.NaN, lastUpdated: recordTimestamp(item.created_at) || '', retrievedAt,
-      catchProbability: typeof item.catch_probability === 'number' && Number.isFinite(item.catch_probability) ? item.catch_probability : undefined,
+      catchProbability: typeof item.catch_probability === 'number' && Number.isFinite(item.catch_probability) && item.catch_probability >= 0 && item.catch_probability <= 100 ? item.catch_probability : undefined,
       predictionDate: predictionDay(item.prediction_date),
-      source: 'model', speciesAdjusted: data.species_hsi_applied === true
-        || (Boolean(species.trim()) && typeof data.species_hsi_applied === 'string' && data.species_hsi_applied === species),
+      source: 'model', speciesAdjusted: adjusted,
       habitatKnown: item.model_type_known !== false && ['pelagic', 'demersal', 'both'].includes(item.model_type),
-      sst: typeof item.sst === 'number' && Number.isFinite(item.sst) ? item.sst : undefined, distanceKm: 0, compassBearing: '',
+      sst: typeof item.sst === 'number' && Number.isFinite(item.sst) ? item.sst : undefined,
+      chlA: typeof item.chl_a === 'number' && Number.isFinite(item.chl_a) ? item.chl_a : undefined,
+      evidence: { responseSource: label(data.source), provenance: label(data.provenance), environmentProvenance: label(item.environment_provenance),
+        clusterId: typeof item.dbscan_cluster_id === 'number' && Number.isInteger(item.dbscan_cluster_id) ? String(item.dbscan_cluster_id) : null },
+      distanceKm: 0, compassBearing: '',
     }));
   const metadata = data.metadata as Partial<FishingAreaMetadata> | undefined;
   return { areas, metadata: metadata && metadata.region === regionId
     && Number.isInteger(metadata.eligibleCount) && Number.isInteger(metadata.returnedCount)
+    && metadata.returnedCount! >= 0 && metadata.eligibleCount! >= metadata.returnedCount!
     && Array.isArray(metadata.predictionDates) && metadata.predictionDates.every(date => predictionDay(date) !== null)
-    && typeof metadata.capped === 'boolean' ? metadata as FishingAreaMetadata : null };
+    && typeof metadata.capped === 'boolean' && metadata.capped === (metadata.eligibleCount! > metadata.returnedCount!) ? metadata as FishingAreaMetadata : null,
+    coverage: { receivedCount: data.hotspots.length, rejectedCount: data.hotspots.length - valid.length, duplicateCount: valid.length - areas.length,
+      speciesStatus: data.species_status === 'resolved' || data.species_status === 'not_requested' ? data.species_status : 'unknown',
+      speciesAdjustment: adjusted ? 'applied' : data.species_hsi_status === 'unavailable' ? 'unavailable' : !species ? 'not_requested' : 'unknown' } };
 }
 
 /** Existing consumers retain the array interface. */

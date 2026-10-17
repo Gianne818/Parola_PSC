@@ -17,6 +17,14 @@ from unittest.mock import Mock, patch
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 from pydantic import ValidationError
 from schemas import DailyGridPredictionItem
+from prediction_ingestion import IngestionError, prepare_batch
+
+
+def successful_ingestion(db, items):
+    batch = prepare_batch(items)
+    db.execute.side_effect = [Mock(), Mock(mappings=lambda: Mock(one=lambda: {
+        'payload_hash': batch.payload_hash, 'status': 'pending', 'expected_records': len(items),
+    })), Mock(), Mock(scalar_one=lambda: len(items)), Mock(rowcount=1)]
 
 
 class PredictionCoordinateTests(unittest.TestCase):
@@ -66,16 +74,17 @@ class CsvIngestionTests(unittest.TestCase):
     def write(self, rows):
         self.csv.write_text('global_rank,grid_lat,grid_lon,catch_probability,thetao,chl\n' + rows, encoding='utf-8')
 
-    def test_valid_input_is_committed_once_with_correct_coordinate_order(self):
+    def test_valid_input_is_published_atomically_with_correct_coordinate_order(self):
         self.write('1,14.1,122.9,0.8,28,0.4\n2,0,0,0.7,,\n')
+        successful_ingestion(self.db, self.loader.read_predictions(str(self.csv), '2026-10-17'))
         with contextlib.redirect_stdout(io.StringIO()) as output:
             count = self.loader.ingest_csv(str(self.csv), '2026-10-17', session_factory=self.factory)
         self.assertEqual(count, 2)
-        self.db.commit.assert_called_once()
+        self.assertEqual(self.db.commit.call_count, 2)  # identity, then complete publication
         self.db.rollback.assert_not_called()
-        values = self.db.execute.call_args_list[0].args[1]
-        self.assertEqual((values['lat'], values['lon'], values['p_date']), (14.1, 122.9, date(2026, 10, 17)))
-        self.assertIsNone(self.db.execute.call_args_list[1].args[1]['sst'])
+        values = self.db.execute.call_args_list[2].args[1]
+        self.assertEqual((values[1]['lat'], values[1]['lon'], values[1]['prediction_date']), (14.1, 122.9, '2026-10-17'))
+        self.assertIsNone(values[0]['sst'])
         self.assertIn('Successfully ingested 2', output.getvalue())
         self.db.close.assert_called_once()
 
@@ -97,9 +106,30 @@ class CsvIngestionTests(unittest.TestCase):
 
     def test_default_date_is_shared_manila_date(self):
         self.write('1,14.1,122.9,0.8,,\n')
+        successful_ingestion(self.db, self.loader.read_predictions(str(self.csv), '2026-10-17'))
         with patch.object(self.loader, 'manila_today', return_value=date(2026, 10, 17)), contextlib.redirect_stdout(io.StringIO()):
             self.loader.ingest_csv(str(self.csv), session_factory=self.factory)
-        self.assertEqual(self.db.execute.call_args.args[1]['p_date'], date(2026, 10, 17))
+        self.assertEqual(self.db.execute.call_args_list[2].args[1][0]['prediction_date'], '2026-10-17')
+
+    def test_csv_supports_each_habitat_and_both_without_substitution(self):
+        for habitats in [('pelagic',), ('demersal',), ('pelagic', 'demersal')]:
+            self.csv.write_text('grid_lat,grid_lon,catch_probability,model_type\n' +
+                                ''.join(f'14,122,0.8,{habitat}\n' for habitat in habitats), encoding='utf-8')
+            items = self.loader.read_predictions(str(self.csv), '2026-10-17')
+            self.assertEqual([item.model_type for item in items], list(habitats))
+            with patch.object(self.loader, 'ingest_predictions', return_value={
+                    'inserted_records': 0, 'total_records': len(items), 'replayed': True}) as service:
+                with contextlib.redirect_stdout(io.StringIO()) as output:
+                    self.assertEqual(self.loader.ingest_csv(str(self.csv), '2026-10-17', session_factory=self.factory), 0)
+                self.assertIn('already published', output.getvalue())
+                self.assertEqual(service.call_args.args[2], prepare_batch(items).run_id)
+
+    def test_duplicate_csv_cells_never_open_database(self):
+        self.write('1,14,122,0.8,,\n2,14,122,0.9,,\n')
+        with self.assertRaises(IngestionError) as raised:
+            self.loader.ingest_csv(str(self.csv), '2026-10-17', session_factory=self.factory)
+        self.assertEqual(raised.exception.code, 'duplicate_cell')
+        self.factory.assert_not_called()
 
     def test_execute_or_commit_failure_rolls_back_closes_and_never_reports_success(self):
         self.write('1,14.1,122.9,0.8,,\n')
@@ -200,14 +230,61 @@ class ApiWiringTests(unittest.TestCase):
     def test_both_habitats_still_ingest_and_keep_lon_lat_geometry_order(self):
         payload = {'predictions': [{'lat': 14.1, 'lon': 122.9, 'prediction_date': '2026-10-17', 'catch_probability': 0.8, 'model_type': model}
                                     for model in ('pelagic', 'demersal')]}
+        successful_ingestion(self.db, [DailyGridPredictionItem(**item) for item in payload['predictions']])
         status, data = self.request('/api/predictions/ingest', body=payload)
         self.assertEqual((status, data['inserted_records']), (201, 2))
-        rows = [call.args[0] for call in self.db.add.call_args_list]
-        self.assertEqual([row.model_type for row in rows], ['pelagic', 'demersal'])
-        point, srid = list(rows[0].centroid_geom.clauses)
-        self.assertEqual([value.value for value in point.clauses], [122.9, 14.1])
-        self.assertEqual(srid.value, 4326)
-        self.db.commit.assert_called_once()
+        rows = self.db.execute.call_args_list[2].args[1]
+        self.assertEqual([row['model_type'] for row in rows], ['demersal', 'pelagic'])
+        self.assertEqual((rows[0]['lon'], rows[0]['lat']), (122.9, 14.1))
+        self.assertEqual(self.db.commit.call_count, 2)
+
+    def test_ingestion_replay_returns_200_and_preserves_run_identity(self):
+        identity = '524ee50a-4ebd-4b06-a129-d6bedfbe0884'
+        result = {'status': 'success', 'run_id': identity, 'inserted_records': 0, 'replayed': True, 'total_records': 1}
+        with patch.object(self.api, 'ingest_predictions', return_value=result) as service:
+            status, data = self.request('/api/predictions/ingest', body={'run_id': identity, 'predictions': [
+                {'lat': 14, 'lon': 122, 'prediction_date': '2026-10-17', 'catch_probability': 0.8}]})
+        self.assertEqual((status, data), (200, result))
+        self.assertEqual(str(service.call_args.args[2]), identity)
+
+    def test_ingestion_errors_use_stable_codes_and_safe_messages(self):
+        body = {'predictions': [{'lat': 14, 'lon': 122, 'prediction_date': '2026-10-17', 'catch_probability': 0.8}]}
+        for code, expected in [('run_conflict', 409), ('ingestion_unavailable', 503)]:
+            with patch.object(self.api, 'ingest_predictions', side_effect=IngestionError('Safe message.', code, expected)):
+                status, data = self.request('/api/predictions/ingest', body=body)
+            self.assertEqual((status, data['detail']['code']), (expected, code))
+
+    def test_database_failure_returns_generated_run_id_for_status_lookup(self):
+        item = {'lat': 14, 'lon': 122, 'prediction_date': '2026-10-17', 'catch_probability': 0.8}
+        batch = prepare_batch([DailyGridPredictionItem(**item)])
+        self.db.execute.side_effect = RuntimeError('private-driver-credentials')
+        status, data = self.request('/api/predictions/ingest', body={'predictions': [item]})
+        self.assertEqual(status, 503)
+        self.assertEqual(data['detail']['run_id'], str(batch.run_id))
+        self.assertEqual(data['detail']['failure_code'], 'claim_failed')
+        self.assertNotIn('private-driver', json.dumps(data))
+
+    def test_missing_key_cannot_ingest_or_read_run_status(self):
+        self.api.app.dependency_overrides.pop(self.api.require_api_key)
+        with patch.dict('os.environ', {'PAROLA_API_KEY': 'fixture-only-key'}):
+            status, _ = self.request('/api/predictions/runs/524ee50a-4ebd-4b06-a129-d6bedfbe0884')
+            self.assertEqual(status, 401)
+            status, _ = self.request('/api/predictions/ingest', body={'predictions': []})
+            self.assertEqual(status, 401)
+        self.db.execute.assert_not_called()
+
+    def test_protected_status_returns_failure_without_database_details(self):
+        record = {'run_id': '524ee50a-4ebd-4b06-a129-d6bedfbe0884', 'status': 'failed', 'failure_code': 'write_failed'}
+        self.db.execute.return_value.mappings.return_value.one_or_none.return_value = record
+        status, data = self.request('/api/predictions/runs/' + record['run_id'])
+        self.assertEqual((status, data), (200, record))
+
+    def test_duplicate_empty_and_invalid_habitat_batches_fail_without_writes(self):
+        item = {'lat': 14, 'lon': 122, 'prediction_date': '2026-10-17', 'catch_probability': 0.8}
+        for rows in [[], [item, item], [item | {'model_type': 'both'}], [item | {'catch_probability': 1.1}]]:
+            status, _ = self.request('/api/predictions/ingest', body={'predictions': rows})
+            self.assertEqual(status, 422)
+        self.db.execute.assert_not_called()
 
     def test_real_cli_missing_file_exits_nonzero_without_database_setup(self):
         script = Path(__file__).resolve().parents[1] / 'ingest_predictions.py'

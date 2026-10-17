@@ -27,12 +27,15 @@ import styles from './dashboard.module.css';
 import AreaWeather from './AreaWeather';
 import { GUIDANCE_COPY } from './guidance-copy';
 import { predictionDay } from '@/lib/frontend/timestamps';
+import { AreaLoadError, areasOnDay, availablePredictionDays, type PredictionCoverage as Coverage } from '@/lib/frontend/prediction-presentation';
+import PredictionCoverage from './PredictionCoverage';
 
 const DashboardMap = dynamic(() => import('./DashboardMap'), { ssr: false, loading: () => <div className={styles.mapLoading} aria-busy="true" /> });
 
 interface WorkspaceProps {
   areas: FishingArea[]; loading: boolean; failed: boolean; retry: () => void; region: PhilippineRegion; lat: number; lng: number;
   areaMetadata: FishingAreaMetadata | null;
+  coverage?: Coverage; loadError?: Error | null;
   habitat: Hotspot['type']; species: string; setFilters: (habitat: Hotspot['type'], species: string) => void;
   minThreshold?: number; setMinThreshold?: (value: number) => void;
   state: AdvisoryState; weather: DashboardWeather | null; weatherStale: boolean; phone: string; port: string;
@@ -59,9 +62,15 @@ export default function DashboardWorkspace(props: WorkspaceProps) {
   const [viewMode, setViewMode] = useState<MapViewMode>('port');
   const [mapRevision, setMapRevision] = useState(0);
   const [tilesFailed, setTilesFailed] = useState(false);
+  const [dateFilter, setDateFilter] = useState('all');
+  const returnedDates = availablePredictionDays(areas);
+  const hasUnknownDates = areas.some(area => !area.predictionDate);
+  const dateAvailable = dateFilter === 'all' || returnedDates.includes(dateFilter) || (dateFilter === 'unknown' && hasUnknownDates);
+  const selectedDate = dateAvailable ? dateFilter : 'all';
+  const displayedAreas = areasOnDay(areas, selectedDate);
   const filtersRef = useRef<HTMLDetailsElement>(null);
-  const selected = areas.find(area => area.id === selectedId) || null;
-  const filtered = habitat !== 'both' || Boolean(species) || minThreshold !== DEFAULT_THRESHOLD_PERCENT;
+  const selected = displayedAreas.find(area => area.id === selectedId) || null;
+  const filtered = habitat !== 'both' || Boolean(species) || selectedDate !== 'all';
   const panelVisible = viewport === 'desktop' || (viewport === 'mobile' && mobileView === 'areas') || (viewport === 'tablet' && drawerOpen) || showWeather;
   const panelTitle = showWeather ? copy.weatherDetails : selected?.name || copy.areas;
   useEffect(() => {
@@ -88,7 +97,7 @@ export default function DashboardWorkspace(props: WorkspaceProps) {
     else setInternalThreshold(clamped);
   };
   const updateFilters = (nextHabitat: Hotspot['type'], nextSpecies: string) => {
-    setLimit(3); setSelectedId(null); setFilters(nextHabitat, nextSpecies);
+    setLimit(3); setSelectedId(null); setDateFilter('all'); setFilters(nextHabitat, nextSpecies);
   };
   const clearAllFilters = () => {
     updateFilters('both', '');
@@ -102,13 +111,28 @@ export default function DashboardWorkspace(props: WorkspaceProps) {
   const returnAreas = () => { closeWeather(); setSelectedId(null); setMobileView('areas'); setDrawerOpen(true); focusPanel(); };
   const closePanel = () => { closeWeather(); setDrawerOpen(false); setMobileView('map'); };
   const retryMap = () => { setTilesFailed(false); setMapRevision(previous => previous + 1); };
+  const predictionControls = <div className={styles.predictionControls} lang="en">
+    <label>Prediction date (returned records only)<select value={selectedDate} onChange={event => { setDateFilter(event.target.value); setSelectedId(null); setLimit(3); }}>
+      <option value="all">All returned dates</option>{returnedDates.map(date => <option key={date} value={date}>{date}</option>)}
+      {hasUnknownDates && <option value="unknown">Date unavailable</option>}
+    </select></label>
+    <button type="button" className={styles.textButton} disabled={loading} onClick={retry}>{loading ? 'Refreshing areas…' : 'Refresh areas'}</button>
+  </div>;
   const informationPanel = <aside className={styles.infoPanel} aria-labelledby="inspector-title">
     <div className={styles.panelScroll}>
       <div className={styles.panelContent}>
         {(showWeather || selected) && <button type="button" className={styles.backButton} onClick={returnAreas}><ArrowLeft size={16} aria-hidden="true" />{copy.backAreas}</button>}
         <div className={styles.panelHeading}><h2 id="inspector-title" tabIndex={-1}>{panelTitle}</h2>
-          {!showWeather && !selected && <span className={styles.resultCount}>{areas.length}</span>}
+          {!showWeather && !selected && <span className={styles.resultCount}>{displayedAreas.length}</span>}
         </div>
+        {!showWeather && <>
+          {viewport !== 'desktop' && predictionControls}
+          {props.loadError instanceof AreaLoadError && <p className={styles.notice} role="status" lang="en">{props.loadError.message}
+            {species && <button type="button" className={styles.textButton} onClick={() => updateFilters(habitat, '')}>Clear fish filter</button>}</p>}
+          {selected && (loading || failed) && <p className={styles.notice} role="status">{loading ? copy.loadingAreas : `${copy.areasFailed} ${copy.lastAvailable}`}</p>}
+          <PredictionCoverage metadata={props.areaMetadata} coverage={props.coverage} displayed={displayedAreas.length}
+            received={props.coverage ? props.coverage.receivedCount - props.coverage.rejectedCount - props.coverage.duplicateCount : areas.length || null} species={species} />
+        </>}
         {showWeather ? <WeatherDetails data={weather} state={state} copy={copy} language={language} />
           : selected ? <>{state === 'hold' && <p className={styles.notice}>{copy.reference}</p>}
             <AreaDetails area={selected} copy={copy} weather={<AreaWeather key={`${selected.lat},${selected.lng}`} area={selected} regionId={region.id} cache={forecastCache} language={language} />} /></>
@@ -116,8 +140,8 @@ export default function DashboardWorkspace(props: WorkspaceProps) {
               {areas.length > 0 && <p className={styles.panelDescription} lang="en">Prediction source and validity are unverified. Refreshing this list does not make predictions current.</p>}
               {earlierPredictions && <p className={styles.predictionNotice}>{latestDate < (manilaDate(new Date()) || '') ? `${text.lastPredictions} · ${formattedPredictionDate}` : text.earlierDates}</p>}
               {props.areaMetadata?.capped && <p className={styles.panelDescription}>{text.capped.replace('{returned}', String(props.areaMetadata.returnedCount)).replace('{total}', String(props.areaMetadata.eligibleCount))}</p>}
-              <FishingAreas areas={areas} loading={loading} failed={failed} retry={retry} limit={limit} showMore={() => setLimit(previous => previous === 3 ? 10 : previous + 10)}
-                select={select} filtered={filtered} clearFilters={clearAllFilters} hold={state === 'hold'} speciesUnavailable={Boolean(species && areas.length && !areas.some(area => area.speciesAdjusted))} copy={copy} />
+              <FishingAreas areas={displayedAreas} loading={loading} failed={failed} retry={retry} limit={limit} showMore={() => setLimit(previous => previous === 3 ? 10 : previous + 10)}
+                select={select} filtered={filtered} clearFilters={() => updateFilters('both', '')} hold={state === 'hold'} speciesUnavailable={Boolean(species && areas.length && !areas.some(area => area.speciesAdjusted))} copy={copy} />
             </>}
       </div>
     </div>
@@ -163,39 +187,19 @@ export default function DashboardWorkspace(props: WorkspaceProps) {
               <summary><SlidersHorizontal size={16} aria-hidden="true" />{copy.filterFish}<ChevronDown size={14} aria-hidden="true" /></summary>
               <div className={styles.filterPopover}>
                 <label>{copy.habitat}<select value={habitat} onChange={event => updateFilters(event.target.value as Hotspot['type'], species)}><option value="both">{copy.all}</option><option value="pelagic">{copy.surface}</option><option value="demersal">{copy.bottom}</option></select></label>
-                <label>{copy.targetFish}<select value={species} onChange={event => updateFilters(habitat, event.target.value)}><option value="">{copy.anyFish}</option>{[...CATEGORIZED_SPECIES.pelagic, ...CATEGORIZED_SPECIES.demersal].map(fish => <option key={fish.name} value={fish.name}>{fish.name}</option>)}</select></label>
-                <label htmlFor="popover-threshold-slider" className={styles.popoverThresholdField}>
-                  <span className={styles.popoverThresholdHeader}>
-                    <span>{copy.minThreshold}</span>
-                    <strong className={styles.thresholdValue}>≥ {minThreshold}%</strong>
-                  </span>
-                  <input
-                    id="popover-threshold-slider"
-                    type="range"
-                    className={styles.thresholdSlider}
-                    min={MIN_THRESHOLD_PERCENT}
-                    max={MAX_THRESHOLD_PERCENT}
-                    step={5}
-                    value={minThreshold}
-                    aria-valuetext={`≥ ${minThreshold}% ${copy.modelEstimate.toLowerCase()}`}
-                    onChange={event => updateMinThreshold(Number(event.target.value))}
-                    style={sliderStyle}
-                  />
-                  <span className={styles.thresholdScale} aria-hidden="true">
-                    <span>{MIN_THRESHOLD_PERCENT}%</span>
-                    <span>50%</span>
-                    <span>{MAX_THRESHOLD_PERCENT}%</span>
-                  </span>
-                </label>
-                {filtered && <button type="button" className={styles.textButton} onClick={clearAllFilters}>{copy.clearFilters}</button>}
+                <label>{copy.targetFish}<select value={species} aria-describedby="species-support-note" onChange={event => updateFilters(habitat, event.target.value)}><option value="">{copy.anyFish}</option>{[...CATEGORIZED_SPECIES.pelagic, ...CATEGORIZED_SPECIES.demersal].map(fish => <option key={fish.name} value={fish.name}>{fish.name}</option>)}</select></label>
+                <p id="species-support-note" className={styles.panelDescription} lang="en">These existing fish-name choices are requests, not a verified species catalog. The server may reject an unsupported or ambiguous name. Habitat selection is separate; adjustment never confirms fish presence.</p>
+                {filtered && <button type="button" className={styles.textButton} onClick={() => updateFilters('both', '')}>{copy.clearFilters}</button>}
               </div>
             </details>
           </div>
         </div>
-        {filtered && <div className={styles.activeFilters}><span>{[habitat === 'pelagic' ? copy.surface : habitat === 'demersal' ? copy.bottom : '', species, minThreshold !== DEFAULT_THRESHOLD_PERCENT ? `${copy.minThreshold}: ≥ ${minThreshold}%` : ''].filter(Boolean).join(' · ')}</span><button type="button" className={styles.textButton} onClick={clearAllFilters}>{copy.clearFilters}</button></div>}
+        {predictionControls}
+        {filtered && <div className={styles.activeFilters}><span>{[habitat === 'pelagic' ? copy.surface : habitat === 'demersal' ? copy.bottom : '', species].filter(Boolean).join(' · ')}
+          {selectedDate !== 'all' && <span lang="en"> · {selectedDate === 'unknown' ? 'Prediction date unavailable' : selectedDate}</span>}</span><button type="button" className={styles.textButton} onClick={() => updateFilters('both', '')}>{copy.clearFilters}</button></div>}
         {tilesFailed && <div className={styles.mapError} role="status"><span>{copy.mapFailed}</span><button type="button" className={styles.textButton} onClick={retryMap}>{copy.retry}</button></div>}
         <div className={styles.mapCanvas}>
-          <DashboardMap key={mapRevision} areas={areas} selected={selected} select={select} region={region} lat={lat} lng={lng} viewMode={viewMode} tileError={() => setTilesFailed(true)} retry={retryMap} copy={copy} />
+          <DashboardMap key={mapRevision} areas={displayedAreas} selected={selected} select={select} region={region} lat={lat} lng={lng} viewMode={viewMode} tileError={() => setTilesFailed(true)} retry={retryMap} copy={copy} />
         </div>
         <div className={styles.mapNote}><span className={styles.homeDot} aria-hidden="true" /><span>{copy.mapNote}</span></div>
       </section>

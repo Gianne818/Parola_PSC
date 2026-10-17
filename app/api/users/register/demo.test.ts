@@ -9,6 +9,7 @@ import { createClient } from '@supabase/supabase-js';
 import { getAuthMode } from '@/lib/auth-mode';
 import { demoOwner, hashAccountPassword, matchesAccountPassword } from '@/lib/demo-account';
 import { phoneAuthClient, REGISTER_VERIFIED_USER_SQL } from '@/lib/registration';
+import { readSchedule } from '@/lib/frontend/profile-client';
 import { POST as register } from './route';
 import { POST as login } from '../login/route';
 import { POST as logout } from '../logout/route';
@@ -30,6 +31,7 @@ function cookie(response: Response) { return response.headers.get('set-cookie')!
 beforeEach(() => {
   vi.clearAllMocks();
   vi.stubEnv('PAROLA_AUTH_MODE', 'demo');
+  vi.stubEnv('PAROLA_REGISTRY_TRANSPORT', 'postgres');
   vi.stubEnv('PAROLA_DEMO_SESSION_SECRET', 'test-signing-secret-at-least-32-characters');
   vi.mocked(getDbPool).mockReturnValue({ query } as never);
   vi.mocked(getSupabaseUser).mockResolvedValue(null);
@@ -83,6 +85,41 @@ describe('existing-table demo registration', () => {
     expect(await response.text()).not.toContain('private');
     expect(response.headers.has('set-cookie')).toBe(false);
   });
+  it('shows only a safe diagnostic in development when database TLS fails', async () => {
+    vi.stubEnv('NODE_ENV', 'development');
+    query.mockRejectedValueOnce(Object.assign(new Error('private connection credentials'), { code: 'SELF_SIGNED_CERT_IN_CHAIN' }));
+    const response = await register(request(input));
+    expect(response.status).toBe(503);
+    expect(await response.json()).toMatchObject({ diagnostic_code: 'SELF_SIGNED_CERT_IN_CHAIN',
+      error: expect.stringContaining('SELF_SIGNED_CERT_IN_CHAIN') });
+    expect(response.headers.has('set-cookie')).toBe(false);
+  });
+  it.each(['production', 'development'])('never exposes arbitrary driver details in %s', async mode => {
+    vi.stubEnv('NODE_ENV', mode);
+    query.mockRejectedValueOnce({ code: 'private-database-url', message: 'private connection credentials' });
+    const response = await register(request(input));
+    const body = await response.json();
+    expect(response.status).toBe(503);
+    expect(JSON.stringify(body)).not.toContain('private');
+    if (mode === 'production') {
+      expect(body).not.toHaveProperty('diagnostic_code');
+      expect(body.error).toBe('Registration service unavailable. Please try again.');
+    } else expect(body.diagnostic_code).toBe('UNEXPECTED_ERROR');
+  });
+  it.each([
+    [new Error('Connection terminated unexpectedly'), 'DB_CONNECTION_CLOSED'],
+    [new Error('SASL: SCRAM-SERVER-FIRST-MESSAGE: client password must be a string'), 'DB_PASSWORD_MISSING'],
+    [Object.assign(new Error('private database details'), { code: 'XX000' }), 'DB_XX000'],
+    [new TypeError('private runtime details'), 'TYPE_ERROR'],
+    [new Error('private wrapper', { cause: { code: 'ECONNRESET' } }), 'ECONNRESET'],
+  ])('classifies an unlabelled or wrapped error safely as %s', async (error, code) => {
+    vi.stubEnv('NODE_ENV', 'development');
+    query.mockRejectedValueOnce(error);
+    const response = await register(request(input));
+    const body = await response.json();
+    expect(body.diagnostic_code).toBe(code);
+    expect(JSON.stringify(body)).not.toContain('private');
+  });
   it('rejects cross-origin writes before insertion', async () => {
     expect((await register(request(input, undefined, { origin: 'https://other.test' }))).status).toBe(403);
     expect(query).not.toHaveBeenCalled();
@@ -114,6 +151,16 @@ describe('demo login, profile and mode isolation', () => {
     const response = await login(request({ phone_number: input.phone_number, password: 'wrong-password' }));
     expect(response.status).toBe(401);
     expect(response.headers.has('set-cookie')).toBe(false);
+  });
+  it('returns the saved schedule immediately on password login', async () => {
+    query.mockResolvedValue({ rows: [{ ...saved, advisory_days: [1, 3, 5], preferred_language: 'hil',
+      preferred_advisory_time: '04:30:17', password_hash: await hashAccountPassword(input.password) }] });
+    const response = await login(request({ phone_number: input.phone_number, password: input.password }));
+    expect(response.status).toBe(200);
+    expect(readSchedule(await response.json())).toMatchObject({ advisory_days: [1, 3, 5], preferred_language: 'hil',
+      preferred_advisory_time: '04:30:17', habitat_preference: 'both', routine_paused: false });
+    expect(query).toHaveBeenCalledTimes(1);
+    expect(fetch).not.toHaveBeenCalled();
   });
   it('allows reload and port edits only for the signed unverified account', async () => {
     const session = cookie(await register(request(input)));

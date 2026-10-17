@@ -1,5 +1,91 @@
 # Son's six work packages
 
+**SON-01 follow-up, October 17, 2026: account response compatibility.**
+Live signup now reads the saved owner profile through the existing `profile_live`
+operation before returning success. This supplies the coordinates required by
+Tier's profile reader with both PostgreSQL and the already-installed HTTPS RPC,
+including when verification links a demo account whose saved port differs from
+the submitted defaults. No migration or hosted-function update is required.
+If readback fails after the save, the response tells the user to sign in instead
+of retrying registration; the completed write is never repeated automatically.
+Demo password login now includes the same derived schedule metadata as reload,
+so saved preferences are available immediately. Existing owner, consent, expired/
+forged-session and demo no-OTP guards are retained. The seven new regression
+cases cover the real frontend reader, all three habitats, readback failures,
+PostgreSQL/HTTPS responses and login schedule hydration.
+Validation: 396 network-denied tests in 32 files, full TypeScript, tracked secret
+scan and whitespace checks passed. A subsequent isolated browser run passed all
+30 TIER-01 checks: saved preferences/port/habitat restoration, pause/five-day
+limits, failed saves/retries, duplicate submission, malformed responses, reload,
+cache failure and responsive accessibility. It used existing cached Vite and
+temporary headless Chrome flags to work around local dependency/GPU restrictions;
+the fixture denied networking, created no real account and removed its temporary
+browser profile. These checks do not prove real database round-trips or the full
+register/onboarding/sign-out/password-sign-in journey. Broader
+PRIV-01 report/fleet/delegation, retention and tamper-evident audit work remains
+partial; no new permissions or assisted operations are enabled. No live account
+writes, OTP/SMS, dependency install or deployment was performed.
+
+SON-01 closure checklist (current account slice versus full package):
+
+- [x] Complete live registration response compatible with Tier's profile reader.
+- [x] Demo password login supplies persisted schedule metadata immediately.
+- [x] Mocked session/owner/consent guards and isolated browser preference/reload checks.
+- [ ] Actual database-backed account journey, login/logout/reload and preference readback.
+- [ ] PRIV-01 dependent report/fleet/delegation controls and reviewed access/retention
+  design (REPORT-02, ENT-01 and D09/C08); no purge period or new role is invented.
+
+The focused compatibility implementation is complete. SON-01 remains partial;
+the last two checks are not established by the automated evidence above.
+
+**User-selected PostgreSQL setting:** `DB_SSL_INSECURE=true` in the ignored
+`.env` and `.env.example`. The app honors the explicit override in development
+and production without needing a local CA file. Optional verified-CA support
+remains available when false. All 29 focused database/HTTPS/registration tests
+pass with mocked network calls. HTTPS registry and demo mode are preserved.
+
+**Current follow-up, October 17, 2026: SON-01 account HTTPS transport.**
+Branch `codex/son/registry-https`. Prepared a backend-only HTTPS path for the same
+users, demo password sessions, live registration, owner profile/preferences,
+consent and recipient eligibility. The user supplied independent PostgreSQL SSL
+timeouts and reachable unauthenticated HTTPS; the dashboard allows all IPs. The
+carrier is not proven responsible. Default PostgreSQL transport is unchanged.
+Migration 06 was applied through the user's authorized Supabase MCP connection:
+health/internal role guard, empty search path and browser/service-role execution
+grants passed; the existing account count remained two. The supplied backend key
+is stored privately in ignored `.env`; local transport is now `https` and
+auth remains `demo`. The agent's HTTPS probe was denied with `EACCES`; the user's
+subsequent ordinary-terminal health check passed, confirming backend credentials
+and registry HTTPS health acceptance. The user then reported browser demo signup
+working; login/reload/preference round-trips remain unverified. At the user's
+request, `.env.local` was merged into `.env` with local overrides winning both
+overlaps; all 29 effective settings stayed identical and a Git-ignored backup was
+kept. No secrets were added to tracked files.
+See [setup, limits and integration handoff](../registration-https.md). Tier's
+screens and Toby's science remain unchanged. Actual function grants, database
+round-trips and mobile-network acceptance remain pending; mocked checks cannot
+establish these. No account changes, OTP, SMS, dependency install or app deployment.
+Validation: 367 network-denied tests in 30 files, full TypeScript, script syntax,
+Python compilation and whitespace checks passed. The Node 24 health helper passed
+with mocked HTTPS. Separate spec and standards reviews found no remaining blocker.
+
+**Current selection, October 17, 2026: Batch 2, OPS-01 ingestion reliability
+(SON-04 portion).** Branch `codex/son/ingestion-reliability`. API and CSV now share
+an upload ledger/identity, canonical retry handling, locked complete-batch writes,
+count verification, publication and safe failure/status responses. Both habitats
+are retained. The additive migration 05 is prepared, not applied; no legacy rows
+or advisory links are deleted or relabeled. Contract, integration limits and exact
+Toby/Tier handoffs: [prediction-ingestion-contract.md](prediction-ingestion-contract.md).
+Full OPS-01 remains partial: actual PostgreSQL concurrency/schema/privilege checks,
+scientific source-cell/run lineage, producer integration and coherent query run
+selection still need their separate acceptance evidence. Tier's frontend and
+Toby's producer files remain unchanged. No live DB, SMS, external service,
+installation, deployment or push is included.
+Validation: all 44 Python backend tests pass with mocked sessions/in-process
+requests; Python compilation and whitespace checks pass. Separate spec and
+standards reviews found no remaining blocker after adding safe run IDs/failure
+phases to API errors. These checks do not prove deployed database behavior.
+
 **Current selection, October 17, 2026: Batch 1, independent MAP-01/OPS-01 slice.**
 Branch `codex/son/api-foundations`. Prediction ingestion now requires finite
 numeric latitude/longitude in range and explicit ISO calendar dates. API and

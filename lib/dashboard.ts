@@ -2,6 +2,7 @@ import type { Hotspot, PhilippineRegion } from '@/types';
 import { isCoordinateInRegion } from '@/data/philippineRegions';
 import { calculateBearing, calculateDistance } from '@/utils/spatial';
 import { isClientCoordinate, isClientTargetCoordinate } from '@/lib/frontend/coordinates';
+import type { PredictionCoverage, PredictionEvidence } from '@/lib/frontend/prediction-presentation';
 
 export interface WeatherReading {
   value: number | null;
@@ -27,13 +28,14 @@ export interface FishingAreaMetadata {
   region: string; eligibleCount: number; returnedCount: number; predictionDates: string[]; capped: boolean;
 }
 
-export interface FishingAreaResult { areas: FishingArea[]; metadata: FishingAreaMetadata | null }
+export interface FishingAreaResult { areas: FishingArea[]; metadata: FishingAreaMetadata | null; coverage?: PredictionCoverage }
 
 export function reusableAreaWeather(data: DashboardWeather, now = new Date()): boolean {
   return [data.wind, data.waves].every(reading => isReadingCurrent(reading, now));
 }
 
 export interface FishingArea extends Hotspot {
+  evidence?: PredictionEvidence;
   retrievedAt?: string;
   predictionDate: string | null;
   source: 'model' | 'sample';

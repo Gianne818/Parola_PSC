@@ -104,13 +104,13 @@ class UserResponse(AdvisoryPreferences):
 
 class DailyGridPredictionItem(BaseModel):
     prediction_date: date
-    model_type: Optional[str] = "pelagic"
+    model_type: Literal['pelagic', 'demersal'] = "pelagic"
     lat: float = Field(..., ge=-90, le=90, strict=True, allow_inf_nan=False)
     lon: float = Field(..., ge=-180, le=180, strict=True, allow_inf_nan=False)
-    catch_probability: float
+    catch_probability: float = Field(..., ge=0, le=1, strict=True, allow_inf_nan=False)
     dbscan_cluster_id: Optional[int] = -1
-    sst: Optional[float] = None
-    chl_a: Optional[float] = None
+    sst: Optional[float] = Field(None, strict=True, allow_inf_nan=False)
+    chl_a: Optional[float] = Field(None, strict=True, allow_inf_nan=False)
 
 
     @field_validator('prediction_date', mode='before')
@@ -120,7 +120,8 @@ class DailyGridPredictionItem(BaseModel):
 
 
 class BatchPredictionIngestRequest(BaseModel):
-    predictions: List[DailyGridPredictionItem]
+    predictions: List[DailyGridPredictionItem] = Field(..., min_length=1, max_length=10000)
+    run_id: Optional[uuid.UUID] = None
 
 
 class SpeciesProfileResponse(BaseModel):
