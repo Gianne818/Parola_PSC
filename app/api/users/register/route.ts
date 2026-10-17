@@ -2,7 +2,7 @@ import { getAuthMode } from '@/lib/auth-mode';
 import { checkSameOrigin, demoSessionResponse, hashAccountPassword, requireDemoConfig } from '@/lib/demo-account';
 import { RATE_LIMITS, checkRateLimit, rateLimitExceededResponse } from '@/lib/rate-limit';
 import { ADVISORY_PREFERENCE_FIELDS, registrationPreferences, withAdvisorySchedule } from '@/lib/advisory-preferences';
-import { consentInput, MESSAGING_CONSENT_VERSION, phoneE164, REGISTER_VERIFIED_USER_SQL, registrationBody, registrationJson, registrationOwner, registrationResponse, registryDb, RegistrationError } from '@/lib/registration';
+import { consentInput, MESSAGING_CONSENT_VERSION, phoneE164, REGISTER_VERIFIED_USER_SQL, VERIFIED_PROFILE_SQL, registrationBody, registrationJson, registrationOwner, registrationResponse, registryQuery, RegistrationError, type RegistryProfile } from '@/lib/registration';
 
 export async function POST(request: Request) {
   return registrationResponse(async () => {
@@ -27,7 +27,7 @@ export async function POST(request: Request) {
     const passwordHash = demo || body.password !== undefined ? await hashAccountPassword(body.password) : null;
     try {
       if (demo) {
-        const result = await registryDb().query(`INSERT INTO public.users
+        const result = await registryQuery<RegistryProfile>('register_demo', `INSERT INTO public.users
           (phone_number, full_name, home_port_name, home_port_geom, password_hash,
            preferred_advisory_time, advisory_days, preferred_language, habitat_preference,
            auth_user_id, phone_verified_at, messaging_consent)
@@ -40,9 +40,19 @@ export async function POST(request: Request) {
         if (!result.rows[0]) throw new RegistrationError(503, 'Account was not saved.');
         return demoSessionResponse({ ...withAdvisorySchedule(result.rows[0]), status: 'registered' }, 201);
       }
-      const result = await registryDb().query(REGISTER_VERIFIED_USER_SQL, [owner!.id, phone, full_name.trim(), home_port_name.trim(), body.longitude, body.latitude, preferences.preferred_advisory_time, consent, MESSAGING_CONSENT_VERSION, preferences.advisory_days, preferences.preferred_language, preferences.habitat_preference, passwordHash]);
+      const result = await registryQuery<RegistryProfile>('register_live', REGISTER_VERIFIED_USER_SQL, [owner!.id, phone, full_name.trim(), home_port_name.trim(), body.longitude, body.latitude, preferences.preferred_advisory_time, consent, MESSAGING_CONSENT_VERSION, preferences.advisory_days, preferences.preferred_language, preferences.habitat_preference, passwordHash]);
       if (!result.rows[0]) throw new RegistrationError(403, 'Phone ownership could not be confirmed.');
-      return registrationJson(withAdvisorySchedule({ ...result.rows[0], contact_verified: true, status: 'registered' }), 201);
+      // The existing hosted registration RPC omits coordinates. Use the same
+      // owner-checked read as reload, without retrying the completed write.
+      let account: RegistryProfile | undefined;
+      try {
+        account = (await registryQuery<RegistryProfile>('profile_live', VERIFIED_PROFILE_SQL, [owner!.id, phone])).rows[0];
+        if (!account) throw new Error('Profile readback unavailable');
+      } catch {
+        throw new RegistrationError(503, 'Your account was saved, but its profile could not be confirmed. Sign in before trying to register again.', 'profile_readback_unavailable');
+      }
+      return registrationJson(withAdvisorySchedule({ ...result.rows[0], ...account, contact_verified: true,
+        messaging_eligible: account.is_active === true && account.messaging_consent === true, status: 'registered' }), 201);
     } catch (error) {
       if ((error as { code?: string })?.code === '23505') throw new RegistrationError(409, 'An account already exists. Sign in, or complete live phone verification to link an unverified account.');
       throw error;

@@ -4,6 +4,15 @@ User-selected follow-up to merge #4, October 16, 2026. The existing registration
 screen and public.users table are shared by both modes. No new tables or schema
 migration. This replaces the earlier proposed separate demo table/browser-only signup.
 
+October 17 follow-up: an optional [backend HTTPS account transport](registration-https.md)
+is prepared for networks where PostgreSQL negotiation stalls. Its separate
+function migration does not change these authentication rules or account tables;
+the function is now installed after explicit authorization. The local backend key
+and HTTPS/demo flags are configured in ignored `.env`. The agent's HTTPS
+probe was denied with `EACCES`; the user's subsequent terminal health check passed,
+confirming the backend key and HTTPS health operation. The user subsequently
+reported browser demo signup working; other account round-trips remain unverified.
+
 ## Demo (current local configuration)
 
 ```dotenv
@@ -11,7 +20,7 @@ PAROLA_AUTH_MODE="demo"
 PAROLA_DEMO_SESSION_SECRET="" # Set privately to a random value of at least 32 characters.
 ```
 
-A dedicated random secret and demo flag are configured in ignored .env.local;
+A dedicated random secret and demo flag are configured in ignored .env;
 credentials are retained and secrets are never client-exposed. Restart Next.js.
 Missing mode defaults to demo; an unknown mode fails rather than enabling live.
 Configure the same server variables explicitly in any separately approved demo deployment.

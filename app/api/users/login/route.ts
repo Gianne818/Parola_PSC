@@ -1,8 +1,9 @@
 import { getAuthMode } from '@/lib/auth-mode';
 import { checkSameOrigin, demoSessionResponse, matchesAccountPassword, requireDemoConfig } from '@/lib/demo-account';
-import { phoneE164, registryDb, registrationBody, registrationResponse } from '@/lib/registration';
+import { phoneE164, registryQuery, registrationBody, registrationResponse, type RegistryProfile } from '@/lib/registration';
 import { NextResponse } from 'next/server';
 import { RATE_LIMITS, checkRateLimit, rateLimitExceededResponse } from '@/lib/rate-limit';
+import { withAdvisorySchedule } from '@/lib/advisory-preferences';
 
 export async function POST(request: Request) {
   return registrationResponse(async () => {
@@ -43,7 +44,7 @@ export async function POST(request: Request) {
     if (getAuthMode() === 'demo') {
       checkSameOrigin(request);
       requireDemoConfig();
-      const result = await registryDb().query(`SELECT id, phone_number, full_name, home_port_name, password_hash,
+      const result = await registryQuery<RegistryProfile>('login_demo', `SELECT id, phone_number, full_name, home_port_name, password_hash,
         ST_Y(home_port_geom) AS latitude, ST_X(home_port_geom) AS longitude,
         advisory_days, preferred_advisory_time::text, preferred_language, habitat_preference
         FROM public.users WHERE phone_e164 = $1 AND auth_user_id IS NULL AND phone_verified_at IS NULL AND messaging_consent IS FALSE;`, [normalizedPhone]);
@@ -52,7 +53,7 @@ export async function POST(request: Request) {
         return NextResponse.json({ error: 'Incorrect phone number or password.' }, { status: 401 });
       }
       const { password_hash: _passwordHash, ...profile } = account;
-      return demoSessionResponse(profile);
+      return demoSessionResponse(withAdvisorySchedule(profile));
     }
     const apiUrl = process.env.PAROLA_API_URL || 'http://localhost:8000';
     const controller = new AbortController();
