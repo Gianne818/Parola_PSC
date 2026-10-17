@@ -37,7 +37,7 @@ export default function DashboardPage() {
         minThreshold={filters.minThreshold}
         setMinThreshold={minThreshold => setFilters(prev => ({ ...prev, minThreshold }))}
         setFilters={(habitat, species) => setFilters(prev => ({ ...prev, habitat, species }))}
-        state={state} weather={weather.data} weatherStale={weather.failed || weather.loading} phone={userProfile.phone} port={userProfile.port}
+        state={state} weather={weather.data} weatherStale={weather.failed || weather.loading} accountId={userProfile.id} phone={userProfile.phone} port={userProfile.port}
         copy={copy} language={language} showWeather={showWeather} closeWeather={() => setShowWeather(false)} />
     </div>
   </AuthLayout>;

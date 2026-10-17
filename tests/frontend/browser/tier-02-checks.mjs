@@ -1,7 +1,8 @@
 export async function runTier02Checks({ evaluate, until, check, clickText, viewport, layout, key }) {
   const list = `document.querySelector('#fishing-areas ol')`;
   const select = async (label, value) => evaluate(`(()=>{const e=Array.from(document.querySelectorAll('label')).filter(e=>e.getClientRects().length).find(e=>e.textContent.startsWith(${JSON.stringify(label)})).querySelector('select');e.value=${JSON.stringify(value)};e.dispatchEvent(new Event('change',{bubbles:true}));})()`);
-  const refresh = async mode => { await evaluate(`tier02.mode=${JSON.stringify(mode)}`); await clickText('button', 'Refresh areas'); };
+  const filters = async () => evaluate(`(()=>{const s=Array.from(document.querySelectorAll('summary[aria-label="Filters"]')).find(e=>e.getClientRects().length);if(!s.parentElement.open)s.click()})()`);
+  const refresh = async mode => { await evaluate(`tier02.mode=${JSON.stringify(mode)}`); await evaluate(`Array.from(document.querySelectorAll('button[aria-label="Refresh areas"]')).find(e=>e.getClientRects().length).click()`); };
   await until(`${list}?.children.length===3`);
   check('initial list is bounded to three returned areas', true);
   await clickText('button', 'See all areas (12)');
@@ -9,28 +10,31 @@ export async function runTier02Checks({ evaluate, until, check, clickText, viewp
   await clickText('button', 'Show more (12)');
   await until(`${list}.children.length===12`);
   check('load more expands only the returned list', await evaluate(`tier02.requests.length===1`));
-  await evaluate(`Array.from(document.querySelectorAll('summary')).find(e=>e.textContent==='Prediction coverage and selection').click()`);
+  await evaluate(`Array.from(document.querySelectorAll('summary')).find(e=>e.textContent==='Data coverage').click()`);
   check('cap and unknown marine/run coverage are explicit', await evaluate(`document.body.textContent.includes('1200 eligible') && document.body.textContent.includes('Ocean-mask validation') && document.body.textContent.includes('run health')`));
+  await filters();
   await select('Prediction date', '2026-09-25');
   await until(`${list}.children.length===3`);
   check('date filter applies without querying or inventing a date', await evaluate(`tier02.requests.length===1 && document.querySelectorAll('.leaflet-marker-icon[title^="Zone"]').length===4`));
   await select('Prediction date', 'unknown');
   await until(`${list}.textContent.includes('Prediction date unavailable')`);
   await evaluate(`${list}.querySelector('button').click()`);
+  await clickText('summary', 'Area details & sources');
   await until(`document.body.textContent.includes('Cluster identifier: 0')`);
   check('zero SST and cluster identifier survive, depth and species remain unavailable', await evaluate(`document.body.textContent.includes('SST: 0 °C') && document.body.textContent.includes('no validated depth') && document.body.textContent.includes('not a sighting')`));
   await evaluate(`tier02.holdNext=true`);
   await refresh('failed');
   await until(`Boolean(tier02.pending)`);
-  check('refresh state remains visible while details are open', await evaluate(`document.body.textContent.includes('Loading fishing areas') && document.body.textContent.includes('Refreshing areas')`));
+  check('refresh state remains visible while details are open', await evaluate(`document.body.textContent.includes('Loading fishing areas') && Boolean(document.querySelector('button[aria-label="Refreshing areas…"]'))`));
   await evaluate(`tier02.pending()`);
   await until(`document.body.textContent.includes('We could not load fishing areas.')`);
   check('failed refresh keeps prior details labelled last available', await evaluate(`document.body.textContent.includes('Last available update') && document.body.textContent.includes('Cluster identifier: 0')`));
   await clickText('button', 'Back to nearby areas');
   await refresh('records');
-  await until(`!Array.from(document.querySelectorAll('button')).some(e=>e.textContent==='Refreshing areas…')`);
+  await until(`!document.querySelector('button[aria-label="Refreshing areas…"]')`);
+  await filters();
   await select('Prediction date', 'all');
-  await evaluate(`document.querySelector('summary').closest('details');Array.from(document.querySelectorAll('summary')).find(e=>e.textContent.includes('Filter fish')).click()`);
+
   await select('Habitat', 'pelagic');
   await until(`${list}.textContent.includes('Surface-water fish')`);
   check('pelagic filter excludes demersal-only areas', await evaluate(`!${list}.textContent.includes('Bottom and reef fish')`));
@@ -53,7 +57,7 @@ export async function runTier02Checks({ evaluate, until, check, clickText, viewp
   check('resolved species with missing HSI remains habitat guidance', await evaluate(`!document.body.textContent.includes('Adjusted model guidance for your target fish')`));
   // Old query resolves after a newer filter request; it must never replace that result.
   await evaluate(`tier02.holdNext=true;tier02.mode='empty'`);
-  await clickText('button', 'Refresh areas');
+  await evaluate(`Array.from(document.querySelectorAll('button[aria-label="Refresh areas"]')).find(e=>e.getClientRects().length).click()`);
   await until(`Boolean(tier02.pending)`);
   await evaluate(`tier02.mode='records';Array.from(document.querySelectorAll('button')).filter(e=>e.getClientRects().length).find(e=>e.textContent==='Clear filters').click()`);
   await until(`${list}?.children.length===3`);
@@ -72,9 +76,10 @@ export async function runTier02Checks({ evaluate, until, check, clickText, viewp
   await viewport(800);
   await clickText('button', 'Areas');
   await until(`Boolean(document.querySelector('dialog[open]'))`);
+  await filters();
   await select('Prediction date', 'unknown');
   await until(`${list}?.textContent.includes('Prediction date unavailable')`);
-  check('tablet drawer exposes date controls and returned unknown-date areas', true);
+  check('tablet drawer filters expose date controls and returned unknown-date areas', true);
   await key('Escape');
   await until(`!document.querySelector('dialog[open]')`);
   await viewport(390);
@@ -87,7 +92,7 @@ export async function runTier02Checks({ evaluate, until, check, clickText, viewp
   await evaluate(`document.documentElement.style.fontSize=''`);
   await clickText('button', 'Map');
   await layout('TIER-02 320px map');
-  await evaluate(`document.documentElement.style.fontSize='32px';Array.from(document.querySelectorAll('summary')).find(e=>e.textContent.includes('Filter fish')).closest('details').open=true`);
+  await evaluate(`document.documentElement.style.fontSize='32px';Array.from(document.querySelectorAll('summary')).find(e=>e.getAttribute('aria-label')==='Filters').closest('details').open=true`);
   await layout('TIER-02 expanded filters / enlarged text');
   check('expanded fish filters scroll within the viewport', await evaluate(`(()=>{const note=document.querySelector('#species-support-note');const panel=note.parentElement;return panel.getBoundingClientRect().bottom<=innerHeight && getComputedStyle(panel).overflowY==='auto'})()`));
   await evaluate(`document.querySelector('#species-support-note').parentElement.querySelector('select').focus()`);

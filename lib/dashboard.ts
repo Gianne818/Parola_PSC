@@ -1,3 +1,4 @@
+import { recordTimestamp } from '@/lib/frontend/timestamps';
 import type { Hotspot, PhilippineRegion } from '@/types';
 import { isCoordinateInRegion } from '@/data/philippineRegions';
 import { calculateBearing, calculateDistance } from '@/utils/spatial';
@@ -48,9 +49,10 @@ export interface FishingArea extends Hotspot {
 export type AdvisoryState = 'hold' | 'incomplete' | 'clear';
 
 export function isReadingCurrent(reading: WeatherReading, now = new Date()): boolean {
-  if (!reading.observedAt) return false;
-  return reading.available !== false && reading.value !== null
-    && manilaDate(reading.observedAt) === manilaDate(now)
+  const observedAt = recordTimestamp(reading.observedAt);
+  if (!observedAt || Date.parse(observedAt) > now.getTime()) return false;
+  return reading.available !== false && typeof reading.value === 'number' && Number.isFinite(reading.value)
+    && manilaDate(observedAt) === manilaDate(now)
     && (!reading.validUntil || (Number.isFinite(Date.parse(reading.validUntil)) && now.getTime() <= Date.parse(reading.validUntil)));
 }
 
@@ -68,8 +70,10 @@ export function advisoryState(weather: DashboardWeather | null, manualHold: bool
     || (weather?.stormSignal.value != null && weather.stormSignal.value > 0)) return 'hold';
   if (!weather || failed || !weather.hold.available) return 'incomplete';
   const readings = [weather.wind, weather.waves, weather.stormSignal];
+  const checkedAt = recordTimestamp(weather.hold.checkedAt);
   return readings.every(reading => isReadingCurrent(reading, now))
-    && weather.hold.checkedAt && manilaDate(weather.hold.checkedAt) === manilaDate(now) ? 'clear' : 'incomplete';
+    && checkedAt && Date.parse(checkedAt) <= now.getTime()
+    && manilaDate(checkedAt) === manilaDate(now) ? 'clear' : 'incomplete';
 }
 
 export function retainWeather(previous: DashboardWeather | null, next: DashboardWeather): DashboardWeather {
@@ -78,7 +82,7 @@ export function retainWeather(previous: DashboardWeather | null, next: Dashboard
     ? { ...old, available: false } : incoming;
   return { ...next, wind: retain(previous.wind, next.wind), waves: retain(previous.waves, next.waves),
     temperature: retain(previous.temperature, next.temperature), stormSignal: retain(previous.stormSignal, next.stormSignal),
-    hold: next.hold.available ? next.hold : { ...previous.hold, available: false },
+    hold: next.hold.available || next.hold.active ? next.hold : { ...previous.hold, available: false },
   };
 }
 

@@ -16,6 +16,7 @@ import styles from '@/components/application/application.module.css';
 import ForecastReading from '@/components/dashboard/ForecastReading';
 import { GUIDANCE_COPY } from '@/components/dashboard/guidance-copy';
 import WeatherCoverage from '@/components/dashboard/WeatherCoverage';
+import SafetyEvidence from '@/components/dashboard/SafetyEvidence';
 
 export default function AdvisoriesPage() {
   const { userProfile, language, manualOverrideHold } = useApp();
@@ -26,7 +27,7 @@ export default function AdvisoriesPage() {
   const region = useMemo(() => PHILIPPINE_REGIONS.find(item => item.id === userProfile.regionId)
     || detectPhilippineRegion(userProfile.lat, userProfile.lng, userProfile.port), [userProfile]);
   const weather = useAdvisoryWeather(userProfile.lat, userProfile.lng, region.id);
-  const state = advisoryState(weather.data, manualOverrideHold, weather.failed, now);
+  const state = advisoryState(weather.data, manualOverrideHold, weather.failed || weather.loading, now);
   const Icon = state === 'hold' ? ShieldAlert : state === 'clear' ? ShieldCheck : CircleHelp;
   const readings = [
     { label: copy.wind, reading: weather.data?.wind, unit: 'km/h', icon: Wind },
@@ -47,6 +48,7 @@ export default function AdvisoriesPage() {
           <p className={styles.small}>{weather.loading ? copy.refreshing : received ? `${guidance.retrieved}: ${received} PHT` : copy.unknownTime}</p>
           {stale && weather.data && !weather.loading && <p className={styles.small}>{copy.lastAvailable}</p>}
           {weather.failed && !weather.loading && <p role="status" className={styles.muted}>{copy.refreshFailed}</p>}
+          <SafetyEvidence data={weather.data} failed={weather.failed} now={now} language={language} />
           <div className={styles.actions}><button type="button" className={styles.button} onClick={weather.refresh} disabled={weather.loading}><RefreshCw size={16} aria-hidden="true" />{copy.refresh}</button><Link className={styles.link} href="/dashboard">{copy.viewAreas}</Link></div>
         </section>
         <section className={styles.weatherSection} aria-labelledby="weather-information">
@@ -60,7 +62,7 @@ export default function AdvisoriesPage() {
           <details className={styles.disclosure}><summary>{text.methodology}</summary><p>{text.methodologyText}</p><p>{text.forecastNote}</p><p>{copy.holdChecks}: {weather.data?.hold.available ? copy.holdRecorded : copy.holdUnknown}. {displayTime(weather.data?.hold.checkedAt, language) || copy.unknownTime}</p></details>
         </section>
       </article>
-      <aside className={`${styles.panel} ${styles.smsSupport}`}><SmsAccess phone={userProfile.phone} port={userProfile.port} weather={weather.data} state={state} stale={weather.failed || weather.loading} copy={copy} language={language} /><div className={styles.help}><h3>{copy.guidanceHelp}</h3><Link href="/resources/guide" className={styles.link}>{copy.openGuide}</Link></div></aside>
+      <aside className={`${styles.panel} ${styles.smsSupport}`}><SmsAccess accountId={userProfile.id} phone={userProfile.phone} port={userProfile.port} weather={weather.data} state={state} stale={weather.failed || weather.loading} copy={copy} language={language} /><div className={styles.help}><h3>{copy.guidanceHelp}</h3><Link href="/resources/guide" className={styles.link}>{copy.openGuide}</Link></div></aside>
     </div></div>
   </AuthLayout>;
 }

@@ -1,7 +1,7 @@
 import type { Language } from '@/types';
 
 const en = {
-  dashboard: 'Dashboard', navigation: 'Navigation', collapseNav: 'Collapse navigation', expandNav: 'Expand navigation', close: 'Close', resources: 'Resources', pricing: 'Pricing', about: 'About Parola', backAreas: 'Back to nearby areas', filterFish: 'Filter fish', areasView: 'Areas', smsHelp: 'How SMS works',
+  dashboard: 'Dashboard', navigation: 'Navigation', collapseNav: 'Collapse navigation', expandNav: 'Expand navigation', close: 'Close', resources: 'Resources', pricing: 'Pricing', about: 'About Parola', backAreas: 'Back to nearby areas', filterFish: 'Filters', areasView: 'Areas', smsHelp: 'How SMS works',
   home: 'Home', advisories: 'Advisories', updates: 'Updates', settings: 'Settings', profile: 'Profile', logout: 'Log out', account: 'Account', language: 'Language', help: 'Help', skip: 'Skip to content',
   title: 'Today at your home port', changePort: 'Change home port', portMissing: 'Choose your home port to see local guidance.',
   advisory: 'Your local advisory', hold: 'Parola hold active', clear: 'No Parola hold detected', incomplete: 'Advisory incomplete',
@@ -30,7 +30,7 @@ const en = {
 
 export type DashboardCopy = typeof en;
 const tl: DashboardCopy = {
-  dashboard: 'Dashboard', navigation: 'Nabigasyon', collapseNav: 'Paliitin ang nabigasyon', expandNav: 'Palawakin ang nabigasyon', close: 'Isara', resources: 'Mga sanggunian', pricing: 'Mga presyo', about: 'Tungkol sa Parola', backAreas: 'Bumalik sa malalapit na lugar', filterFish: 'Salain ang isda', areasView: 'Mga lugar', smsHelp: 'Paano gumagana ang SMS',
+  dashboard: 'Dashboard', navigation: 'Nabigasyon', collapseNav: 'Paliitin ang nabigasyon', expandNav: 'Palawakin ang nabigasyon', close: 'Isara', resources: 'Mga sanggunian', pricing: 'Mga presyo', about: 'Tungkol sa Parola', backAreas: 'Bumalik sa malalapit na lugar', filterFish: 'Mga filter', areasView: 'Mga lugar', smsHelp: 'Paano gumagana ang SMS',
   home: 'Home', advisories: 'Mga abiso', updates: 'Mga update', settings: 'Mga setting', profile: 'Profile', logout: 'Mag-log out', account: 'Account', language: 'Wika', help: 'Tulong', skip: 'Lumaktaw sa nilalaman',
   title: 'Ngayon sa iyong daungan', changePort: 'Palitan ang daungan', portMissing: 'Piliin ang iyong daungan para makita ang lokal na gabay.',
   advisory: 'Abiso sa inyong lugar', hold: 'May aktibong Parola hold', clear: 'Walang natukoy na Parola hold', incomplete: 'Hindi kumpleto ang abiso',
@@ -58,7 +58,7 @@ const tl: DashboardCopy = {
 };
 
 const ceb: DashboardCopy = {
-  dashboard: 'Dashboard', navigation: 'Nabigasyon', collapseNav: 'Pagamay sa nabigasyon', expandNav: 'Padak-a ang nabigasyon', close: 'Sirad-i', resources: 'Mga kapanguhaan', pricing: 'Mga presyo', about: 'Bahin sa Parola', backAreas: 'Balik sa duol nga mga lugar', filterFish: 'Salain ang isda', areasView: 'Mga lugar', smsHelp: 'Giunsa paggana ang SMS',
+  dashboard: 'Dashboard', navigation: 'Nabigasyon', collapseNav: 'Pagamay sa nabigasyon', expandNav: 'Padak-a ang nabigasyon', close: 'Sirad-i', resources: 'Mga kapanguhaan', pricing: 'Mga presyo', about: 'Bahin sa Parola', backAreas: 'Balik sa duol nga mga lugar', filterFish: 'Mga filter', areasView: 'Mga lugar', smsHelp: 'Giunsa paggana ang SMS',
   home: 'Home', advisories: 'Mga pahibalo', updates: 'Mga update', settings: 'Mga setting', profile: 'Profile', logout: 'Pag-log out', account: 'Account', language: 'Pinulongan', help: 'Tabang', skip: 'Laktaw sa sulod',
   title: 'Karon sa imong pantalan', changePort: 'Ilisi ang pantalan', portMissing: 'Pilia ang imong pantalan aron makita ang lokal nga giya.',
   advisory: 'Pahibalo sa inyong lugar', hold: 'Aktibo ang Parola hold', clear: 'Walay nakitang Parola hold', incomplete: 'Dili kompleto ang pahibalo',
@@ -86,7 +86,7 @@ const ceb: DashboardCopy = {
 };
 
 const hil: DashboardCopy = {
-  dashboard: 'Dashboard', navigation: 'Nabigasyon', collapseNav: 'Pagamay sang nabigasyon', expandNav: 'Padakuon ang nabigasyon', close: 'Sirad-i', resources: 'Mga reperensiya', pricing: 'Mga presyo', about: 'Parte sa Parola', backAreas: 'Balik sa malapit nga mga lugar', filterFish: 'Salain ang isda', areasView: 'Mga lugar', smsHelp: 'Paano nagagana ang SMS',
+  dashboard: 'Dashboard', navigation: 'Nabigasyon', collapseNav: 'Pagamay sang nabigasyon', expandNav: 'Padakuon ang nabigasyon', close: 'Sirad-i', resources: 'Mga reperensiya', pricing: 'Mga presyo', about: 'Parte sa Parola', backAreas: 'Balik sa malapit nga mga lugar', filterFish: 'Mga filter', areasView: 'Mga lugar', smsHelp: 'Paano nagagana ang SMS',
   home: 'Home', advisories: 'Mga abiso', updates: 'Mga update', settings: 'Mga setting', profile: 'Profile', logout: 'Mag-log out', account: 'Account', language: 'Lengguwahe', help: 'Bulig', skip: 'Laktaw sa sulod',
   title: 'Subong sa imo pantalan', changePort: 'Ilisi ang pantalan', portMissing: 'Pilia ang imo pantalan para makita ang lokal nga giya.',
   advisory: 'Abiso sa inyo lugar', hold: 'Aktibo ang Parola hold', clear: 'Wala sang nakita nga Parola hold', incomplete: 'Indi kompleto ang abiso',

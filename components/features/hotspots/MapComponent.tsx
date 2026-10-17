@@ -33,6 +33,7 @@ const BriefingMapInner = dynamic(() => import('./MapInner'), {
 });
 
 interface MapComponentProps {
+  guidanceAvailable?: boolean;
   presentation?: 'default' | 'dashboard';
   onTileError?: () => void;
   labels?: { loading: string; homePort: string; advisoryArea: string };
@@ -86,6 +87,7 @@ export const MapComponent: React.FC<MapComponentProps> = ({
   minHeight = 450,
   constrainToPhilippines = false,
   presentation = 'default',
+  guidanceAvailable = false,
   onTileError,
   labels,
   minThreshold: controlledThreshold,
@@ -120,7 +122,7 @@ export const MapComponent: React.FC<MapComponentProps> = ({
       setCustomWaypoint={setCustomWaypoint} showToast={showToast} manualOverrideHold={manualOverrideHold}
       center={center} activeRegion={activeRegion} showRegionBoundary={showRegionBoundary} showVesselMarkers={false}
       viewMode={viewMode} boundaryMaskOpacity={boundaryMaskOpacity} minHeight={minHeight}
-      showPredictionRadius={false} presentation="dashboard" onTileError={onTileError} labels={labels} />
+      showPredictionRadius={false} presentation="dashboard" guidanceAvailable={guidanceAvailable} onTileError={onTileError} labels={labels} />
   );
 
   return (

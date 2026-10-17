@@ -8,6 +8,7 @@ import styles from './dashboard.module.css';
 import { GUIDANCE_COPY } from './guidance-copy';
 import { recordTimestamp } from '@/lib/frontend/timestamps';
 import WeatherCoverage from './WeatherCoverage';
+import SafetyEvidence from './SafetyEvidence';
 
 export function displayTime(value: string | null | undefined, language: string): string | null {
   const timestamp = recordTimestamp(value);
@@ -40,6 +41,8 @@ export default function Advisory({ data, state, loading, failed, refresh, openDe
       {state === 'hold' && <Link className={styles.holdLink} href="/alerts">{copy.readAdvisory}</Link>}
     </div>
     {failed && !loading && <p className={styles.advisoryNotice} role="status">{copy.refreshFailed}</p>}
+    {data?.hold.active && <p className={styles.advisoryNotice} lang="en">Recorded regional hold: {data.hold.reason || 'Reason unavailable'}. {displayTime(data.hold.checkedAt, language) || copy.unknownTime} PHT. <Link href="/alerts">Warnings and coverage</Link></p>}
+    {!data?.hold.active && data?.stormSignal.value != null && data.stormSignal.value > 0 && <p className={styles.advisoryNotice} lang="en">Recorded storm signal: {data.stormSignal.value}. {data.stormSignal.source}. {displayTime(data.stormSignal.observedAt, language) || copy.unknownTime} PHT. Current coverage is unconfirmed. <Link href="/alerts">Warnings and coverage</Link></p>}
   </section>;
 }
 
@@ -61,5 +64,6 @@ export function WeatherDetails({ data, state, copy, language }: { data: Dashboar
       </div>
     </dl>
     <WeatherCoverage data={data} />
+    <SafetyEvidence data={data} language={language} />
   </>;
 }

@@ -2,39 +2,32 @@
 
 import { ChevronRight, Compass, Fish } from 'lucide-react';
 import type { ReactNode } from 'react';
-import { manilaDate, predictionPercent, type FishingArea } from '@/lib/dashboard';
+import { manilaDate, type FishingArea } from '@/lib/dashboard';
 import type { DashboardCopy } from './dashboard-copy';
 import styles from './dashboard.module.css';
 import PredictionProvenance from './PredictionProvenance';
 import { predictionDayLabel } from '@/lib/frontend/prediction-presentation';
 
-export function AreaDetails({ area, copy, weather }: { area: FishingArea; copy: DashboardCopy; weather?: ReactNode }) {
-  const percent = area.source === 'model' ? predictionPercent(area.catchProbability) : null;
+export function AreaDetails({ area, copy, weather, guidanceAvailable = false }: { area: FishingArea; copy: DashboardCopy; weather?: ReactNode; guidanceAvailable?: boolean }) {
   return <div className={styles.areaDetails}>
-    <div className={styles.areaDistance}><Compass size={22} aria-hidden="true" /><strong>{area.distanceKm.toFixed(1)} km</strong><span>{area.compassBearing}</span></div>
-    <p className={styles.panelDescription}>{copy.areasDescription}</p>
     {weather}
-    <dl>
-      <div><dt>{copy.coordinates}</dt><dd>{area.lat.toFixed(4)}° N, {area.lng.toFixed(4)}° E</dd></div>
-      <div><dt>{copy.habitat}</dt><dd>{area.habitatKnown ? area.type === 'pelagic' ? copy.surface : area.type === 'demersal' ? copy.bottom : copy.mixed : copy.unavailable}</dd></div>
-      {percent !== null && <div><dt>{copy.modelEstimate}</dt><dd>{percent}%</dd></div>}
-      <div><dt>{copy.predictionTime}</dt><dd>{area.predictionDate?.slice(0, 10) || copy.dateUnknown}</dd></div>
-    </dl>
-    <PredictionProvenance area={area} />
-    <p className={styles.panelDescription}>{copy.estimateNote}</p>
-    {area.source === 'sample' && <p className={styles.notice}>{copy.sample}</p>}
-    {area.speciesAdjusted && <p className={styles.panelDescription}>{copy.speciesNote}</p>}
+    <details className={styles.disclosure}><summary lang="en">Area details &amp; sources</summary>
+      <dl className={styles.areaFacts}>
+        <div><dt>{copy.coordinates}</dt><dd>{area.lat.toFixed(4)}° N, {area.lng.toFixed(4)}° E</dd></div>
+      </dl>
+      <PredictionProvenance area={area} />
+      {guidanceAvailable && !area.isUnsafe && area.speciesAdjusted && <p className={styles.panelDescription}>{copy.speciesNote}</p>}
+    </details>
+    {area.source === 'sample' && <p className={styles.notice}>{copy.sample} · not operational guidance.</p>}
   </div>;
 }
 
-export default function FishingAreas({ areas, loading, failed, retry, limit, showMore, select, filtered, clearFilters, hold, speciesUnavailable, copy }: {
+export default function FishingAreas({ areas, loading, failed, retry, limit, showMore, select, filtered, clearFilters, speciesUnavailable, copy }: {
   areas: FishingArea[]; loading: boolean; failed: boolean; retry: () => void; limit: number; showMore: () => void;
-  select: (area: FishingArea) => void; filtered: boolean; clearFilters: () => void; hold: boolean; speciesUnavailable: boolean; copy: DashboardCopy;
+  select: (area: FishingArea) => void; filtered: boolean; clearFilters: () => void; speciesUnavailable: boolean; copy: DashboardCopy;
 }) {
   const today = manilaDate(new Date());
   return <section id="fishing-areas" aria-busy={loading}>
-    <p className={styles.panelDescription}>{copy.areasDescription}</p>
-    {hold && <p className={styles.notice}>{copy.reference}</p>}
     {speciesUnavailable && <p className={styles.notice} role="status">{copy.fishUnavailable}</p>}
     {failed && <div className={styles.empty} role="status"><Fish size={23} aria-hidden="true" /><h3>{copy.areasFailed}</h3>
       {areas.length > 0 && <p>{copy.lastAvailable}</p>}<button type="button" className={styles.textButton} onClick={retry} disabled={loading}>{copy.retry}</button></div>}

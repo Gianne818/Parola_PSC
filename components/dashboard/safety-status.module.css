@@ -1,0 +1,13 @@
+.evidence { margin-block: 16px; padding-block: 16px; border-block: 1px solid var(--line); overflow-wrap: anywhere; font-size: .875em; line-height: 1.65; }
+.evidence h3 { margin: 0 0 10px; font: 700 1em/1.4 var(--font-sans); }
+.evidence p { margin: 8px 0; }
+.warning { color: var(--hold, #a12b26); font-weight: 650; }
+.facts { margin: 12px 0; }
+.facts > div { margin: 10px 0; }
+.facts dt { color: var(--muted); font-size: .9286em; }
+.facts dd { margin: 2px 0 0; overflow-wrap: anywhere; font-variant-numeric: tabular-nums; }
+.status { font-size: .875em; line-height: 1.65; overflow-wrap: anywhere; }
+.status h3 { font: 700 1em/1.5 var(--font-sans); margin: 12px 0 6px; }
+.status p { margin: 6px 0; }
+.status summary { min-height: 44px; padding-block: 10px; cursor: pointer; color: var(--green); }
+.status button { white-space: normal; overflow-wrap: anywhere; }

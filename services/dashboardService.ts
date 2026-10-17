@@ -1,27 +1,8 @@
+import { readWeatherEvidence } from '@/lib/frontend/safety-presentation';
 import type { DashboardWeather, FishingArea, FishingAreaResult, FishingAreaMetadata } from '@/lib/dashboard';
 import { isClientCoordinate, isClientTargetCoordinate } from '@/lib/frontend/coordinates';
 import { predictionDay, recordTimestamp } from '@/lib/frontend/timestamps';
 import { AreaLoadError } from '@/lib/frontend/prediction-presentation';
-
-function isReading(value: unknown): boolean {
-  if (!value || typeof value !== 'object') return false;
-  const reading = value as Record<string, unknown>;
-  return (reading.value === null || (typeof reading.value === 'number' && Number.isFinite(reading.value)))
-    && typeof reading.source === 'string' && (reading.observedAt === null || typeof reading.observedAt === 'string')
-    && (reading.available === undefined || typeof reading.available === 'boolean')
-    && (reading.validUntil === undefined || reading.validUntil === null || typeof reading.validUntil === 'string');
-}
-
-function isDashboardWeather(value: unknown): value is DashboardWeather {
-  if (!value || typeof value !== 'object') return false;
-  const data = value as Record<string, unknown>;
-  if (!data.hold || typeof data.hold !== 'object') return false;
-  const hold = data.hold as Record<string, unknown>;
-  return [data.wind, data.waves, data.temperature, data.stormSignal].every(isReading)
-    && typeof data.receivedAt === 'string' && typeof hold.available === 'boolean' && typeof hold.active === 'boolean'
-    && (hold.checkedAt === null || typeof hold.checkedAt === 'string')
-    && (hold.reason === null || typeof hold.reason === 'string') && isWeatherLocation(data.location);
-}
 
 function isWeatherLocation(value: unknown): boolean {
   if (value === undefined) return true; // Older responses remain compatible.
@@ -48,11 +29,12 @@ export async function loadDashboardWeather(lat: number, lng: number, regionId: s
   const params = new URLSearchParams({ lat: String(lat), lng: String(lng), region: regionId });
   const response = await fetch(`/api/dashboard/weather?${params}`, { signal, cache: 'no-store' });
   const data = await readResponse(response);
-  if (!isDashboardWeather(data)) throw new Error('Weather response could not be read.');
-  if (data.location && (data.location.requested.lat !== lat || data.location.requested.lng !== lng)) {
+  if (!isWeatherLocation(data.location)) throw new Error('Weather response location could not be read.');
+  const location = data.location as DashboardWeather['location'];
+  if (location && (location.requested.lat !== lat || location.requested.lng !== lng)) {
     throw new Error('Weather response belongs to a different requested location.');
   }
-  return data;
+  return { ...readWeatherEvidence(data), ...(location ? { location } : {}) };
 }
 
 interface Prediction {

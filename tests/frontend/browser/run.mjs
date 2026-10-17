@@ -2,7 +2,7 @@
 // Uses only installed Vite, React and a local Chromium binary. No app server.
 import assert from 'node:assert/strict';
 import { spawn } from 'node:child_process';
-import { mkdtemp, rm } from 'node:fs/promises';
+import { mkdtemp, rm, mkdir, writeFile, readFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -10,6 +10,8 @@ import { createInterface } from 'node:readline/promises';
 import { build } from 'vite';
 import { runTier01Checks } from './tier-01-checks.mjs';
 import { runTier02Checks } from './tier-02-checks.mjs';
+import { runTier03Checks } from './tier-03-checks.mjs';
+import { runHotspotReadabilityChecks } from './hotspot-readability-checks.mjs';
 
 const root = fileURLToPath(new URL('../../../', import.meta.url));
 const directory = path.join(root, 'tests/frontend/browser').replaceAll('\\', '/');
@@ -22,6 +24,9 @@ let passedChecks = 0;
 const manual = process.argv.includes('--manual');
 const tier01 = process.argv.includes('--tier-01');
 const tier02 = process.argv.includes('--tier-02');
+const tier03 = process.argv.includes('--tier-03');
+const readability = process.argv.includes('--hotspot-readability');
+const zoom200 = readability && process.argv.includes('--zoom-200');
 let browser;
 let profile;
 let sequence = 0;
@@ -46,19 +51,34 @@ async function evaluate(expression) {
 async function until(expression) {
   const deadline = Date.now() + 10000;
   do { if (await evaluate(expression)) return; await new Promise(resolve => setTimeout(resolve, 50)); } while (Date.now() < deadline);
-  console.log(await evaluate(`({path:location.pathname,headings:Array.from(document.querySelectorAll('h1')).map(e=>e.textContent),body:document.body.innerText.slice(0,700)})`));
+  console.log(await evaluate(`({path:location.pathname,headings:Array.from(document.querySelectorAll('h1')).map(e=>e.textContent),panel:document.querySelector('#inspector-title')?.textContent,focus:document.activeElement.outerHTML.slice(0,300),body:document.body.innerText.slice(0,700)})`));
   throw new Error(`UI condition timed out: ${expression}`);
 }
 async function key(key, modifiers = 0) {
-  const codes = { Tab: 9, Enter: 13, Escape: 27, ArrowDown: 40, ArrowUp: 38, End: 35, Home: 36 };
+  const codes = { Tab: 9, Enter: 13, Escape: 27, ArrowDown: 40, ArrowUp: 38, ArrowLeft: 37, ArrowRight: 39, End: 35, Home: 36 };
   await send('Input.dispatchKeyEvent', { type: 'keyDown', key, code: key, windowsVirtualKeyCode: codes[key], modifiers, ...(key==='Enter' ? {text:'\r',unmodifiedText:'\r'} : {}) }, session);
   await send('Input.dispatchKeyEvent', { type: 'keyUp', key, code: key, windowsVirtualKeyCode: codes[key], modifiers }, session);
+}
+async function drag(from, to) {
+  await send('Input.dispatchMouseEvent', { type: 'mouseMoved', x: from.x, y: from.y }, session);
+  await send('Input.dispatchMouseEvent', { type: 'mousePressed', x: from.x, y: from.y, button: 'left', buttons: 1, clickCount: 1 }, session);
+  for (let i = 1; i <= 5; i++) await send('Input.dispatchMouseEvent', {
+    type: 'mouseMoved', x: from.x + (to.x - from.x) * i / 5, y: from.y + (to.y - from.y) * i / 5, button: 'left', buttons: 1,
+  }, session);
+  await send('Input.dispatchMouseEvent', { type: 'mouseReleased', x: to.x, y: to.y, button: 'left', buttons: 0, clickCount: 1 }, session);
 }
 const byText = (tag, text) => `Array.from(document.querySelectorAll(${JSON.stringify(tag)})).find(e=>e.getClientRects().length && e.textContent.trim()===${JSON.stringify(text)})`;
 async function clickText(tag, text) { const expression = byText(tag, text); await until(`Boolean(${expression})`); await evaluate(`(${expression}).click()`); }
 async function viewport(width, height = 800) {
   await send('Emulation.setDeviceMetricsOverride', { width, height, deviceScaleFactor: 1, mobile: false }, session);
   await until(`innerWidth===${width}`);
+  await evaluate(`new Promise(resolve=>requestAnimationFrame(()=>requestAnimationFrame(resolve)))`);
+}
+async function screenshot(name) {
+  if (!process.env.HOTSPOT_REVIEW_DIR) return;
+  await mkdir(process.env.HOTSPOT_REVIEW_DIR, { recursive: true });
+  const { data } = await send('Page.captureScreenshot', { format: 'png' }, session);
+  await writeFile(path.join(process.env.HOTSPOT_REVIEW_DIR, name + '.png'), Buffer.from(data, 'base64'));
 }
 async function containedFocus() {
   // Chromium may report BODY while traversing the browser's own focus boundary.
@@ -78,13 +98,17 @@ try {
     resolve: { alias: { '@': root } }, esbuild: { jsx: 'automatic' },
     plugins: [{ name: 'offline-boundaries', enforce: 'pre',
       resolveId(id) {
+        if (readability && id === 'next/image') return '\0offline:next/image';
+        if ((readability || tier03) && /(^|\/)utils\/auth-fetch$/.test(id)) return '\0offline:auth-fetch';
         if (!tier01 && /(^|\/)context\/AppContext$/.test(id)) return stateModule;
         if (tier01 && /(^|\/)lib\/supabase$/.test(id)) return '\0tier01:supabase';
         if (tier01 && /(^|\/)services\/(weatherService|supabaseHotspotService|supabaseWeatherService)$/.test(id)) return '\0tier01:' + id.split('/').at(-1);
         if (['next/navigation', 'next/link', 'next/dynamic'].includes(id)) return '\0offline:' + id;
-        if (/(^|\/)services\/geocodingService$/.test(id) || (!tier02 && /(^|\/)services\/dashboardService$/.test(id))) return '\0offline:' + id.split('/').at(-1);
+        if (/(^|\/)services\/geocodingService$/.test(id) || (!tier02 && !tier03 && !readability && /(^|\/)services\/dashboardService$/.test(id))) return '\0offline:' + id.split('/').at(-1);
       },
       load(id) {
+        if (id === '\0offline:auth-fetch') return `export async function authHeaders(base={}){return base}`;
+        if (id === '\0offline:next/image') return `import React from 'react';export default function Image(props){return React.createElement('img',props)}`;
         if (id === '\0tier01:supabase') return `export const supabase={auth:{getSession:async()=>({data:{session:null}})}};`;
         if (id === '\0tier01:weatherService') return `export const UNAVAILABLE_WEATHER={temp:null,windSpeed:null,windDirection:null,waveHeight:null,tide:null,stormSignal:null}; export async function fetchLiveWeather(){return UNAVAILABLE_WEATHER}`;
         if (id === '\0tier01:supabaseHotspotService') return `export async function fetchHotspots(){return []}`;
@@ -98,8 +122,9 @@ try {
         if (id === '\0offline:geocodingService') return `export async function searchLocations(){return []} export async function reverseGeocode(){throw new Error('Offline fixture: no geocoder')}`;
         if (id === '\0offline:dashboardService') return `export async function loadDashboardWeather(){throw new Error('Offline fixture: no weather')} export async function loadFishingAreaResult(){throw new Error('Offline fixture: no predictions')} export async function requestWeatherSms(){throw new Error('Offline fixture: SMS disabled')}`;
       } }],
-    build: { write: false, minify: false, cssCodeSplit: false, sourcemap: false, rollupOptions: { input: path.join(directory, tier01 ? 'tier-01-fixture.tsx' : tier02 ? 'tier-02-fixture.tsx' : 'fixture.tsx') } } });
+    build: { write: false, minify: false, cssCodeSplit: false, sourcemap: false, rollupOptions: { input: path.join(directory, readability ? 'hotspot-readability-fixture.tsx' : tier01 ? 'tier-01-fixture.tsx' : tier02 ? 'tier-02-fixture.tsx' : tier03 ? 'tier-03-fixture.tsx' : 'fixture.tsx') } } });
   for (const item of output.output) assets.set('/' + item.fileName, Buffer.from(item.type === 'chunk' ? item.code : item.source));
+  if (readability) assets.set('/images/parola-logo.jpeg', await readFile(path.join(root, 'public/images/parola-logo.jpeg')));
   const entry = output.output.find(item => item.type === 'chunk' && item.isEntry).fileName;
   const css = output.output.filter(item => item.fileName.endsWith('.css')).map(item => `<link rel="stylesheet" href="/${item.fileName}">`).join('');
   assets.set('/', Buffer.from(`<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Offline frontend verification</title>${css}</head><body><div id="root"></div><script type="module" src="/${entry}"></script></body></html>`));
@@ -108,7 +133,7 @@ try {
   const executable = process.argv.slice(2).find(argument => !argument.startsWith('--')) || 'C:/Program Files/Google/Chrome/Application/chrome.exe';
   browser = spawn(executable, [...(manual ? [] : ['--headless=new']), '--remote-debugging-pipe', `--user-data-dir=${profile}`, '--no-first-run', '--no-default-browser-check',
     '--disable-background-networking', '--disable-component-update', '--disable-sync', '--disable-extensions', '--disable-default-apps',
-    '--proxy-server=http://127.0.0.1:9', '--proxy-bypass-list=<-loopback>', '--host-resolver-rules=MAP * ~NOTFOUND', 'about:blank'],
+    '--proxy-server=http://127.0.0.1:9', '--proxy-bypass-list=<-loopback>', '--host-resolver-rules=MAP * ~NOTFOUND', ...(zoom200 || (manual && readability) ? ['--window-size=1440,1000'] : []), 'about:blank'],
     { stdio: ['ignore', 'ignore', 'pipe', 'pipe', 'pipe'], windowsHide: true });
   browser.on('error', error => { for (const item of pending.values()) item.reject(error); });
   let buffer = '';
@@ -126,9 +151,9 @@ try {
     const url = new URL(params.request.url);
     const asset = url.origin === origin && assets.get(url.pathname);
     if (!asset) { blocked.add(url.origin); await send('Fetch.failRequest', { requestId: params.requestId, errorReason: 'BlockedByClient' }, sessionId); return; }
-    const type = url.pathname.endsWith('.css') ? 'text/css' : url.pathname.endsWith('.js') ? 'text/javascript' : url.pathname === '/' ? 'text/html' : 'application/octet-stream';
+    const type = url.pathname.endsWith('.css') ? 'text/css' : url.pathname.endsWith('.js') ? 'text/javascript' : url.pathname.endsWith('.jpeg') ? 'image/jpeg' : url.pathname === '/' ? 'text/html' : 'application/octet-stream';
     await send('Fetch.fulfillRequest', { requestId: params.requestId, responseCode: 200, responseHeaders: [{ name: 'Content-Type', value: type },
-      { name: 'Content-Security-Policy', value: "default-src 'none'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src data: blob:; connect-src 'none'; font-src 'none'; object-src 'none'; frame-src 'none'; form-action 'none'; base-uri 'none'" }], body: asset.toString('base64') }, sessionId);
+      { name: 'Content-Security-Policy', value: `default-src 'none'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src ${readability ? "'self' " : ''}data: blob:; connect-src 'none'; font-src 'none'; object-src 'none'; frame-src 'none'; form-action 'none'; base-uri 'none'` }], body: asset.toString('base64') }, sessionId);
   });
   on('Runtime.exceptionThrown', ({ params }) => { const error = params.exceptionDetails.exception?.description || params.exceptionDetails.text; exceptions.push(error); console.log(error); });
   // Page is still about:blank. Install deny-by-default interception before navigation.
@@ -150,17 +175,55 @@ try {
     HTMLAnchorElement.prototype.click=function(){if(this.download){const blob=blobs.get(this.href);if(blob)blob.text().then(text=>window.samples.push({name:this.download,type:blob.type,text}));return;}return click.call(this)};
     navigator.sendBeacon=()=>false;window.open=()=>null;
   ` }, session);
-  await viewport(1280);
+  if (zoom200) {
+    // Change native browser zoom in this disposable profile via its own Settings UI API.
+    await send('Page.navigate', { url: 'chrome://settings/appearance' }, session);
+    await until(`typeof chrome.settingsPrivate?.setDefaultZoom==='function'`);
+    await evaluate(`new Promise(resolve=>chrome.settingsPrivate.setDefaultZoom(2,resolve))`);
+  }
+  if (!zoom200) await viewport(1280);
   await send('Page.navigate', { url: origin + '/' }, session);
   await until(`Boolean(window.fixture && document.querySelector('main'))`);
   check('external fetch is rejected under fixture CSP', await evaluate(`fetch('https://example.invalid/offline-canary').then(()=>false,()=>true)`));
   check('same-origin API is also rejected', await evaluate(`fetch('/api/offline-canary').then(()=>false,()=>true)`));
   if (manual) {
     await send('Emulation.clearDeviceMetricsOverride', {}, session);
+    if (readability) {
+      await until(`document.querySelector('.leaflet-marker-icon[title^="Zone 2 ·"]')?.title.includes('75%')`);
+      await evaluate(`document.querySelector('.leaflet-marker-icon[title^="Zone 2 ·"]').click();document.querySelector('.leaflet-control-zoom-out').click()`);
+    }
     await send('Page.bringToFront', {}, session);
     const terminal = createInterface({ input: process.stdin, output: process.stdout });
     try { await terminal.question('Network-blocked manual fixture ready. Use its fixture controls. Press Enter here when finished: '); }
     finally { terminal.close(); }
+  } else if (zoom200) {
+    console.log('Native browser zoom geometry:', await evaluate(`({innerWidth,innerHeight,outerWidth,outerHeight,devicePixelRatio})`));
+    check('native Chrome 200% zoom changes layout viewport and device pixel ratio', await evaluate(`devicePixelRatio>=2 && innerWidth<=outerWidth/1.9`));
+    await until(`document.querySelector('.leaflet-marker-icon[title^="Zone 2 ·"]')?.title.includes('75%')`);
+    await evaluate(`document.querySelector('.leaflet-marker-icon[title^="Zone 2 ·"]').focus()`);
+    await key('Enter');
+    await until(`document.querySelector('[aria-label="Selected hotspot estimate"]')?.textContent.includes('75%')`);
+    check('200% browser zoom reveals selected estimate without scrolling panel', await evaluate(`(()=>{const p=document.querySelector('aside[aria-labelledby="inspector-title"]');const e=document.querySelector('[aria-label="Selected hotspot estimate"]');const r=e.querySelector('strong').getBoundingClientRect();return p.firstElementChild.scrollTop===0 && r.top>=0 && r.bottom<=innerHeight})()`));
+    await layout('native Chrome 200% zoom');
+    await screenshot('hotspot-browser-zoom-200');
+    for (const safety of ['hold', 'incomplete']) {
+      await evaluate(`fixture.setSafety('${safety}')`);
+      await until(`document.querySelector('.leaflet-marker-icon[title^="Zone 2 ·"]')?.title.includes('withheld')`);
+      await evaluate(`document.querySelector('.leaflet-marker-icon[title^="Zone 2 ·"]').focus()`);
+      await key('Enter');
+      await until(`document.querySelector('[aria-label="Selected hotspot estimate"]')?.textContent.includes('Withheld')`);
+      check(`200% browser zoom exposes ${safety} warning and withheld status`, await evaluate(`(()=>{const p=document.querySelector('aside[aria-labelledby="inspector-title"]');const e=p.querySelector('[aria-label="Selected hotspot estimate"]');const r=e.querySelector('strong').getBoundingClientRect();return p.firstElementChild.scrollTop===0 && p.textContent.includes('Fishing guidance withheld') && r.top>=0 && r.bottom<=innerHeight})()`));
+    }
+    check('no uncaught browser/driver exceptions', exceptions.length===0);
+    console.log(`${passedChecks} native 200% browser zoom checks passed.`);
+  } else if (readability) {
+    await runHotspotReadabilityChecks({ evaluate, until, check, clickText, viewport, layout, key, screenshot, drag });
+    check('no uncaught browser/driver exceptions', exceptions.length === 0 || (console.log(exceptions), false));
+    console.log(`${passedChecks} hotspot-readability browser checks passed. Synthetic fixture only.`);
+  } else if (tier03) {
+    await runTier03Checks({ evaluate, until, check, clickText, viewport, layout, key });
+    check('no uncaught browser/driver exceptions', exceptions.length === 0 || (console.log(exceptions), false));
+    console.log(`${passedChecks} TIER-03 named browser checks passed. No real service was used.`);
   } else if (tier02) {
     await runTier02Checks({ evaluate, until, check, clickText, viewport, layout, key });
     check('no uncaught browser/driver exceptions', exceptions.length === 0 || (console.log(exceptions), false));
@@ -317,5 +380,5 @@ try {
   // Delete only the exact task-created, verified temporary profile.
   if (profile && path.dirname(profile) === tmpdir() && path.basename(profile).startsWith('parola-ui02-offline-'))
     await rm(profile, { recursive: true, force: true, maxRetries: 5, retryDelay: 200 });
-  console.log('Temporary browser profile removed; no screenshots/downloads/recordings written.');
+  console.log('Temporary browser profile removed. No downloads or recordings; review screenshots only when HOTSPOT_REVIEW_DIR was supplied.');
 }

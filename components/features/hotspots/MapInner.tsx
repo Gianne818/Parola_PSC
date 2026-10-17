@@ -7,6 +7,8 @@ import L from "leaflet";
 import { Hotspot, UserProfile, PhilippineRegion } from "../../../types";
 import { isWithinPhilippineGeofence } from "../../../utils/spatial";
 import { getSpeciesColor, getSpeciesConfig, getHotspotDisplayColor, GENERAL_PELAGIC_COLOR, GENERAL_DEMERSAL_COLOR } from "../../../utils/speciesColors";
+import { hotspotAppearance } from '@/lib/frontend/hotspot-presentation';
+import dashboardStyles from '@/components/dashboard/dashboard.module.css';
 import { PHILIPPINE_REGIONS, detectPhilippineRegion, isCoordinateInRegion } from "../../../data/philippineRegions";
 
 import { PREDICTION_RADIUS_KM, PREDICTION_RADIUS_METERS, type MapViewMode } from "./MapComponent";
@@ -80,6 +82,7 @@ const selectedLocationPinIcon = typeof window !== "undefined" ? L.divIcon({
 }) : null;
 
 interface MapInnerProps {
+  guidanceAvailable?: boolean;
   presentation?: 'default' | 'dashboard';
   onTileError?: () => void;
   labels?: { loading: string; homePort: string; advisoryArea: string };
@@ -337,6 +340,7 @@ export default function MapInner({
   minHeight = 400,
   constrainToPhilippines = false,
   presentation = 'default',
+  guidanceAvailable = false,
   onTileError,
   labels,
 }: MapInnerProps) {
@@ -650,9 +654,14 @@ export default function MapInner({
           const isSelected = selectedHotspot?.id === spot.id;
 
           // Resolve display color using catch probability gradient shade
-          const speciesColor = isBriefing ? '#087F5B' : getHotspotDisplayColor(type, selectedSpecies, species, spot.catchProbability);
+          const appearance = hotspotAppearance(spot, guidanceAvailable && !manualOverrideHold);
+          const speciesColor = isBriefing ? appearance.color : getHotspotDisplayColor(type, selectedSpecies, species, spot.catchProbability);
 
-          const markerIcon = isUnsafe
+          const markerIcon = isBriefing ? L.divIcon({
+            className: `${dashboardStyles.hotspotMarker} ${isSelected ? dashboardStyles.hotspotSelected : ''}`,
+            html: `<span${appearance.percent !== null ? ` data-estimate="${appearance.percent}% model estimate"` : ''} style="background:${appearance.unavailable ? '#fff' : appearance.color};border-color:${appearance.outline};border-style:${appearance.unavailable ? 'dashed' : 'solid'}">${appearance.symbol}</span>`,
+            iconSize: [44, 44], iconAnchor: [22, 22],
+          }) : isUnsafe
             ? unsafeHotspotIcon
             : typeof window !== "undefined"
               ? L.divIcon({
@@ -682,10 +691,19 @@ export default function MapInner({
               />
               )}
               <Marker
-                title={name}
+                title={isBriefing ? `${name} · ${appearance.label} · ${appearance.status}${isSelected ? ' · Selected' : ''}` : name}
                 position={[lat, lng]}
                 icon={markerIcon}
+                zIndexOffset={isBriefing && isSelected ? 1000 : 0}
                 eventHandlers={{
+                  keydown: event => {
+                    if (isBriefing && (event.originalEvent.key === 'Enter' || event.originalEvent.key === ' ')) {
+                      event.originalEvent.preventDefault();
+                      event.originalEvent.stopPropagation();
+                      onSelectHotspot(spot);
+                      setCustomWaypoint(null);
+                    }
+                  },
                   click: () => {
                     onSelectHotspot(spot);
                     setCustomWaypoint(null); // Clear custom waypoint to prioritize active hotspot
