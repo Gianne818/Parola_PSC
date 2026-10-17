@@ -79,6 +79,19 @@ describe('fishing guidance', () => {
     expect(predictionPercent(undefined)).toBeNull(); expect(predictionPercent(NaN)).toBeNull();
     expect(predictionPercent(0.84)).toBe(84); expect(predictionPercent(84)).toBe(84);
   });
+  it('defaults to >= 50% threshold and includes >= 25% hotspots when threshold is lowered', () => {
+    const region = PHILIPPINE_REGIONS.find(item => item.id === 'reg-7')!;
+    const candidates = [
+      { ...area('high', 10.35, 123.90), catchProbability: 0.72 },
+      { ...area('border50', 10.36, 123.91), catchProbability: 0.50 },
+      { ...area('low28', 10.37, 123.92), catchProbability: 0.28 },
+      { ...area('border25', 10.38, 123.93), catchProbability: 0.25 },
+      { ...area('below25', 10.39, 123.94), catchProbability: 0.20 },
+    ];
+    expect(nearbyAreas(candidates, region, 10.3157, 123.8854, 'both').map(item => item.id)).toEqual(['high', 'border50']);
+    expect(nearbyAreas(candidates, region, 10.3157, 123.8854, 'both', 25).map(item => item.id)).toEqual(['high', 'border50', 'low28', 'border25']);
+    expect(nearbyAreas(candidates, region, 10.3157, 123.8854, 'both', 70).map(item => item.id)).toEqual(['high']);
+  });
 });
 
 describe('SMS results and language support', () => {

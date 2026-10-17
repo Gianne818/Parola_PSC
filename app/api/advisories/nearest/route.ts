@@ -87,7 +87,7 @@ export async function GET(request: Request) {
         prediction_date >= (CURRENT_DATE - INTERVAL '2 days')
         OR prediction_date = (SELECT MAX(prediction_date) FROM public.daily_grid_predictions)
       )
-        AND catch_probability >= 0.50
+        AND catch_probability >= 0.25
         AND ($2::text IS NULL OR model_type = $2)
       ORDER BY prediction_date DESC, catch_probability DESC
       LIMIT $1`,

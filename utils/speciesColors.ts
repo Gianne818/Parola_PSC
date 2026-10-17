@@ -293,9 +293,9 @@ export function getGeneralDemersalProbabilityColor(catchProbability?: number): s
 
 /**
  * Returns the exact shade hex color for a species based on its catch probability.
- * Catch probability can be passed as a fraction (0.50 to 1.00) or percentage (50 to 100).
+ * Catch probability can be passed as a fraction (0.25 to 1.00) or percentage (25 to 100).
  * Brackets:
- *  - 50-69% => Light
+ *  - 25-69% => Light
  *  - 70-79% => Medium
  *  - 80-89% => Dark
  *  - 90-100% => Deepest
@@ -320,7 +320,7 @@ export function getSpeciesProbabilityColor(
   if (probPct >= 90) return config.shades.deepest;
   if (probPct >= 80) return config.shades.dark;
   if (probPct >= 70) return config.shades.medium;
-  return config.shades.light; // 50-69% (or lower)
+  return config.shades.light; // 25-69%
 }
 
 /**

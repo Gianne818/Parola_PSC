@@ -118,7 +118,7 @@ Each original assignment maps once below. Historical labels do not establish cur
 
 ### Urgent task: minimum hotspot score of 50% — October 17, 2026
 
-- **Latest user-requested daily pipeline deployment (October 17, 2026):**
+- **Latest user-requested daily pipeline deployment & 25% threshold slider (October 17, 2026):**
   Toby explicitly authorized integrating and deploying the updated Pelagic +
   Demersal daily hotspot prediction pipeline from
   `/Users/gianne/Development/Python/Parola/AWS_DEPLOYMENT_HANDOFF.md` and
@@ -126,16 +126,23 @@ Each original assignment maps once below. Historical labels do not establish cur
   `backend/aws-inference/` (including `backend/aws-inference/requirements.txt`)
   with a daily-prediction toggle (`ENABLE_DAILY_PREDICTIONS = True` in code and
   `PAROLA_ENABLE_DAILY_PREDICTIONS=true` in Lambda env vars, plus `{"enabled": false}`
-  and `{"force": true}` event overrides). Built and deployed the ARM64 OCI
-  container image (`sha256:838e73c6eb0dde38d4752356914d0c7ab5bfca85c5af496d6f693331c23ccbb7`,
-  tag `daily-pipeline-20261017-838e73c6eb0d`) to `parola-ParolaInferenceFunction-OjglErBmhUc2`
+  and `{"force": true}` event overrides), and subsequently lowering the stored
+  and queryable hotspot floor to `0.25` (25%) while keeping the default UI
+  threshold at `>= 50%` with a user-adjustable slider (`25%`–`95%`, step `5%`).
+  Built and deployed the ARM64 container image (`sha256:2d1b93c6a016abcc6a125fd273ae11d4a18618c709bb5f1ad526ecfd82c90ccf`,
+  tag `daily-pipeline-25pct-v3-5707923a35c5`) to `parola-ParolaInferenceFunction-OjglErBmhUc2`
   with `EphemeralStorage=2048 MB` and updated `ParolaDailyInferenceSchedule` to
   `cron(0 21 * * ? *)` (05:00 AM Philippine Time daily). Verified in AWS Lambda:
   1) `{"enabled": false, "date": "2026-10-17"}` returned HTTP 200 with
      `{"status": "skipped", "reason": "daily_predictions_disabled"}`;
-  2) `{"date": "2026-10-17"}` completed in 70.8s (max memory 1823 MB) and
-     synced 637 hotspots (`568` pelagic + `69` demersal) to Supabase.
-  39 focused Python unit tests pass.
+  2) `{"date": "2026-10-17", "force": true}` synced `879` local peak hotspots
+     (`768` pelagic + `111` demersal, including `243` hotspots in `25%–49%`
+     alongside `636` at `>= 50%`) to Supabase `public.daily_grid_predictions`.
+  Updated `lib/regional-predictions.ts`, `app/api/advisories/nearest/route.ts`,
+  `lib/dashboard.ts`, `app/dashboard/page.tsx`, `components/dashboard/DashboardWorkspace.tsx`,
+  `components/dashboard/dashboard-copy.ts`, `components/dashboard/dashboard.module.css`,
+  `components/features/hotspots/MapComponent.tsx`, and `utils/speciesColors.ts`.
+  6 focused daily-pipeline Python tests and 402 Vitest frontend/API tests pass.
 
 - **Prior user-requested replacement:** The initial 11,007 inserted IDs were
   backed up, deleted and marked withdrawn in the AWS manifest. Toby explicitly
