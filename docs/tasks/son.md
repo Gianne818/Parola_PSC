@@ -1,5 +1,24 @@
 # Son's six work packages
 
+**October 18 account acceptance follow-up:** prepared
+`node scripts/check-demo-account.mjs --allow-demo-account-writes` for the remaining
+real account API check. It creates one disposable demo account, tests password
+login/logout/reload and all preference/habitat/port round-trips plus owner/consent
+rejection, and leaves that account paused on success. Without the flag it makes
+no requests. No OTP/SMS, deletion, migration or automatic write retry is included.
+The command passes an in-process test using the real Next.js account handlers
+and mocked HTTPS storage; its opt-in, local-origin, failure/redaction and no-retry
+guards are also tested. This is preparation, not evidence of a real database run.
+The initial launch on port 3000 failed because an existing development server
+already occupies that port. That server was preserved: its unsigned profile
+request returns 401 and `/register` returns 200 with demo registration/account
+mode confirmed in its rendered payload. All 428 network-denied tests in 34 files,
+full TypeScript, script syntax/help, secret scanning and whitespace checks pass.
+The shared-database write test awaits the user's explicit test-account
+authorization; no real test account has been created by this follow-up.
+Full browser navigation and broader PRIV-01 prerequisites
+remain separate acceptance items. See [verification instructions](../registration-https.md#validation-and-remaining-acceptance).
+
 **SON-01 follow-up, October 17, 2026: account response compatibility.**
 Live signup now reads the saved owner profile through the existing `profile_live`
 operation before returning success. This supplies the coordinates required by

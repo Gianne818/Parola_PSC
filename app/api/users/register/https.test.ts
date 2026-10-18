@@ -11,6 +11,8 @@ import { POST as login } from '../login/route';
 import { GET as profile, PUT as update } from '../profile/route';
 import { PUT as consent } from '../consent/route';
 import { POST as otp } from '../../auth/otp/request/route';
+import { POST as logout } from '../logout/route';
+import { checkDemoAccount } from '../../../../scripts/check-demo-account.mjs';
 
 const fetcher = vi.fn();
 const id = '11111111-1111-4111-8111-111111111111';
@@ -39,6 +41,40 @@ beforeEach(() => {
 afterEach(() => { vi.unstubAllEnvs(); vi.unstubAllGlobals(); });
 
 describe('accounts over HTTPS with direct PostgreSQL unavailable', () => {
+  it('runs the complete account API acceptance command through the real route handlers', async () => {
+    let row: Record<string, unknown>;
+    fetcher.mockImplementation(async (_url, options) => {
+      const { p_operation: operation, p_values: v } = JSON.parse(options.body);
+      if (operation === 'register_demo') {
+        row = { id, phone_number: v[0], full_name: v[1], home_port_name: v[2], longitude: v[3], latitude: v[4],
+          password_hash: v[5], preferred_advisory_time: v[6], advisory_days: v[7], preferred_language: v[8], habitat_preference: v[9], messaging_consent: false };
+      } else if (operation === 'update_demo') {
+        for (const [field, index] of Object.entries({ full_name: 2, home_port_name: 3, longitude: 4, latitude: 5,
+          preferred_advisory_time: 6, advisory_days: 7, preferred_language: 8, habitat_preference: 9 })) {
+          if (v[index] !== null) row[field] = v[index];
+        }
+      } else if (!['login_demo', 'profile_demo'].includes(operation)) throw new Error('Unexpected RPC');
+      const { password_hash, ...profileRow } = row!;
+      return Response.json([operation === 'login_demo' ? { ...profileRow, password_hash } : profileRow]);
+    });
+    const recorded = vi.fn();
+    const bridge: typeof fetch = async (url, init) => {
+      const incoming = new Request(url, init);
+      const path = new URL(incoming.url).pathname;
+      if (path === '/api/users/register') return register(incoming);
+      if (path === '/api/users/login') return login(incoming);
+      if (path === '/api/users/logout') return logout(incoming);
+      if (path === '/api/users/consent') return consent(incoming);
+      if (path === '/api/users/profile') return incoming.method === 'PUT' ? update(incoming) : profile(incoming);
+      throw new Error('Unexpected account API');
+    };
+    const result = await checkDemoAccount('http://localhost:3000', { allowWrites: true, fetcher: bridge, report: vi.fn(), recordCreated: recorded });
+    expect(result).toEqual({ checks: 9, id });
+    expect(recorded).toHaveBeenCalledTimes(1);
+    expect(row!.advisory_days).toEqual([]);
+    expect(row!.messaging_consent).toBe(false);
+    expect(getDbPool).not.toHaveBeenCalled();
+  });
   it('registers in demo and establishes only an unverified application session', async () => {
     const response = await register(request(input));
     expect(response.status).toBe(201);
