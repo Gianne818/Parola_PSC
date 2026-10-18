@@ -1,5 +1,48 @@
 # Son's six work packages
 
+**SON-02 continuation, October 18: routine delivery tracking.** Added internal
+transactional claims, submitted/rejected/unknown outcomes and persisted receipt
+deduplication. Claimed or completed jobs cannot be reset by the planner. Submitted
+does not mean delivered; delayed failures cannot downgrade confirmed delivery.
+Migration 08 and the extra tracking opt-in are prepared only. No sender/public
+callback/cron is wired; current demo mode still blocks persistence. Actual gateway
+authentication, retry/reconciliation policy, critical alerts and cost accounting
+remain pending, alongside real database verification. The existing incoming
+feedback webhook and registration/frontend/AWS behavior were preserved. Details:
+[routine-scheduling-contract.md](routine-scheduling-contract.md#remaining-integration--handoff).
+Validation: 508 network-denied tests passed across 38 files; the final 61 focused
+scheduler/tracking/route tests also passed, including duplicate/out-of-order
+receipts, repeated acknowledgements after delivery and missing-write detection.
+Database uniqueness/concurrency/RLS and actual provider receipt authentication
+are still unverified; mocked storage is not deployment evidence.
+
+**Current selection, October 18: SON-02 / SMS-01 routine scheduling portion.**
+Branch `codex/son/routine-scheduling`. Implemented an admin-only planner with a
+read-only default, persisted-preference/Manila-day scheduling, current verified
+recipient eligibility, stable daily upserts and transactional cancellation of
+obsolete unsent jobs. Migration 07 prepares a backend-only queue; it is not
+applied. Queue writes remain disabled in demo mode and require an explicit
+scheduler flag plus live Auth/SMS configuration. No provider code, frontend,
+AWS/inference schedule, live database operation or local credentials were changed.
+The queue contains no SMS text, fishing target or delivery claim. Critical
+alerts remain independent. Scope/activation gates and exact producer/consumer
+handoffs: [routine-scheduling-contract.md](routine-scheduling-contract.md).
+SMS-01/SON-02 remain partial pending database concurrency/RLS verification,
+target/safety integration, job consumption and separate operational activation.
+Validation: 485 network-denied tests in 37 files and full TypeScript passed;
+changed-file secret scanning found no credentials and whitespace checks passed.
+The scheduling code is implemented; the SQL constraints/concurrency claims still
+require actual PostgreSQL verification before activation.
+
+**User acceptance update, October 18:** Son confirmed preference saving, then
+verified all four requested checks with an existing demo account: refresh keeps
+the signed-in account and saved details; changing the home port preserves saved
+preferences; logout makes direct dashboard access require login; password login
+restores the account, new port and preferences. These manual results complete
+the current demo account-flow acceptance. No duplicate scripted check or new
+test account is needed. The optional script has not run against the real database;
+live OTP/release acceptance and broader PRIV-01 work are not claimed complete.
+
 **October 18 account acceptance follow-up:** prepared
 `node scripts/check-demo-account.mjs --allow-demo-account-writes` for the remaining
 real account API check. It creates one disposable demo account, tests password
@@ -14,10 +57,10 @@ already occupies that port. That server was preserved: its unsigned profile
 request returns 401 and `/register` returns 200 with demo registration/account
 mode confirmed in its rendered payload. All 428 network-denied tests in 34 files,
 full TypeScript, script syntax/help, secret scanning and whitespace checks pass.
-The shared-database write test awaits the user's explicit test-account
-authorization; no real test account has been created by this follow-up.
-Full browser navigation and broader PRIV-01 prerequisites
-remain separate acceptance items. See [verification instructions](../registration-https.md#validation-and-remaining-acceptance).
+No real test account was created by this follow-up. The subsequent manual
+confirmation above supplies the current demo account-flow acceptance; the
+optional script is no longer required for it. Live-mode release checks and
+broader PRIV-01 prerequisites remain separate. See [verification instructions](../registration-https.md#validation-and-remaining-acceptance).
 
 **SON-01 follow-up, October 17, 2026: account response compatibility.**
 Live signup now reads the saved owner profile through the existing `profile_live`
@@ -50,12 +93,14 @@ SON-01 closure checklist (current account slice versus full package):
 - [x] Complete live registration response compatible with Tier's profile reader.
 - [x] Demo password login supplies persisted schedule metadata immediately.
 - [x] Mocked session/owner/consent guards and isolated browser preference/reload checks.
-- [ ] Actual database-backed account journey, login/logout/reload and preference readback.
+- [x] Preference saving in the running app (Son's manual confirmation, October 18).
+- [x] Demo account login/logout, refresh and port-only preservation (Son's manual confirmation, October 18).
 - [ ] PRIV-01 dependent report/fleet/delegation controls and reviewed access/retention
   design (REPORT-02, ENT-01 and D09/C08); no purge period or new role is invented.
 
-The focused compatibility implementation is complete. SON-01 remains partial;
-the last two checks are not established by the automated evidence above.
+The current demo account-flow implementation and acceptance are complete.
+SON-01 remains partial for the unchecked broader PRIV-01 work; this does not
+certify the live OTP/release journey.
 
 **User-selected PostgreSQL setting:** `DB_SSL_INSECURE=true` in the ignored
 `.env` and `.env.example`. The app honors the explicit override in development
