@@ -7,11 +7,12 @@ export function weatherLocation(value: ForecastCoordinates | null | undefined): 
 }
 
 /** Reports supplied locations only; this does not decide geographic applicability. */
-export default function WeatherCoverage({ data, requested, regionName }: {
-  data: DashboardWeather | null; requested?: ForecastCoordinates; regionName?: string;
+export default function WeatherCoverage({ data, requested, regionName, note }: {
+  data: DashboardWeather | null; requested?: ForecastCoordinates; regionName?: string; note?: string;
 }) {
   return <details className={styles.areaForecastLocations} lang="en">
     <summary>Weather locations and coverage</summary>
+    {note && <p className={styles.panelDescription}>{note}</p>}
     <dl>
       <div><dt>Requested location</dt><dd>{weatherLocation(data?.location?.requested || requested)}</dd></div>
       <div><dt>Latest response wind / temperature grid</dt><dd>{weatherLocation(data?.location?.weatherGrid)}</dd></div>

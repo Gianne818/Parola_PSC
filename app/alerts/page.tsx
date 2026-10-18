@@ -36,26 +36,37 @@ export default function AdvisoriesPage() {
   ];
   const stale = weather.failed || readings.some(({ reading }) => reading?.value != null && !isReadingCurrent(reading, now));
   const received = displayTime(weather.data?.receivedAt, language);
+  const holdReason = weather.data?.hold.active && weather.data.hold.reason ? weather.data.hold.reason : null;
+  const stormSignalActive = weather.data?.stormSignal.value != null && weather.data.stormSignal.value > 0;
   return <AuthLayout variant="application">
     <div className={`${styles.page} ${styles.advisories}`}><div className={styles.columns}>
       <article className={styles.bulletin}>
         <section className={styles.status} data-state={state} aria-busy={weather.loading} aria-labelledby="current-advisory">
-          <div className={styles.statusHeading}><Icon size={24} aria-hidden="true" /><h2 id="current-advisory" aria-live="polite">{state === 'hold' ? copy.hold : state === 'clear' ? copy.clear : copy.incomplete}</h2></div>
+          <div className={styles.statusHeaderRow}>
+            <div className={styles.statusHeading}><Icon size={24} aria-hidden="true" /><h2 id="current-advisory" aria-live="polite">{state === 'hold' ? copy.hold : state === 'clear' ? copy.clear : copy.incomplete}</h2></div>
+            <div className={styles.freshnessRow}>
+              <span className={styles.small}>{weather.loading ? copy.refreshing : received ? `${guidance.retrieved}: ${received} PHT` : copy.unknownTime}</span>
+              {stale && weather.data && !weather.loading && <span className={styles.staleBadge}>{copy.lastAvailable}</span>}
+            </div>
+          </div>
           <p className={styles.advisoryPort}>{userProfile.port || copy.portMissing}</p>
           <p>{state === 'hold' ? copy.holdDescription : state === 'clear' ? copy.clearDescription : copy.incompleteDescription}</p>
-          {weather.data?.hold.active && weather.data.hold.reason && <p><strong>{text.regionalReason}: </strong>{weather.data.hold.reason}</p>}
-          <p className={styles.small}>{weather.loading ? copy.refreshing : received ? `${guidance.retrieved}: ${received} PHT` : copy.unknownTime}</p>
-          {stale && weather.data && !weather.loading && <p className={styles.small}>{copy.lastAvailable}</p>}
-          {weather.failed && !weather.loading && <p role="status" className={styles.muted}>{copy.refreshFailed}</p>}
+          {(holdReason || stormSignalActive) && <div className={styles.warningCallout} role="status">
+            {holdReason && <p><strong>{text.regionalReason}: </strong>{holdReason}</p>}
+            {stormSignalActive && <p><strong>{copy.storm}: </strong>{weather.data?.stormSignal.value}</p>}
+          </div>}
+          {weather.failed && !weather.loading && <p role="status" className={styles.refreshNotice}>{copy.refreshFailed}</p>}
           <div className={styles.actions}><button type="button" className={styles.button} onClick={weather.refresh} disabled={weather.loading}><RefreshCw size={16} aria-hidden="true" />{copy.refresh}</button><Link className={styles.link} href="/dashboard">{copy.viewAreas}</Link></div>
         </section>
         <section className={styles.weatherSection} aria-labelledby="weather-information">
-          <div className={styles.panelHeading}><h2 id="weather-information">{guidance.portWeather}</h2></div>
+          <div className={styles.panelHeading}>
+            <h2 id="weather-information">{guidance.portWeather}</h2>
+            <p className={styles.regionalNote}>{guidance.regionalNote}</p>
+          </div>
           <dl className={styles.primaryWeather}>{readings.slice(0, 2).map(({ label, reading, unit, icon }) =>
             <ForecastReading key={label} label={label} reading={reading} unit={unit} icon={icon} language={language} now={now} emphasis />)}</dl>
           <dl className={styles.supportingWeather}>{readings.slice(2).map(({ label, reading, unit, icon }, index) =>
             <ForecastReading key={label} label={label} reading={reading} unit={unit} icon={icon} language={language} now={now} record={index === 1} />)}</dl>
-          <p className={styles.regionalNote}>{guidance.regionalNote}</p>
           <WeatherCoverage data={weather.data} requested={userProfile} regionName={region.name} />
           <details className={styles.disclosure}><summary>{text.methodology}</summary><p>{text.methodologyText}</p><p>{text.forecastNote}</p><p>{copy.holdChecks}: {weather.data?.hold.available ? copy.holdRecorded : copy.holdUnknown}. {displayTime(weather.data?.hold.checkedAt, language) || copy.unknownTime}</p></details>
         </section>

@@ -16,14 +16,25 @@ export default function ForecastReading({ label, reading, unit, icon: Icon, lang
   const time = displayTime(reading?.observedAt, language);
   const validUntil = displayTime(reading?.validUntil, language);
   const value = typeof reading?.value === 'number' && Number.isFinite(reading.value) ? reading.value : null;
-  return <div className={styles.reading} data-emphasis={emphasis}>
-    <dt><Icon size={20} aria-hidden="true" />{label}</dt>
+  const stateLabel = value === null
+    ? copy.unavailable
+    : reading?.available === false
+      ? copy.lastAvailable
+      : !time
+        ? copy.unknownTime
+        : current
+          ? (record ? copy.holdRecorded : text.forecast)
+          : text.outdated;
+  return <div className={styles.reading} data-emphasis={emphasis} data-current={current}>
+    <div className={styles.readingHeader}>
+      <dt><Icon size={18} aria-hidden="true" /><span>{label}</span></dt>
+      <dd className={styles.state} data-current={current}>{stateLabel}</dd>
+    </div>
     <dd className={styles.value}>{value !== null
-      ? <>{value.toLocaleString(language, { maximumFractionDigits: 1 })}<span>{unit}</span></>
+      ? <>{value.toLocaleString(language, { maximumFractionDigits: 1 })}{unit ? <span>{unit}</span> : null}</>
       : <span className={styles.unavailable}>{copy.unavailable}</span>}</dd>
     <dd className={styles.meta}><span>{copy.source}: {reading?.source || copy.unavailable}</span>
       <span>{record ? copy.observed : text.forecastTime}: {time ? `${time} PHT` : copy.unknownTime}</span>
       <span lang="en">Valid until: {validUntil ? `${validUntil} PHT` : 'Unavailable'}</span></dd>
-    <dd className={styles.state} data-current={current}>{value === null ? copy.unavailable : reading?.available === false ? copy.lastAvailable : !time ? copy.unknownTime : current ? (record ? copy.holdRecorded : text.forecast) : text.outdated}</dd>
   </div>;
 }
