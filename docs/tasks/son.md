@@ -1,5 +1,107 @@
 # Son's six work packages
 
+**Geographic entry-point continuation, October 18.** Wired server-resolved
+profile authority into nearest reads; inactive enforcement permits only the
+existing demo preview and blocks unrestricted live reads. The legacy FastAPI
+nearest/species APIs require trusted proxy identity in enforced mode and filter
+through the same database decision. Added an authenticated current-data GeoJSON
+export through the guarded API, preserving unverified/non-operational labels.
+Live fishing SMS now requires a current unsent stored advisory and an existing
+eligible routine job; its recipient and canonical target are checked before the
+sender. The existing durable claim prevents repeats, geography is rechecked
+after claiming and ambiguous submissions remain held. Trusted operator safety
+warnings remain independent of geographic coverage. Explicit Auth/SMS demo mode
+also overrides a runtime live-SMS toggle, preserving the no-paid-provider guard.
+The new enforcement setting remains off; migration 09 is unapplied and no
+production data, provider or remote setting was touched. Tier's UI is unchanged.
+Migration 09 also prepares client prediction-table/legacy RPC read restrictions;
+coordinate consumers before applying and inspect other deployed access paths.
+Real data/rules, PostGIS verification, run/safety readiness, provider reconciliation
+and client integration remain separate acceptance work. Validation: 618 mocked/
+network-denied JavaScript tests across 43 files, 50 Python tests, full TypeScript
+and 47 local SQL checks passed. Final spec/standards reviews, secret scans and
+whitespace checks passed. No commit, migration or activation was performed.
+See [the geographic contract](geographic-eligibility-contract.md).
+
+**Current continuation, October 18: SON-04 / GEO-01 and GEO-02 foundations.**
+Prepared versioned reviewed boundary/catalog storage, backend profile grants,
+effective exclusions and a shared allowed/denied/unavailable decision. Missing,
+expired, withdrawn or incomplete coverage cannot grant clearance; known active
+exclusions remain denied. Boundary ambiguity is withheld. A private prediction
+path filters before ranking/counts/limits for both habitats. Default public preview
+is preserved and reports geography not evaluated; no client selector grants access.
+Migration 09 is prepared only: no data, grants, settings or enforcement activation
+were installed. Real PostGIS/source/rule and deployed API/SMS/export acceptance
+remain pending; the entry-point implementation is recorded above.
+Contract: [geographic-eligibility-contract.md](geographic-eligibility-contract.md).
+Validation: 583 network-denied tests across 40 files and full TypeScript passed.
+The local in-memory PostgreSQL fixture passed 44 checks for grant ownership,
+expiry/revocation, active/boundary exclusions, incomplete coverage, version
+protection, privileges and filtering before limits for both habitats. Geometry
+and clock functions were substituted; real PostGIS/concurrency are not verified.
+Default preview SQL also passed without migration 09. Final spec/standards
+reviews found no blocker; tracked/changed-file secret scans and whitespace checks
+passed. Changes remain local and uncommitted; no migration or enforcement was activated.
+
+**Current selection, October 18: SON-04 / date-selected prediction queries.**
+Continued with one national prediction date selected before regional/score
+filtering, using the database statement's Manila day. Future dates are excluded
+by default; exact ISO date requests retain historical/future previews. Missing
+regional or habitat coverage never fills from another date. Counts for pelagic
+and demersal are reported separately before limiting. Explicit date/lineage
+metadata keeps historical rows historical and marks scientific validity
+unverified; even a stored upload ID never grants operational eligibility.
+Optional migration-05 IDs are observed without requiring that schema, with a
+ten-ID response cap and total count. No new migration, flag, table or producer/
+frontend change is required. This replaces the legacy date-window fallback
+described in the first portion below.
+
+Current SON-04 delivery versus remaining integration:
+
+- [x] Numeric targets, invalid-data failures, habitat-preserving deduplication,
+  0.25 floor and nearest-before-limit queries.
+- [x] Single-date selection, Manila boundary behavior, exact-date previews and
+  explicit per-habitat/date/upload-lineage availability.
+- [x] Inactive geographic decision/storage foundation and a separate backend
+  prediction filter using labeled fixtures; no real enforcement claim.
+- [x] Server-authorized API filtering, basic GeoJSON export and stored-target SMS
+  checks with durable routine claims; demo guards retained, enforcement inactive.
+- [ ] Scientific run/publication authority and source-cell/model/input lineage;
+  Toby's direct writer does not yet supply the shared run manifest.
+- [ ] Validated ocean-mask enforcement; the current screening candidate is
+  explicitly not production approved, so it is not enabled automatically.
+- [ ] Authoritative marine/restriction eligibility, recommendation accounting
+  and integration across all ingest/query/SMS/export paths, with real database
+  verification. Administrative region polygons do not establish these controls.
+
+Continuation validation: 560 network-denied tests across 39 files and full
+TypeScript passed. Local in-memory PostgreSQL fixtures passed date isolation,
+Manila midnight/database-timezone independence, future/history handling, missing
+regional/habitat coverage, legacy/optional-upload schema compatibility and the
+upload-ID cap. Geometry/clock functions were mocked; deployed PostGIS, publication
+and scientific validity remain unverified. Final spec/standards review found no
+new code blocker; the stale date-window documentation was corrected. Tracked
+and changed-file secret scans and whitespace checks passed. No live operations.
+
+Branch `codex/son/prediction-queries`. Regional and national nearest queries now
+share numeric PostGIS coordinates, habitat-preserving deduplication and distance
+ranking before the limit. The newest row is selected before the existing 0.25
+floor, preventing an older high score from replacing newer below-floor data.
+Invalid stored targets/scores produce an explicit unavailable response; no
+missing geometry becomes `(0,0)`. Explicit pelagic/demersal/both filters are
+supported and species/habitat conflicts are rejected. Existing Tier readers,
+species/environment fields, account preferences and demo SMS guards are preserved.
+The local SQL check passes with an in-memory PostgreSQL engine and mocked geometry
+functions; actual PostGIS/deployed behavior remains unverified. No migration,
+remote database/provider operation, dependency install or frontend/science change was
+made. Scientific run validity/freshness, masks and geographic eligibility remain
+SON-04 work; this portion does not mark the package complete. Contract and
+handoffs: [prediction-query-contract.md](prediction-query-contract.md).
+First-portion validation: 534 network-denied tests across 38 files and full TypeScript passed.
+The local SQL fixture checks, tracked/changed-file secret scans and whitespace
+checks passed. Final spec/standards review found no remaining blocker in this
+bounded portion. Changes are prepared for the normal commit/review workflow.
+
 **SON-02 continuation, October 18: routine delivery tracking.** Added internal
 transactional claims, submitted/rejected/unknown outcomes and persisted receipt
 deduplication. Claimed or completed jobs cannot be reset by the planner. Submitted
@@ -16,7 +118,7 @@ receipts, repeated acknowledgements after delivery and missing-write detection.
 Database uniqueness/concurrency/RLS and actual provider receipt authentication
 are still unverified; mocked storage is not deployment evidence.
 
-**Current selection, October 18: SON-02 / SMS-01 routine scheduling portion.**
+**Previous selection, October 18: SON-02 / SMS-01 routine scheduling portion.**
 Branch `codex/son/routine-scheduling`. Implemented an admin-only planner with a
 read-only default, persisted-preference/Manila-day scheduling, current verified
 recipient eligibility, stable daily upserts and transactional cancellation of

@@ -85,7 +85,7 @@ export class IProgSmsService {
   }
 
   public getConfig(): IProgSmsConfig {
-    return { ...this.config };
+    return { ...this.config, mockMode: this.config.mockMode || process.env.PAROLA_AUTH_MODE === 'demo' || process.env.PAROLA_SMS_MODE === 'demo' };
   }
 
   public updateConfig(newConfig: Partial<IProgSmsConfig>): void {
@@ -96,7 +96,7 @@ export class IProgSmsService {
     const formattedPhone = sanitizePhilippineMobileNumber(req.recipient);
 
     // MOCK DRY-RUN GUARD (Preserves 5 free credits)
-    if (this.config.mockMode) {
+    if (this.getConfig().mockMode) {
 
 
       return {
