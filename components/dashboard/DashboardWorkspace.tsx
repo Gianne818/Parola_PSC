@@ -29,6 +29,7 @@ import { GUIDANCE_COPY } from './guidance-copy';
 import { predictionDay } from '@/lib/frontend/timestamps';
 import { AreaLoadError, areasOnDay, availablePredictionDays, type PredictionCoverage as Coverage } from '@/lib/frontend/prediction-presentation';
 import PredictionCoverage from './PredictionCoverage';
+import HotspotLegend from './HotspotLegend';
 
 const DashboardMap = dynamic(() => import('./DashboardMap'), { ssr: false, loading: () => <div className={styles.mapLoading} aria-busy="true" /> });
 
@@ -45,6 +46,23 @@ interface WorkspaceProps {
 export default function DashboardWorkspace(props: WorkspaceProps) {
   const { areas: rawAreas, loading, failed, retry, region, lat, lng, habitat, species, setFilters, state, weather, weatherStale, phone, port, copy, language, showWeather, closeWeather } = props;
   const viewport = useWorkspaceViewport();
+  const workspaceRef = useRef<HTMLDivElement>(null);
+  const resizeStart = useRef({ x: 0, width: 380 });
+  const [inspectorWidth, setInspectorWidth] = useState(380);
+  const [workspaceWidth, setWorkspaceWidth] = useState(0);
+  const [resizing, setResizing] = useState(false);
+  const maxInspectorWidth = Math.max(300, Math.min(560, workspaceWidth ? workspaceWidth - 340 : 380));
+  const visibleInspectorWidth = Math.min(maxInspectorWidth, Math.max(300, inspectorWidth));
+  const resizeInspector = (width: number) => setInspectorWidth(Math.round(Math.min(maxInspectorWidth, Math.max(300, width))));
+  useEffect(() => {
+    const workspace = workspaceRef.current;
+    if (!workspace) return;
+    const observer = new ResizeObserver(([entry]) => {
+      if (entry.contentRect.width > 0) setWorkspaceWidth(Math.floor(entry.contentRect.width));
+    });
+    observer.observe(workspace);
+    return () => observer.disconnect();
+  }, []);
   const [forecastCache] = useState(() => new Map<string, DashboardWeather>());
   const [internalThreshold, setInternalThreshold] = useState(DEFAULT_THRESHOLD_PERCENT);
   const minThreshold = props.minThreshold ?? internalThreshold;
@@ -118,12 +136,13 @@ export default function DashboardWorkspace(props: WorkspaceProps) {
     </select></label>
     <button type="button" className={styles.textButton} disabled={loading} onClick={retry}>{loading ? 'Refreshing areas…' : 'Refresh areas'}</button>
   </div>;
-  const informationPanel = <aside className={styles.infoPanel} aria-labelledby="inspector-title">
+  const informationPanel = <aside id="nearby-areas-inspector" className={styles.infoPanel} aria-labelledby="inspector-title">
     <div className={styles.panelScroll}>
       <div className={styles.panelContent}>
         {(showWeather || selected) && <button type="button" className={styles.backButton} onClick={returnAreas}><ArrowLeft size={16} aria-hidden="true" />{copy.backAreas}</button>}
         <div className={styles.panelHeading}><h2 id="inspector-title" tabIndex={-1}>{panelTitle}</h2>
           {!showWeather && !selected && <span className={styles.resultCount}>{displayedAreas.length}</span>}
+          {viewport === 'desktop' && <button type="button" lang="en" className={styles.resetWidth} onClick={() => setInspectorWidth(380)}>Reset width</button>}
         </div>
         {!showWeather && <>
           {viewport !== 'desktop' && predictionControls}
@@ -154,7 +173,7 @@ export default function DashboardWorkspace(props: WorkspaceProps) {
       <button type="button" aria-pressed={mobileView === 'map' && !showWeather} onClick={closePanel}>{copy.map}</button>
       <button type="button" aria-pressed={mobileView === 'areas' || showWeather} onClick={() => { setMobileView('areas'); closeWeather(); }}>{copy.areasView}</button>
     </div>}
-    <div className={styles.workspace} data-size={viewport} data-view={viewport === 'mobile' && showWeather ? 'areas' : mobileView}>
+    <div ref={workspaceRef} className={styles.workspace} style={{ '--inspector-width': `${visibleInspectorWidth}px` } as CSSProperties} data-resizing={resizing} data-size={viewport} data-view={viewport === 'mobile' && showWeather ? 'areas' : mobileView}>
       <section className={styles.mapCard} aria-label={copy.map}>
         <div className={styles.mapToolbar}>
           <div className={styles.framing} role="group" aria-label={copy.map}>
@@ -224,8 +243,34 @@ export default function DashboardWorkspace(props: WorkspaceProps) {
         <div className={styles.mapCanvas}>
           <DashboardMap key={mapRevision} areas={displayedAreas} selected={selected} select={select} region={region} lat={lat} lng={lng} viewMode={viewMode} tileError={() => setTilesFailed(true)} retry={retryMap} copy={copy} />
         </div>
+        <HotspotLegend />
         <div className={styles.mapNote}><span className={styles.homeDot} aria-hidden="true" /><span>{copy.mapNote}</span></div>
       </section>
+      {viewport === 'desktop' && <div className={styles.inspectorDivider} role="separator" tabIndex={0} lang="en"
+        aria-label="Nearby areas inspector width" aria-orientation="vertical" aria-controls="nearby-areas-inspector"
+        aria-valuemin={300} aria-valuemax={maxInspectorWidth} aria-valuenow={visibleInspectorWidth}
+        aria-valuetext={`${visibleInspectorWidth} pixels`} aria-describedby="inspector-resize-help"
+        onKeyDown={event => {
+          const step = event.shiftKey ? 48 : 16;
+          const next = event.key === 'ArrowLeft' ? visibleInspectorWidth + step : event.key === 'ArrowRight' ? visibleInspectorWidth - step
+            : event.key === 'Home' ? 300 : event.key === 'End' ? maxInspectorWidth : null;
+          if (next !== null) { event.preventDefault(); resizeInspector(next); }
+        }}
+        onPointerDown={event => {
+          if (event.button !== 0) return;
+          event.preventDefault();
+          event.currentTarget.focus();
+          event.currentTarget.setPointerCapture(event.pointerId);
+          resizeStart.current = { x: event.clientX, width: visibleInspectorWidth };
+          setResizing(true);
+        }}
+        onPointerMove={event => {
+          if (event.currentTarget.hasPointerCapture(event.pointerId)) resizeInspector(resizeStart.current.width + resizeStart.current.x - event.clientX);
+        }}
+        onPointerUp={event => { if (event.currentTarget.hasPointerCapture(event.pointerId)) event.currentTarget.releasePointerCapture(event.pointerId); }}
+        onLostPointerCapture={() => setResizing(false)} onPointerCancel={() => setResizing(false)}>
+        <span aria-hidden="true" /><span id="inspector-resize-help" className={styles.srOnly}>Drag or use Left and Right arrows to resize. Shift changes the step. Home selects minimum width; End selects maximum. Use Reset width to restore the default.</span>
+      </div>}
       {viewport === 'desktop' || (viewport === 'mobile' && panelVisible) ? informationPanel : null}
     </div>
     {viewport === 'tablet' && <SideDrawer open={panelVisible} close={closePanel} title={copy.advisoryArea} closeLabel={copy.close}>{informationPanel}</SideDrawer>}

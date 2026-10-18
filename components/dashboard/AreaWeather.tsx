@@ -24,18 +24,20 @@ export default function AreaWeather({ area, regionId, cache, language }: {
   const warning = data && ((data.wind.value != null && data.wind.value / 1.852 >= 20) || (data.waves.value != null && data.waves.value >= 2));
   const received = displayTime(data?.receivedAt, language);
   return <section className={styles.areaWeather} aria-busy={weather.loading} aria-labelledby="area-weather-title">
-    <h3 id="area-weather-title">{text.areaWeather}</h3>
-    <p className={styles.timestamp}>{text.forecast}</p>
+    <div className={styles.areaWeatherHeader}>
+      <div>
+        <h3 id="area-weather-title">{text.areaWeather}</h3>
+        {data && <p className={styles.timestamp}>{text.retrieved}: {received ? `${received} PHT` : copy.unknownTime}</p>}
+      </div>
+      <button type="button" className={styles.textButton} onClick={weather.refresh} disabled={weather.loading}><RefreshCw size={15} aria-hidden="true" />{text.refreshWeather}</button>
+    </div>
+    {warning && <p className={styles.warningCallout} role="status">{text.zoneCaution}</p>}
     {weather.loading && <p className={styles.panelDescription} role="status">{copy.loadingWeather}</p>}
-    {(weather.failed || incomplete) && !weather.loading && <p className={styles.panelDescription} role="status">{copy.refreshFailed}</p>}
+    {(weather.failed || incomplete) && !weather.loading && <p className={styles.notice} role="status">{copy.refreshFailed}</p>}
     <dl className={styles.areaWeatherReadings}>
       <ForecastReading label={copy.wind} reading={data?.wind} unit="km/h" icon={Wind} language={language} now={now} />
       <ForecastReading label={copy.waves} reading={data?.waves} unit="m" icon={Waves} language={language} now={now} />
     </dl>
-    {warning && <p className={styles.notice}>{text.zoneCaution}</p>}
-    <p className={styles.panelDescription}>{text.gridNote}</p>
-    {data && <p className={styles.timestamp}>{text.retrieved}: {received ? `${received} PHT` : copy.unknownTime}</p>}
-    <button type="button" className={styles.textButton} onClick={weather.refresh} disabled={weather.loading}><RefreshCw size={16} aria-hidden="true" />{text.refreshWeather}</button>
-    <WeatherCoverage data={data} requested={area} />
+    <WeatherCoverage data={data} requested={area} note={text.gridNote} />
   </section>;
 }

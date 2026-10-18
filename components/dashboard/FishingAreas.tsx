@@ -12,18 +12,17 @@ export function AreaDetails({ area, copy, weather }: { area: FishingArea; copy: 
   const percent = area.source === 'model' ? predictionPercent(area.catchProbability) : null;
   return <div className={styles.areaDetails}>
     <div className={styles.areaDistance}><Compass size={22} aria-hidden="true" /><strong>{area.distanceKm.toFixed(1)} km</strong><span>{area.compassBearing}</span></div>
-    <p className={styles.panelDescription}>{copy.areasDescription}</p>
-    {weather}
-    <dl>
-      <div><dt>{copy.coordinates}</dt><dd>{area.lat.toFixed(4)}° N, {area.lng.toFixed(4)}° E</dd></div>
-      <div><dt>{copy.habitat}</dt><dd>{area.habitatKnown ? area.type === 'pelagic' ? copy.surface : area.type === 'demersal' ? copy.bottom : copy.mixed : copy.unavailable}</dd></div>
-      {percent !== null && <div><dt>{copy.modelEstimate}</dt><dd>{percent}%</dd></div>}
-      <div><dt>{copy.predictionTime}</dt><dd>{area.predictionDate?.slice(0, 10) || copy.dateUnknown}</dd></div>
-    </dl>
-    <PredictionProvenance area={area} />
-    <p className={styles.panelDescription}>{copy.estimateNote}</p>
     {area.source === 'sample' && <p className={styles.notice}>{copy.sample}</p>}
+    <dl className={styles.areaSummaryGrid}>
+      <div className={styles.estimateRow}><dt lang="en">Unverified model estimate</dt><dd className={percent !== null ? styles.estimateValue : undefined}>{percent !== null ? `${percent}%` : copy.unavailable}</dd></div>
+      <div><dt>{copy.habitat}</dt><dd>{area.habitatKnown ? area.type === 'pelagic' ? copy.surface : area.type === 'demersal' ? copy.bottom : copy.mixed : copy.unavailable}</dd></div>
+      <div><dt>{copy.predictionTime}</dt><dd>{area.predictionDate?.slice(0, 10) || copy.dateUnknown}</dd></div>
+      <div><dt>{copy.coordinates}</dt><dd>{area.lat.toFixed(4)}° N, {area.lng.toFixed(4)}° E</dd></div>
+    </dl>
+    <p className={styles.panelDescription}>{copy.estimateNote}</p>
     {area.speciesAdjusted && <p className={styles.panelDescription}>{copy.speciesNote}</p>}
+    {weather}
+    <PredictionProvenance area={area} />
   </div>;
 }
 

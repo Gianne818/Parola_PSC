@@ -25,10 +25,16 @@ export default function Advisory({ data, state, loading, failed, refresh, openDe
   const title = state === 'hold' ? copy.hold : state === 'clear' ? copy.clear : copy.incomplete;
   const oldReadings = Boolean(data && [data.wind, data.waves, data.stormSignal].some(reading => !isReadingCurrent(reading)));
   const received = displayTime(data?.receivedAt, language);
+  const retrievedLabel = GUIDANCE_COPY[language as keyof typeof GUIDANCE_COPY]?.retrieved || GUIDANCE_COPY.en.retrieved;
+  const holdReason = data?.hold.active && data.hold.reason ? data.hold.reason : null;
+  const stormActive = data?.stormSignal.value != null && data.stormSignal.value > 0;
   return <section className={styles.advisory} data-state={state} aria-labelledby="advisory-title" aria-busy={loading}>
-    <div className={styles.advisoryStatus}><Icon size={20} aria-hidden="true" /><div><h2 id="advisory-title" aria-live="polite">{title}</h2>
-      <p className={styles.timestamp}>{loading ? copy.refreshing : received ? `${GUIDANCE_COPY[language as keyof typeof GUIDANCE_COPY]?.retrieved || GUIDANCE_COPY.en.retrieved}: ${received} PHT` : copy.unknownTime}</p>
-      {(failed || oldReadings) && data && <p className={styles.timestamp}>{copy.lastAvailable}</p>}
+    <div className={styles.advisoryStatus}><Icon size={20} aria-hidden="true" /><div>
+      <div className={styles.advisoryTitleRow}>
+        <h2 id="advisory-title" aria-live="polite">{title}</h2>
+        {(failed || oldReadings) && data && <span className={styles.freshnessBadge}>{copy.lastAvailable}</span>}
+      </div>
+      <p className={styles.timestamp}>{loading ? copy.refreshing : received ? `${retrievedLabel}: ${received} PHT` : copy.unknownTime}</p>
     </div></div>
     <dl className={styles.readings}>
       <div><Wind size={18} aria-hidden="true" /><dt>{copy.wind}</dt><dd>{data?.wind.value != null ? `${data.wind.value.toFixed(1)} km/h` : copy.unavailable}</dd></div>
@@ -39,26 +45,53 @@ export default function Advisory({ data, state, loading, failed, refresh, openDe
       <button type="button" className={styles.textButton} onClick={openDetails}>{copy.weatherDetails}</button>
       {state === 'hold' && <Link className={styles.holdLink} href="/alerts">{copy.readAdvisory}</Link>}
     </div>
+    {(holdReason || stormActive) && <p className={styles.advisoryWarning} role="status">
+      {holdReason ? holdReason : `${copy.storm}: ${data?.stormSignal.value}`}
+    </p>}
     {failed && !loading && <p className={styles.advisoryNotice} role="status">{copy.refreshFailed}</p>}
   </section>;
 }
 
 export function WeatherDetails({ data, state, copy, language }: { data: DashboardWeather | null; state: AdvisoryState; copy: DashboardCopy; language: string }) {
+  const outdatedLabel = GUIDANCE_COPY[language as keyof typeof GUIDANCE_COPY]?.outdated || GUIDANCE_COPY.en.outdated;
   const sources = [
     { label: copy.wind, reading: data?.wind, unit: 'km/h' }, { label: copy.waves, reading: data?.waves, unit: 'm' },
     { label: copy.temperature, reading: data?.temperature, unit: '°C' }, { label: copy.storm, reading: data?.stormSignal, unit: '' },
   ];
   return <>
     <p className={styles.panelDescription}>{state === 'hold' ? copy.holdDescription : state === 'clear' ? copy.clearDescription : copy.incompleteDescription}</p>
-    <dl className={styles.sourceList}>{sources.map(({ label, reading, unit }) => <div key={label}><dt>{label}</dt>
-      <dd className={styles.sourceValue}>{reading?.value != null ? `${reading.value} ${unit}` : copy.unavailable}</dd>
-      <dd>{copy.source}: {reading?.source || copy.unavailable}</dd><dd>{copy.observed}: {displayTime(reading?.observedAt, language) || copy.unknownTime}</dd>
-      <dd lang="en">Valid until: {displayTime(reading?.validUntil, language) || 'Unavailable'}</dd>
-      <dd>{reading?.value == null ? copy.unavailable : reading.available === false ? copy.lastAvailable : !displayTime(reading.observedAt, language) ? copy.unknownTime : !isReadingCurrent(reading) ? GUIDANCE_COPY[language as keyof typeof GUIDANCE_COPY]?.outdated || GUIDANCE_COPY.en.outdated : null}</dd>
-    </div>)}
-      <div><dt>{copy.holdChecks}</dt><dd>{data?.hold.available ? copy.holdRecorded : copy.holdUnknown}</dd><dd>{displayTime(data?.hold.checkedAt, language) || copy.unknownTime}</dd>
-        {data?.hold.active && data.hold.reason && <dd>{data.hold.reason}</dd>}
+    <dl className={styles.sourceList}>
+      <div className={styles.holdSummaryItem} data-active={Boolean(data?.hold.active)}>
+        <div className={styles.sourceHeader}>
+          <dt>{copy.holdChecks}</dt>
+          <dd className={styles.sourceState}>{data?.hold.available ? copy.holdRecorded : copy.holdUnknown}</dd>
+        </div>
+        <dd>{displayTime(data?.hold.checkedAt, language) || copy.unknownTime}</dd>
+        {data?.hold.active && data.hold.reason && <dd className={styles.holdReasonText}>{data.hold.reason}</dd>}
       </div>
+      {sources.map(({ label, reading, unit }) => {
+        const statusText = reading?.value == null
+          ? copy.unavailable
+          : reading.available === false
+            ? copy.lastAvailable
+            : !displayTime(reading.observedAt, language)
+              ? copy.unknownTime
+              : !isReadingCurrent(reading)
+                ? outdatedLabel
+                : null;
+        return <div key={label}>
+          <div className={styles.sourceHeader}>
+            <dt>{label}</dt>
+            <dd className={styles.sourceValue}>{reading?.value != null ? `${reading.value}${unit ? ` ${unit}` : ''}` : copy.unavailable}</dd>
+          </div>
+          {statusText && <dd className={styles.sourceState}>{statusText}</dd>}
+          <dd className={styles.sourceMeta}>
+            <span>{copy.source}: {reading?.source || copy.unavailable}</span>
+            <span>{copy.observed}: {displayTime(reading?.observedAt, language) || copy.unknownTime}</span>
+            <span lang="en">Valid until: {displayTime(reading?.validUntil, language) || 'Unavailable'}</span>
+          </dd>
+        </div>;
+      })}
     </dl>
     <WeatherCoverage data={data} />
   </>;

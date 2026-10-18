@@ -2,7 +2,7 @@
 // Uses only installed Vite, React and a local Chromium binary. No app server.
 import assert from 'node:assert/strict';
 import { spawn } from 'node:child_process';
-import { mkdtemp, rm } from 'node:fs/promises';
+import { mkdtemp, rm, mkdir, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -10,6 +10,8 @@ import { createInterface } from 'node:readline/promises';
 import { build } from 'vite';
 import { runTier01Checks } from './tier-01-checks.mjs';
 import { runTier02Checks } from './tier-02-checks.mjs';
+import { runHotspotReadabilityChecks } from './hotspot-readability-checks.mjs';
+import { buildReadabilityAssets, previewCsp } from './readability-preview.mjs';
 
 const root = fileURLToPath(new URL('../../../', import.meta.url));
 const directory = path.join(root, 'tests/frontend/browser').replaceAll('\\', '/');
@@ -22,6 +24,10 @@ let passedChecks = 0;
 const manual = process.argv.includes('--manual');
 const tier01 = process.argv.includes('--tier-01');
 const tier02 = process.argv.includes('--tier-02');
+const readability = process.argv.includes('--hotspot-readability');
+const beforeSource = process.argv.find(argument => argument.startsWith('--before-source='))?.slice('--before-source='.length);
+const screenshots = process.argv.find(argument => argument.startsWith('--screenshots='))?.slice('--screenshots='.length);
+const nativeZoom = process.argv.includes('--native-zoom');
 let browser;
 let profile;
 let sequence = 0;
@@ -50,7 +56,7 @@ async function until(expression) {
   throw new Error(`UI condition timed out: ${expression}`);
 }
 async function key(key, modifiers = 0) {
-  const codes = { Tab: 9, Enter: 13, Escape: 27, ArrowDown: 40, ArrowUp: 38, End: 35, Home: 36 };
+  const codes = { Tab: 9, Enter: 13, Escape: 27, ArrowDown: 40, ArrowUp: 38, ArrowLeft: 37, ArrowRight: 39, End: 35, Home: 36 };
   await send('Input.dispatchKeyEvent', { type: 'keyDown', key, code: key, windowsVirtualKeyCode: codes[key], modifiers, ...(key==='Enter' ? {text:'\r',unmodifiedText:'\r'} : {}) }, session);
   await send('Input.dispatchKeyEvent', { type: 'keyUp', key, code: key, windowsVirtualKeyCode: codes[key], modifiers }, session);
 }
@@ -74,7 +80,7 @@ async function layout(name) {
 
 try {
   // No config mutation, .env loading, disk output, dev server or Next process.
-  const output = await build({ root, configFile: false, envFile: false, logLevel: 'error',
+  const output = readability ? null : await build({ root, configFile: false, envFile: false, logLevel: 'error',
     resolve: { alias: { '@': root } }, esbuild: { jsx: 'automatic' },
     plugins: [{ name: 'offline-boundaries', enforce: 'pre',
       resolveId(id) {
@@ -99,14 +105,19 @@ try {
         if (id === '\0offline:dashboardService') return `export async function loadDashboardWeather(){throw new Error('Offline fixture: no weather')} export async function loadFishingAreaResult(){throw new Error('Offline fixture: no predictions')} export async function requestWeatherSms(){throw new Error('Offline fixture: SMS disabled')}`;
       } }],
     build: { write: false, minify: false, cssCodeSplit: false, sourcemap: false, rollupOptions: { input: path.join(directory, tier01 ? 'tier-01-fixture.tsx' : tier02 ? 'tier-02-fixture.tsx' : 'fixture.tsx') } } });
+  if (readability) {
+    for (const [key, value] of await buildReadabilityAssets()) assets.set(key, value);
+    if (beforeSource) for (const [key, value] of await buildReadabilityAssets({ beforeSource, variant: 'before' })) assets.set(key, value);
+  } else {
   for (const item of output.output) assets.set('/' + item.fileName, Buffer.from(item.type === 'chunk' ? item.code : item.source));
   const entry = output.output.find(item => item.type === 'chunk' && item.isEntry).fileName;
   const css = output.output.filter(item => item.fileName.endsWith('.css')).map(item => `<link rel="stylesheet" href="/${item.fileName}">`).join('');
   assets.set('/', Buffer.from(`<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Offline frontend verification</title>${css}</head><body><div id="root"></div><script type="module" src="/${entry}"></script></body></html>`));
+  }
   console.log('Fixture compiled in memory; starting isolated browser with deny proxy.');
   profile = await mkdtemp(path.join(tmpdir(), 'parola-ui02-offline-'));
   const executable = process.argv.slice(2).find(argument => !argument.startsWith('--')) || 'C:/Program Files/Google/Chrome/Application/chrome.exe';
-  browser = spawn(executable, [...(manual ? [] : ['--headless=new']), '--remote-debugging-pipe', `--user-data-dir=${profile}`, '--no-first-run', '--no-default-browser-check',
+  browser = spawn(executable, [...(manual || nativeZoom ? [] : ['--headless=new']), '--remote-debugging-pipe', `--user-data-dir=${profile}`, '--no-first-run', '--no-default-browser-check',
     '--disable-background-networking', '--disable-component-update', '--disable-sync', '--disable-extensions', '--disable-default-apps',
     '--proxy-server=http://127.0.0.1:9', '--proxy-bypass-list=<-loopback>', '--host-resolver-rules=MAP * ~NOTFOUND', 'about:blank'],
     { stdio: ['ignore', 'ignore', 'pipe', 'pipe', 'pipe'], windowsHide: true });
@@ -124,11 +135,12 @@ try {
   browser.on('exit', (code, signal) => { for (const item of pending.values()) { clearTimeout(item.timeout); item.reject(new Error(`Browser exited (${code}, ${signal})`)); } pending.clear(); });
   on('Fetch.requestPaused', async ({ params, sessionId }) => {
     const url = new URL(params.request.url);
-    const asset = url.origin === origin && assets.get(url.pathname);
+    const pathname = readability && url.pathname === '/_next/image' && url.searchParams.get('url') === '/images/parola-logo.jpeg' ? '/images/parola-logo.jpeg' : url.pathname;
+    const asset = url.origin === origin && assets.get(pathname);
     if (!asset) { blocked.add(url.origin); await send('Fetch.failRequest', { requestId: params.requestId, errorReason: 'BlockedByClient' }, sessionId); return; }
-    const type = url.pathname.endsWith('.css') ? 'text/css' : url.pathname.endsWith('.js') ? 'text/javascript' : url.pathname === '/' ? 'text/html' : 'application/octet-stream';
+    const type = pathname.endsWith('.css') ? 'text/css' : pathname.endsWith('.js') ? 'text/javascript' : pathname.endsWith('.jpeg') ? 'image/jpeg' : pathname.endsWith('/') ? 'text/html' : 'application/octet-stream';
     await send('Fetch.fulfillRequest', { requestId: params.requestId, responseCode: 200, responseHeaders: [{ name: 'Content-Type', value: type },
-      { name: 'Content-Security-Policy', value: "default-src 'none'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src data: blob:; connect-src 'none'; font-src 'none'; object-src 'none'; frame-src 'none'; form-action 'none'; base-uri 'none'" }], body: asset.toString('base64') }, sessionId);
+      { name: 'Content-Security-Policy', value: readability ? previewCsp : "default-src 'none'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src data: blob:; connect-src 'none'; font-src 'none'; object-src 'none'; frame-src 'none'; form-action 'none'; base-uri 'none'" }], body: asset.toString('base64') }, sessionId);
   });
   on('Runtime.exceptionThrown', ({ params }) => { const error = params.exceptionDetails.exception?.description || params.exceptionDetails.text; exceptions.push(error); console.log(error); });
   // Page is still about:blank. Install deny-by-default interception before navigation.
@@ -151,11 +163,23 @@ try {
     navigator.sendBeacon=()=>false;window.open=()=>null;
   ` }, session);
   await viewport(1280);
-  await send('Page.navigate', { url: origin + '/' }, session);
+  await send('Page.navigate', { url: origin + (readability ? '/after/' : '/') }, session);
   await until(`Boolean(window.fixture && document.querySelector('main'))`);
   check('external fetch is rejected under fixture CSP', await evaluate(`fetch('https://example.invalid/offline-canary').then(()=>false,()=>true)`));
   check('same-origin API is also rejected', await evaluate(`fetch('/api/offline-canary').then(()=>false,()=>true)`));
-  if (manual) {
+  if (readability && !manual) {
+    const capture = async name => {
+      if (!screenshots) return;
+      await evaluate(`new Promise(resolve=>requestAnimationFrame(()=>requestAnimationFrame(resolve)))`);
+      await mkdir(screenshots, { recursive: true });
+      const { data } = await send('Page.captureScreenshot', { format: 'png' }, session);
+      await writeFile(path.join(screenshots, name + '.png'), Buffer.from(data, 'base64'));
+    };
+    await runHotspotReadabilityChecks({ evaluate, until, check, clickText, viewport, layout, key, capture, nativeZoom,
+      send: (method, params) => send(method, params, session), navigate: async variant => { await send('Page.navigate', { url: origin + '/' + variant + '/' }, session); await until(`Boolean(window.readability && document.querySelector('.leaflet-container'))`); }, hasBefore: Boolean(beforeSource) });
+    check('no uncaught browser/driver exceptions', exceptions.length === 0 || (console.log(exceptions), false));
+    console.log(`${passedChecks} hotspot readability browser checks passed; synthetic data only.`);
+  } else if (manual) {
     await send('Emulation.clearDeviceMetricsOverride', {}, session);
     await send('Page.bringToFront', {}, session);
     const terminal = createInterface({ input: process.stdin, output: process.stdout });
@@ -317,5 +341,5 @@ try {
   // Delete only the exact task-created, verified temporary profile.
   if (profile && path.dirname(profile) === tmpdir() && path.basename(profile).startsWith('parola-ui02-offline-'))
     await rm(profile, { recursive: true, force: true, maxRetries: 5, retryDelay: 200 });
-  console.log('Temporary browser profile removed; no screenshots/downloads/recordings written.');
+  console.log('Temporary browser profile removed.' + (screenshots ? ` Requested screenshots: ${screenshots}` : ' No screenshots/downloads/recordings written.'));
 }

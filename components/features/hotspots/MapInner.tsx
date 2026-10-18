@@ -11,6 +11,7 @@ import { PHILIPPINE_REGIONS, detectPhilippineRegion, isCoordinateInRegion } from
 
 import { PREDICTION_RADIUS_KM, PREDICTION_RADIUS_METERS, type MapViewMode } from "./MapComponent";
 import { isClientCoordinate } from '@/lib/frontend/coordinates';
+import { hotspotPresentation } from '@/lib/frontend/hotspot-presentation';
 
 const PHILIPPINE_NAVIGATION_BOUNDS: L.LatLngBoundsLiteral = [[4.5, 115.5], [21.5, 127.5]];
 
@@ -650,9 +651,14 @@ export default function MapInner({
           const isSelected = selectedHotspot?.id === spot.id;
 
           // Resolve display color using catch probability gradient shade
-          const speciesColor = isBriefing ? '#087F5B' : getHotspotDisplayColor(type, selectedSpecies, species, spot.catchProbability);
+          const dashboardMarker = isBriefing ? hotspotPresentation(spot) : null;
+          const speciesColor = dashboardMarker ? dashboardMarker.fill : getHotspotDisplayColor(type, selectedSpecies, species, spot.catchProbability);
 
-          const markerIcon = isUnsafe
+          const markerIcon = dashboardMarker ? L.divIcon({
+            className: 'dashboard-hotspot-marker',
+            html: `<div aria-hidden="true" style="box-sizing:border-box;width:28px;height:28px;background:${dashboardMarker.fill};border:3px ${dashboardMarker.unavailable ? 'dashed' : 'solid'} ${dashboardMarker.outline};border-radius:50%;display:flex;align-items:center;justify-content:center;${isSelected ? 'box-shadow:0 0 0 2px #fff,0 0 0 5px #12211e;' : ''}"><span style="display:flex;align-items:center;justify-content:center;width:16px;height:16px;border-radius:50%;background:#fff;color:#12211e;font:700 11px/1 sans-serif;">${dashboardMarker.letter}</span></div>`,
+            iconSize: [28, 28], iconAnchor: [14, 14],
+          }) : isUnsafe
             ? unsafeHotspotIcon
             : typeof window !== "undefined"
               ? L.divIcon({
@@ -666,7 +672,7 @@ export default function MapInner({
           if (!markerIcon) return null;
 
           return (
-            <React.Fragment key={`${spot.id}-${speciesColor}-${isSelected ? "sel" : "nor"}`}>
+            <React.Fragment key={isBriefing ? spot.id : `${spot.id}-${speciesColor}-${isSelected ? "sel" : "nor"}`}>
               {/* Single 9 km prediction radius circle (was double-drawn). Leaflet Circle uses real-world meters so it auto-scales with zoom. */}
               {showPredictionRadius && (
               <Circle
@@ -682,10 +688,19 @@ export default function MapInner({
               />
               )}
               <Marker
-                title={name}
+                title={dashboardMarker ? `${name} · ${dashboardMarker.label} · ${dashboardMarker.percent === null ? 'Estimate unavailable' : `${dashboardMarker.percent}% unverified model estimate`}` : name}
                 position={[lat, lng]}
                 icon={markerIcon}
                 eventHandlers={{
+                  keydown: event => {
+                    if (!isBriefing) return;
+                    const key = (event.originalEvent as KeyboardEvent).key;
+                    if (key === 'Enter' || key === ' ') {
+                      event.originalEvent.preventDefault();
+                      onSelectHotspot(spot);
+                      setCustomWaypoint(null);
+                    }
+                  },
                   click: () => {
                     onSelectHotspot(spot);
                     setCustomWaypoint(null); // Clear custom waypoint to prioritize active hotspot

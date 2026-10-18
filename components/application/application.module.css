@@ -6,31 +6,36 @@
 .columns { display: grid; grid-template-columns: minmax(0, 1fr) 320px; gap: 24px; align-items: start; }
 .advisories { max-width: 1200px; }
 .advisories .statusHeading h2 { font-size: 1.5em; font-weight: 800; }
-.status .advisoryPort { font-size: .875em; color: var(--muted); margin-bottom: 12px; }
-.primaryWeather { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 24px; margin: 0; }
-.primaryWeather > div + div { border-left: 1px solid var(--line); padding-left: 24px; }
-.supportingWeather { display: grid; gap: 20px; border-top: 1px solid var(--line); padding-top: 24px; margin: 24px 0 0; }
-.supportingWeather > div + div { border-top: 1px solid var(--line); padding-top: 20px; }
-.page .regionalNote { color: var(--muted); font-size: .875em; margin-top: 20px; }
+.statusHeaderRow { display: flex; align-items: flex-start; justify-content: space-between; flex-wrap: wrap; gap: 10px 16px; margin-bottom: 6px; }
+.freshnessRow { display: flex; align-items: center; flex-wrap: wrap; gap: 8px; }
+.staleBadge { display: inline-flex; align-items: center; padding: 3px 9px; border-radius: 999px; font-size: .75em; font-weight: 650; background: #12211e0f; color: var(--caution); line-height: 1.3; }
+[data-state='hold'] .staleBadge { color: var(--hold); background: #a12b2614; }
+.status .advisoryPort { font-size: .875em; font-weight: 600; color: var(--muted); margin-bottom: 8px; }
+.warningCallout { margin-top: 14px; padding: 12px 14px; border-radius: 12px; background: #a12b2612; border: 1px solid var(--hold-line, #eac9c0); color: var(--hold, #a12b26); font-size: .875em; }
+.warningCallout p + p { margin-top: 6px; }
+.refreshNotice { margin-top: 10px; font-size: .875em; font-weight: 600; color: var(--caution, #80601e); }
+.primaryWeather { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px; margin: 0; }
+.supportingWeather { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px; margin: 14px 0 12px; }
+.page .regionalNote { color: var(--muted); font-size: .8125em; margin: 0; }
 .stack { display: flex; flex-direction: column; gap: 24px; min-width: 0; }
 .panel, .bulletin, .listColumn { border: 1px solid var(--line); border-radius: var(--panel-radius); background: var(--surface); min-width: 0; box-shadow: var(--surface-shadow); }
 .panel { padding: var(--card-padding); }
 .bulletin { min-width: 0; }
 .weatherSection { padding: var(--card-padding); border-top: 1px solid var(--line); }
-.panelHeading { display: flex; align-items: center; justify-content: space-between; gap: 16px; margin-bottom: 20px; }
+.panelHeading { display: flex; align-items: baseline; justify-content: space-between; flex-wrap: wrap; gap: 8px 16px; margin-bottom: 16px; }
 .muted { color: var(--muted); font-size: 1em; }
 .small { font-size: .8125em; color: var(--muted); }
 .status { padding: var(--card-padding); background: var(--surface); border-radius: 23px 23px 0 0; }
 .status[data-state='hold'] { background: var(--hold-surface); }
 .status[data-state='incomplete'] { background: var(--caution-surface); }
 .statusHeading h2 { font-size: 1.75em; font-weight: 900; }
-.statusHeading { display: flex; gap: 12px; align-items: center; margin-bottom: 16px; }
+.statusHeading { display: flex; gap: 10px; align-items: center; }
 .statusHeading > svg { color: var(--green); }
 [data-state='hold'] .statusHeading > svg { color: #a12b26; }
 [data-state='incomplete'] .statusHeading > svg { color: #80601e; }
-.status p + p { margin-top: 12px; }
+.status p + p { margin-top: 8px; }
 .status > p { max-width: 65ch; }
-.actions { display: flex; align-items: center; flex-wrap: wrap; gap: 12px; margin-top: 20px; }
+.actions { display: flex; align-items: center; flex-wrap: wrap; gap: 12px; margin-top: 18px; }
 .button, .primary, .danger { display: inline-flex; justify-content: center; align-items: center; gap: 8px; min-height: 44px; padding: 10px 18px; border: 1px solid var(--line); border-radius: 999px; background: var(--surface); font-size: .875em; font-weight: 700; color: var(--ink); text-decoration: none; }
 .button:hover:not(:disabled) { background: var(--coast); }
 .primary { min-height: 52px; background: var(--green); border-color: var(--green); color: white; }
@@ -122,8 +127,7 @@
   .preferenceFields { grid-template-columns: minmax(0, 1fr); }
 }
 @media (max-width: 767px) {
-  .primaryWeather { grid-template-columns: minmax(0, 1fr); }
-  .primaryWeather > div + div { border-left: 0; border-top: 1px solid var(--line); padding: 24px 0 0; }
+  .primaryWeather, .supportingWeather { grid-template-columns: minmax(0, 1fr); }
   .panel, .status, .weatherSection, .settingsSection { padding: 24px; }
   .stack, .columns, .settings { gap: 20px; }
   .details > div { grid-template-columns: 1fr; gap: 5px; }
