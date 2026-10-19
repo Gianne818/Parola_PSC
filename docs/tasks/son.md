@@ -1,5 +1,19 @@
 # Son's six work packages
 
+**SON-03 / SAFE-03 isolated decision portion, October 19.** Added a backend
+combiner for validated area-specific wind, waves and official warnings. Known
+current hazards win over other missing inputs; missing/stale/conflicting evidence
+returns `UNKNOWN`, and `NORMAL` requires complete clear evidence plus vessel and
+reviewed rule metadata. No threshold or live-provider claim was invented. This
+is not yet wired into persistence, query, SMS or export: the repository schema only
+allows two advisory states, and Toby's rules/provider evidence still need review.
+Recheck binds clearance evidence to vessel/rule context, prevents unresolved
+local records from disappearing into clearance and rejects impossible timestamps.
+All 26 focused mocked tests and the full TypeScript check pass; no provider or
+database operation was performed. Changes are local on `codex/son/safety-decisions`.
+Contract and handoff: [safety-decision-contract.md](safety-decision-contract.md).
+
+
 **Geographic entry-point continuation, October 18.** Wired server-resolved
 profile authority into nearest reads; inactive enforcement permits only the
 existing demo preview and blocks unrestricted live reads. The legacy FastAPI
