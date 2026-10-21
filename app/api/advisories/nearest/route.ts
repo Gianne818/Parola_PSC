@@ -4,7 +4,8 @@ import { getDbPool } from '@/lib/db';
 import { RATE_LIMITS, checkRateLimit, rateLimitExceededResponse } from '@/lib/rate-limit';
 import { loadSpeciesProfile, environmentalNumber, type SpeciesProfile } from '@/lib/species-catalog';
 import { PHILIPPINE_REGIONS } from '@/data/philippineRegions';
-import { loadRegionalPredictions, type PredictionRow } from '@/lib/regional-predictions';
+import { isPredictionDate, loadPredictions } from '@/lib/regional-predictions';
+import { geographicReadProfile, GeographicAccessError } from '@/lib/geographic-access';
 
 const DEFAULT_LAT = 14.0122;
 const DEFAULT_LON = 123.0114;
@@ -14,6 +15,7 @@ const MAX_SPECIES_CHARS = 100;
 
 function parseCoordinate(raw: string | null, min: number, max: number, fallback: number): number | null {
   if (raw === null) return fallback;
+  if (!raw.trim()) return null;
   const value = Number(raw);
   if (!Number.isFinite(value) || value < min || value > max) return null;
   return value;
@@ -39,7 +41,7 @@ export async function GET(request: Request) {
     let limit = DEFAULT_LIMIT;
     if (limitRaw !== null) {
       const parsed = Number(limitRaw);
-      if (!Number.isFinite(parsed)) {
+      if (!limitRaw.trim() || !Number.isFinite(parsed)) {
         return NextResponse.json({ error: 'limit must be a number.', hotspots: [] }, { status: 400 });
       }
       limit = Math.min(Math.max(Math.floor(parsed), 1), MAX_LIMIT);
@@ -50,12 +52,21 @@ export async function GET(request: Request) {
       return NextResponse.json({ error: 'species is too long.', hotspots: [] }, { status: 400 });
     }
     const species = speciesRaw?.trim() ? speciesRaw.trim() : null;
+    const predictionDate = searchParams.get('prediction_date');
+    if (predictionDate !== null && !isPredictionDate(predictionDate)) {
+      return NextResponse.json({ error: 'prediction_date must be a valid YYYY-MM-DD date.', hotspots: [] }, { status: 400 });
+    }
+    const habitat = searchParams.get('habitat');
+    if (habitat !== null && habitat !== 'pelagic' && habitat !== 'demersal' && habitat !== 'both') {
+      return NextResponse.json({ error: 'habitat must be pelagic, demersal or both.', hotspots: [] }, { status: 400 });
+    }
     const regionId = searchParams.get('region');
     const region = PHILIPPINE_REGIONS.find(item => item.id === regionId);
     if (regionId !== null && !region) {
       return NextResponse.json({ error: 'Unknown advisory region.', hotspots: [] }, { status: 400 });
     }
 
+    const geographicProfileId = await geographicReadProfile(request);
     const db = getDbPool(3);
     if (!db) {
       return NextResponse.json({
@@ -70,55 +81,44 @@ export async function GET(request: Request) {
       catch { return NextResponse.json({ error: 'Species catalog is unavailable.', code: 'species_catalog_unavailable', species_status: 'unavailable', hotspots: [] }, { status: 503 }); }
       if (!speciesProfile) return NextResponse.json({ error: 'Species is unsupported or ambiguous. Use a catalog identifier.', code: 'species_unsupported', species_status: 'unsupported', hotspots: [] }, { status: 422 });
     }
-
-    const result = region ? await loadRegionalPredictions(db, region, lat, lon, limit, speciesProfile?.category) : await db.query(
-      `SELECT
-        id,
-        prediction_date,
-        model_type,
-        catch_probability,
-        dbscan_cluster_id,
-        sst,
-        chl_a,
-        created_at,
-        ST_AsText(centroid_geom) as centroid_wkt
-      FROM public.daily_grid_predictions
-      WHERE (
-        prediction_date >= (CURRENT_DATE - INTERVAL '2 days')
-        OR prediction_date = (SELECT MAX(prediction_date) FROM public.daily_grid_predictions)
-      )
-        AND catch_probability >= 0.25
-        AND ($2::text IS NULL OR model_type = $2)
-      ORDER BY prediction_date DESC, catch_probability DESC
-      LIMIT $1`,
-      [limit, speciesProfile?.category ?? null]
-    );
+    if (speciesProfile && habitat && habitat !== 'both' && habitat !== speciesProfile.category) {
+      return NextResponse.json({ error: 'The selected species belongs to a different habitat.', code: 'species_habitat_conflict', hotspots: [] }, { status: 422 });
+    }
+    const selectedHabitat = speciesProfile?.category ?? (habitat === 'pelagic' || habitat === 'demersal' ? habitat : undefined);
+    const requestedHabitat = selectedHabitat ?? 'both';
+    const result = await loadPredictions(db, { region, lat, lon, limit, habitat: selectedHabitat,
+      predictionDate: predictionDate ?? undefined, geographicProfileId });
+    if (result.selection.geography.status === 'unavailable') {
+      return NextResponse.json({ error: 'Geographic coverage is unavailable.', code: 'geographic_data_unavailable',
+        hotspots: [], selection: result.selection }, { status: 503, headers: { 'Cache-Control': 'no-store' } });
+    }
 
     if (!result.rows || result.rows.length === 0) {
       return NextResponse.json({
         hotspots: [],
         source: 'postgres_direct',
         message: 'No stored predictions match this query.',
+        requested_habitat: requestedHabitat, habitat_status: 'unavailable',
+        selection: result.selection,
         species_status: speciesProfile ? 'resolved' : 'not_requested',
         prediction_scope: 'habitat_model', species_hsi_status: species ? 'unavailable' : 'not_requested',
-        ...('metadata' in result ? { metadata: result.metadata } : {}),
-      });
+        ...(result.metadata ? { metadata: result.metadata } : {}),
+      }, { headers: { 'Cache-Control': 'no-store' } });
     }
 
-    const hotspots = (result.rows as PredictionRow[]).map((row) => {
-      let itemLat = 0, itemLng = 0;
-      if (row.centroid_wkt) {
-        const match = row.centroid_wkt.match(/POINT\(([-\d.]+)\s+([-\d.]+)\)/);
-        if (match) {
-          itemLng = parseFloat(match[1]);
-          itemLat = parseFloat(match[2]);
-        }
+    const hotspots = result.rows.map((row) => {
+      const itemLat = environmentalNumber(row.target_lat);
+      const itemLng = environmentalNumber(row.target_lon);
+      const catchProb = environmentalNumber(row.catch_probability);
+      if (itemLat === null || Math.abs(itemLat) > 90 || itemLng === null || Math.abs(itemLng) > 180
+        || (itemLat === 0 && itemLng === 0)
+        || catchProb === null || catchProb < 0 || catchProb > 1) {
+        return null;
       }
 
-      const catchProb = Number(row.catch_probability);
       const sstVal = environmentalNumber(row.sst);
       const distKm = calculateDistance(lat, lon, itemLat, itemLng);
-      const catchProbPercent = catchProb <= 1.0 ? catchProb * 100 : catchProb;
+      const catchProbPercent = catchProb * 100;
       const efficiencyRatio = distKm > 0 ? parseFloat((catchProbPercent / distKm).toFixed(2)) : catchProbPercent;
 
       return {
@@ -141,12 +141,19 @@ export async function GET(request: Request) {
       };
     });
 
+    if (hotspots.some(item => item === null)) {
+      return NextResponse.json({ error: 'Stored prediction coordinates or scores are unavailable or invalid.',
+        code: 'prediction_data_unavailable', hotspots: [] }, { status: 503 });
+    }
+
     return NextResponse.json(
       {
         hotspots,
         source: 'postgres_direct',
         count: hotspots.length,
-        ...('metadata' in result ? { metadata: result.metadata } : {}),
+        requested_habitat: requestedHabitat, habitat_status: 'available',
+        selection: result.selection,
+        ...(result.metadata ? { metadata: result.metadata } : {}),
         species_status: speciesProfile ? 'resolved' : 'not_requested',
         ...(speciesProfile ? { species_profile: speciesProfile } : {}),
         prediction_scope: 'habitat_model',
@@ -155,9 +162,11 @@ export async function GET(request: Request) {
         weather_endpoint: '/api/dashboard/weather',
         provenance: 'legacy_unverified',
       },
-      { headers: { 'Cache-Control': 'public, s-maxage=300, stale-while-revalidate=60' } }
+      { headers: { 'Cache-Control': 'no-store' } }
     );
-  } catch {
+  } catch (error) {
+    if (error instanceof GeographicAccessError) return NextResponse.json({ error: error.message, code: error.code, hotspots: [] },
+      { status: error.status, headers: { 'Cache-Control': 'no-store' } });
     console.error('[Nearest API] request failed');
     return NextResponse.json({
       error: 'Internal server error',

@@ -15,8 +15,10 @@ existing rows, advisory references and prior successful runs remain intact.
 
 An ingestion run identifies an **upload**, not a validated scientific model run.
 `published` means all upload rows committed; it does not certify ocean eligibility,
-freshness, safety, calibrated scores or operational readiness. Existing read
-queries remain unchanged. Coherent run selection/retirement is still MAP-02;
+freshness, safety, calibrated scores or operational readiness. Nearest preview
+reads now select one date and expose unavailable/unverified lineage; see the
+[prediction query contract](prediction-query-contract.md). Scientific run
+selection/retirement remains MAP-02;
 new uploads do not erase historical or overlapping runs.
 
 ## Write contract
@@ -83,8 +85,8 @@ by or performed for this delivery.
 
 ## Handoffs
 
-- **Toby / TOBY-03 → Son / SON-04:** current Lambda output has no stable source
-  run/cell IDs; its direct writer uses ±0.05° envelopes and CSV/API use ±0.005°.
+- **Toby / TOBY-03 → Son / SON-04:** current Lambda output has no shared scientific
+  run/cell IDs; its producer-specific envelopes differ from CSV/API's ±0.005°.
   Supply reviewed source-cell IDs/geometry and model/input/run manifests. The
   new service explicitly labels its retained geometry `legacy-envelope-v1`;
   hashed ingestion cell keys are date/habitat/location identities, not source IDs.

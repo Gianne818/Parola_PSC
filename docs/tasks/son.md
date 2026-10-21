@@ -1,5 +1,183 @@
 # Son's six work packages
 
+**SON-03 / SAFE-03 isolated decision portion, October 19.** Added a backend
+combiner for validated area-specific wind, waves and official warnings. Known
+current hazards win over other missing inputs; missing/stale/conflicting evidence
+returns `UNKNOWN`, and `NORMAL` requires complete clear evidence plus vessel and
+reviewed rule metadata. No threshold or live-provider claim was invented. This
+is not yet wired into persistence, query, SMS or export: the repository schema only
+allows two advisory states, and Toby's rules/provider evidence still need review.
+Recheck binds clearance evidence to vessel/rule context, prevents unresolved
+local records from disappearing into clearance and rejects impossible timestamps.
+All 26 focused mocked tests and the full TypeScript check pass; no provider or
+database operation was performed. Changes are local on `codex/son/safety-decisions`.
+Contract and handoff: [safety-decision-contract.md](safety-decision-contract.md).
+
+
+**Geographic entry-point continuation, October 18.** Wired server-resolved
+profile authority into nearest reads; inactive enforcement permits only the
+existing demo preview and blocks unrestricted live reads. The legacy FastAPI
+nearest/species APIs require trusted proxy identity in enforced mode and filter
+through the same database decision. Added an authenticated current-data GeoJSON
+export through the guarded API, preserving unverified/non-operational labels.
+Live fishing SMS now requires a current unsent stored advisory and an existing
+eligible routine job; its recipient and canonical target are checked before the
+sender. The existing durable claim prevents repeats, geography is rechecked
+after claiming and ambiguous submissions remain held. Trusted operator safety
+warnings remain independent of geographic coverage. Explicit Auth/SMS demo mode
+also overrides a runtime live-SMS toggle, preserving the no-paid-provider guard.
+The new enforcement setting remains off; migration 09 is unapplied and no
+production data, provider or remote setting was touched. Tier's UI is unchanged.
+Migration 09 also prepares client prediction-table/legacy RPC read restrictions;
+coordinate consumers before applying and inspect other deployed access paths.
+Real data/rules, PostGIS verification, run/safety readiness, provider reconciliation
+and client integration remain separate acceptance work. Validation: 618 mocked/
+network-denied JavaScript tests across 43 files, 50 Python tests, full TypeScript
+and 47 local SQL checks passed. Final spec/standards reviews, secret scans and
+whitespace checks passed. No commit, migration or activation was performed.
+See [the geographic contract](geographic-eligibility-contract.md).
+
+**Current continuation, October 18: SON-04 / GEO-01 and GEO-02 foundations.**
+Prepared versioned reviewed boundary/catalog storage, backend profile grants,
+effective exclusions and a shared allowed/denied/unavailable decision. Missing,
+expired, withdrawn or incomplete coverage cannot grant clearance; known active
+exclusions remain denied. Boundary ambiguity is withheld. A private prediction
+path filters before ranking/counts/limits for both habitats. Default public preview
+is preserved and reports geography not evaluated; no client selector grants access.
+Migration 09 is prepared only: no data, grants, settings or enforcement activation
+were installed. Real PostGIS/source/rule and deployed API/SMS/export acceptance
+remain pending; the entry-point implementation is recorded above.
+Contract: [geographic-eligibility-contract.md](geographic-eligibility-contract.md).
+Validation: 583 network-denied tests across 40 files and full TypeScript passed.
+The local in-memory PostgreSQL fixture passed 44 checks for grant ownership,
+expiry/revocation, active/boundary exclusions, incomplete coverage, version
+protection, privileges and filtering before limits for both habitats. Geometry
+and clock functions were substituted; real PostGIS/concurrency are not verified.
+Default preview SQL also passed without migration 09. Final spec/standards
+reviews found no blocker; tracked/changed-file secret scans and whitespace checks
+passed. Changes remain local and uncommitted; no migration or enforcement was activated.
+
+**Current selection, October 18: SON-04 / date-selected prediction queries.**
+Continued with one national prediction date selected before regional/score
+filtering, using the database statement's Manila day. Future dates are excluded
+by default; exact ISO date requests retain historical/future previews. Missing
+regional or habitat coverage never fills from another date. Counts for pelagic
+and demersal are reported separately before limiting. Explicit date/lineage
+metadata keeps historical rows historical and marks scientific validity
+unverified; even a stored upload ID never grants operational eligibility.
+Optional migration-05 IDs are observed without requiring that schema, with a
+ten-ID response cap and total count. No new migration, flag, table or producer/
+frontend change is required. This replaces the legacy date-window fallback
+described in the first portion below.
+
+Current SON-04 delivery versus remaining integration:
+
+- [x] Numeric targets, invalid-data failures, habitat-preserving deduplication,
+  0.25 floor and nearest-before-limit queries.
+- [x] Single-date selection, Manila boundary behavior, exact-date previews and
+  explicit per-habitat/date/upload-lineage availability.
+- [x] Inactive geographic decision/storage foundation and a separate backend
+  prediction filter using labeled fixtures; no real enforcement claim.
+- [x] Server-authorized API filtering, basic GeoJSON export and stored-target SMS
+  checks with durable routine claims; demo guards retained, enforcement inactive.
+- [ ] Scientific run/publication authority and source-cell/model/input lineage;
+  Toby's direct writer does not yet supply the shared run manifest.
+- [ ] Validated ocean-mask enforcement; the current screening candidate is
+  explicitly not production approved, so it is not enabled automatically.
+- [ ] Authoritative marine/restriction eligibility, recommendation accounting
+  and integration across all ingest/query/SMS/export paths, with real database
+  verification. Administrative region polygons do not establish these controls.
+
+Continuation validation: 560 network-denied tests across 39 files and full
+TypeScript passed. Local in-memory PostgreSQL fixtures passed date isolation,
+Manila midnight/database-timezone independence, future/history handling, missing
+regional/habitat coverage, legacy/optional-upload schema compatibility and the
+upload-ID cap. Geometry/clock functions were mocked; deployed PostGIS, publication
+and scientific validity remain unverified. Final spec/standards review found no
+new code blocker; the stale date-window documentation was corrected. Tracked
+and changed-file secret scans and whitespace checks passed. No live operations.
+
+Branch `codex/son/prediction-queries`. Regional and national nearest queries now
+share numeric PostGIS coordinates, habitat-preserving deduplication and distance
+ranking before the limit. The newest row is selected before the existing 0.25
+floor, preventing an older high score from replacing newer below-floor data.
+Invalid stored targets/scores produce an explicit unavailable response; no
+missing geometry becomes `(0,0)`. Explicit pelagic/demersal/both filters are
+supported and species/habitat conflicts are rejected. Existing Tier readers,
+species/environment fields, account preferences and demo SMS guards are preserved.
+The local SQL check passes with an in-memory PostgreSQL engine and mocked geometry
+functions; actual PostGIS/deployed behavior remains unverified. No migration,
+remote database/provider operation, dependency install or frontend/science change was
+made. Scientific run validity/freshness, masks and geographic eligibility remain
+SON-04 work; this portion does not mark the package complete. Contract and
+handoffs: [prediction-query-contract.md](prediction-query-contract.md).
+First-portion validation: 534 network-denied tests across 38 files and full TypeScript passed.
+The local SQL fixture checks, tracked/changed-file secret scans and whitespace
+checks passed. Final spec/standards review found no remaining blocker in this
+bounded portion. Changes are prepared for the normal commit/review workflow.
+
+**SON-02 continuation, October 18: routine delivery tracking.** Added internal
+transactional claims, submitted/rejected/unknown outcomes and persisted receipt
+deduplication. Claimed or completed jobs cannot be reset by the planner. Submitted
+does not mean delivered; delayed failures cannot downgrade confirmed delivery.
+Migration 08 and the extra tracking opt-in are prepared only. No sender/public
+callback/cron is wired; current demo mode still blocks persistence. Actual gateway
+authentication, retry/reconciliation policy, critical alerts and cost accounting
+remain pending, alongside real database verification. The existing incoming
+feedback webhook and registration/frontend/AWS behavior were preserved. Details:
+[routine-scheduling-contract.md](routine-scheduling-contract.md#remaining-integration--handoff).
+Validation: 508 network-denied tests passed across 38 files; the final 61 focused
+scheduler/tracking/route tests also passed, including duplicate/out-of-order
+receipts, repeated acknowledgements after delivery and missing-write detection.
+Database uniqueness/concurrency/RLS and actual provider receipt authentication
+are still unverified; mocked storage is not deployment evidence.
+
+**Previous selection, October 18: SON-02 / SMS-01 routine scheduling portion.**
+Branch `codex/son/routine-scheduling`. Implemented an admin-only planner with a
+read-only default, persisted-preference/Manila-day scheduling, current verified
+recipient eligibility, stable daily upserts and transactional cancellation of
+obsolete unsent jobs. Migration 07 prepares a backend-only queue; it is not
+applied. Queue writes remain disabled in demo mode and require an explicit
+scheduler flag plus live Auth/SMS configuration. No provider code, frontend,
+AWS/inference schedule, live database operation or local credentials were changed.
+The queue contains no SMS text, fishing target or delivery claim. Critical
+alerts remain independent. Scope/activation gates and exact producer/consumer
+handoffs: [routine-scheduling-contract.md](routine-scheduling-contract.md).
+SMS-01/SON-02 remain partial pending database concurrency/RLS verification,
+target/safety integration, job consumption and separate operational activation.
+Validation: 485 network-denied tests in 37 files and full TypeScript passed;
+changed-file secret scanning found no credentials and whitespace checks passed.
+The scheduling code is implemented; the SQL constraints/concurrency claims still
+require actual PostgreSQL verification before activation.
+
+**User acceptance update, October 18:** Son confirmed preference saving, then
+verified all four requested checks with an existing demo account: refresh keeps
+the signed-in account and saved details; changing the home port preserves saved
+preferences; logout makes direct dashboard access require login; password login
+restores the account, new port and preferences. These manual results complete
+the current demo account-flow acceptance. No duplicate scripted check or new
+test account is needed. The optional script has not run against the real database;
+live OTP/release acceptance and broader PRIV-01 work are not claimed complete.
+
+**October 18 account acceptance follow-up:** prepared
+`node scripts/check-demo-account.mjs --allow-demo-account-writes` for the remaining
+real account API check. It creates one disposable demo account, tests password
+login/logout/reload and all preference/habitat/port round-trips plus owner/consent
+rejection, and leaves that account paused on success. Without the flag it makes
+no requests. No OTP/SMS, deletion, migration or automatic write retry is included.
+The command passes an in-process test using the real Next.js account handlers
+and mocked HTTPS storage; its opt-in, local-origin, failure/redaction and no-retry
+guards are also tested. This is preparation, not evidence of a real database run.
+The initial launch on port 3000 failed because an existing development server
+already occupies that port. That server was preserved: its unsigned profile
+request returns 401 and `/register` returns 200 with demo registration/account
+mode confirmed in its rendered payload. All 428 network-denied tests in 34 files,
+full TypeScript, script syntax/help, secret scanning and whitespace checks pass.
+No real test account was created by this follow-up. The subsequent manual
+confirmation above supplies the current demo account-flow acceptance; the
+optional script is no longer required for it. Live-mode release checks and
+broader PRIV-01 prerequisites remain separate. See [verification instructions](../registration-https.md#validation-and-remaining-acceptance).
+
 **SON-01 follow-up, October 17, 2026: account response compatibility.**
 Live signup now reads the saved owner profile through the existing `profile_live`
 operation before returning success. This supplies the coordinates required by
@@ -31,12 +209,14 @@ SON-01 closure checklist (current account slice versus full package):
 - [x] Complete live registration response compatible with Tier's profile reader.
 - [x] Demo password login supplies persisted schedule metadata immediately.
 - [x] Mocked session/owner/consent guards and isolated browser preference/reload checks.
-- [ ] Actual database-backed account journey, login/logout/reload and preference readback.
+- [x] Preference saving in the running app (Son's manual confirmation, October 18).
+- [x] Demo account login/logout, refresh and port-only preservation (Son's manual confirmation, October 18).
 - [ ] PRIV-01 dependent report/fleet/delegation controls and reviewed access/retention
   design (REPORT-02, ENT-01 and D09/C08); no purge period or new role is invented.
 
-The focused compatibility implementation is complete. SON-01 remains partial;
-the last two checks are not established by the automated evidence above.
+The current demo account-flow implementation and acceptance are complete.
+SON-01 remains partial for the unchecked broader PRIV-01 work; this does not
+certify the live OTP/release journey.
 
 **User-selected PostgreSQL setting:** `DB_SSL_INSECURE=true` in the ignored
 `.env` and `.env.example`. The app honors the explicit override in development

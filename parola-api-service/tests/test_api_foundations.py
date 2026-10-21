@@ -177,13 +177,13 @@ class ApiWiringTests(unittest.TestCase):
         self.api.app.dependency_overrides[self.api.require_api_key] = lambda: 'fixture-key'
         self.addCleanup(self.api.app.dependency_overrides.clear)
 
-    def request(self, path, query='', body=None):
+    def request(self, path, query='', body=None, headers=None):
         # In-process ASGI, no HTTP client package, sockets or app startup events.
         payload = json.dumps(body).encode() if body is not None else b''
         scope = {'type': 'http', 'asgi': {'version': '3.0'}, 'http_version': '1.1',
                  'method': 'POST' if body is not None else 'GET', 'scheme': 'http',
                  'path': path, 'raw_path': path.encode(), 'query_string': query.encode(),
-                 'headers': [(b'content-type', b'application/json')],
+                 'headers': [(b'content-type', b'application/json')] + [(key.lower().encode(), value.encode()) for key, value in (headers or {}).items()],
                  'server': ('fixture', 80), 'client': ('fixture', 123), 'root_path': ''}
         messages = []
         async def receive():
@@ -204,6 +204,59 @@ class ApiWiringTests(unittest.TestCase):
         self.assertEqual(status, 200)
         self.assertEqual(data['prediction_date'], '2026-10-17')
         self.assertEqual(self.db.execute.call_args.args[1]['p_date'], clock.astimezone(MANILA).date())
+
+    def test_live_reads_cannot_bypass_inactive_geographic_enforcement(self):
+        with patch.dict('os.environ', {'PAROLA_AUTH_MODE': 'live', 'PAROLA_GEOGRAPHIC_ENFORCEMENT_ENABLED': 'false'}):
+            for path, query in [('/api/advisories/nearest', 'lat=14&lon=123'), ('/api/predictions/species', 'species=Tamban')]:
+                status, data = self.request(path, query)
+                self.assertEqual(status, 503)
+                self.assertEqual(data['detail']['code'], 'geographic_enforcement_inactive')
+        self.db.execute.assert_not_called()
+
+    def test_enforced_nearest_uses_trusted_proxy_identity_and_filters_before_limit(self):
+        owner = '11111111-1111-4111-8111-111111111111'
+        self.db.execute.return_value.scalar_one.return_value = 0
+        with patch.dict('os.environ', {'PAROLA_GEOGRAPHIC_ENFORCEMENT_ENABLED': 'true', 'PAROLA_API_KEY': 'fixture-only-key'}):
+            status, _ = self.request('/api/advisories/nearest', 'lat=14&lon=123', headers={
+                'x-api-key': 'fixture-only-key', 'x-parola-profile-id': owner})
+        self.assertEqual(status, 200)
+        statement, values = self.db.execute.call_args.args
+        self.assertEqual(values['geo_profile_id'], owner)
+        self.assertLess(str(statement).index('parola_geographic_eligibility'), str(statement).index('LIMIT'))
+
+    def test_enforced_reads_reject_public_user_id_as_authority(self):
+        with patch.dict('os.environ', {'PAROLA_GEOGRAPHIC_ENFORCEMENT_ENABLED': 'true', 'PAROLA_API_KEY': 'fixture-only-key'}):
+            status, _ = self.request('/api/advisories/nearest', 'lat=14&lon=123&user_id=11111111-1111-4111-8111-111111111111')
+        self.assertEqual(status, 401)
+        self.db.execute.assert_not_called()
+
+    def test_enforced_reads_do_not_return_empty_success_for_unknown_coverage(self):
+        self.db.execute.return_value.scalar_one.return_value = 1
+        with patch.dict('os.environ', {'PAROLA_GEOGRAPHIC_ENFORCEMENT_ENABLED': 'true', 'PAROLA_API_KEY': 'fixture-only-key'}):
+            status, data = self.request('/api/advisories/nearest', 'lat=14&lon=123', headers={
+                'x-api-key': 'fixture-only-key', 'x-parola-profile-id': '11111111-1111-4111-8111-111111111111'})
+        self.assertEqual(status, 503)
+        self.assertEqual(data['detail']['code'], 'geographic_data_unavailable')
+
+    def test_enforced_reads_reject_a_different_profile_in_public_query(self):
+        with patch.dict('os.environ', {'PAROLA_GEOGRAPHIC_ENFORCEMENT_ENABLED': 'true', 'PAROLA_API_KEY': 'fixture-only-key'}):
+            status, _ = self.request('/api/advisories/nearest', 'user_id=22222222-2222-4222-8222-222222222222', headers={
+                'x-api-key': 'fixture-only-key', 'x-parola-profile-id': '11111111-1111-4111-8111-111111111111'})
+        self.assertEqual(status, 403)
+        self.db.execute.assert_not_called()
+
+    def test_species_endpoint_uses_same_geographic_authority_and_habitat(self):
+        self.db.execute.return_value.scalar_one.return_value = 0
+        self.db.execute.return_value.fetchone.return_value = None
+        owner = '11111111-1111-4111-8111-111111111111'
+        with patch.dict('os.environ', {'PAROLA_GEOGRAPHIC_ENFORCEMENT_ENABLED': 'true', 'PAROLA_API_KEY': 'fixture-only-key'}), \
+                patch.object(self.api, 'find_species_profile', return_value={'category': 'demersal', 'species_name': 'Fixture'}):
+            status, data = self.request('/api/predictions/species', 'species=Fixture', headers={
+                'x-api-key': 'fixture-only-key', 'x-parola-profile-id': owner})
+        self.assertEqual((status, data), (200, []))
+        statement, values = self.db.execute.call_args.args
+        self.assertEqual((values['geo_profile_id'], values['habitat']), (owner, 'demersal'))
+        self.assertIn('parola_geographic_eligibility', str(statement))
 
     def test_explicit_prediction_day_is_not_shifted(self):
         status, data = self.request('/api/advisories/nearest', 'lat=14.1&lon=122.9&prediction_date=2026-10-15')

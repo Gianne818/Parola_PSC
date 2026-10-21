@@ -115,6 +115,32 @@ working DNS and HTTPS access. This is not an offline account store.
 
 ## Validation and remaining acceptance
 
+On October 18, Son confirmed saved preferences and subsequently verified all
+four requested checks using an existing demo account: signed-in refresh retains
+the account/details; a home-port edit preserves preferences after refresh;
+logout makes direct dashboard access require login; phone/password sign-in
+restores the saved account, port and preferences. These user-provided manual
+results complete the current demo account-flow acceptance. Rerunning the script
+or creating another test account is not required. Live OTP/release acceptance
+and broader privacy/delegation work remain separate.
+
+For an optional automated account API round-trip, start the local app in demo mode and run:
+
+```powershell
+node scripts/check-demo-account.mjs --allow-demo-account-writes
+```
+
+This is an explicit opt-in to create one real demo test account in the configured
+database through localhost:3000. It checks registration, wrong/correct password,
+logout/session reload, five-day/time/language persistence for all three habitats,
+port-only preservation, invalid days, cross-account/assisted-write denial and
+demo-consent denial. It never calls OTP/SMS endpoints or automatically retries a
+write. On success the test account is left paused without messaging consent;
+no existing account is changed or deleted. A Git-ignored `.son-01-verification-*.local`
+report identifies the created account for later operator review. No password or
+cookie is saved. The command without the flag prints help and makes no requests.
+These API checks do not replace browser navigation acceptance.
+
 The account-compatibility follow-up passed 396 network-denied tests, full
 TypeScript and 30 isolated TIER-01 browser checks. The latter cover real profile/
 settings components with mocked account responses, including saves, reload,
@@ -134,8 +160,9 @@ confirmed migration installation, execution grants, search path and the health
 operation with controlled service-role claims, plus rejection of non-service
 claims. The user's subsequent terminal check established authenticated HTTPS
 health access using the configured backend key. Neither check exercised account
-writes. Browser demo signup is user-reported working; login, reload, preference
-persistence and full live registration acceptance remain separate checks.
+writes. Browser demo signup, preference saving, login/logout, refresh and
+port-only preservation are user-reported working. Full live registration/release
+acceptance remains separate.
 
 Security advisor categories/counts were unchanged before and after installation,
 with no finding for the new registry function. Existing findings include

@@ -18,6 +18,7 @@ import schemas
 import hsi_calculator
 from species_catalog import resolve_species
 from prediction_ingestion import IngestionError, ingest_predictions, get_ingestion_run
+from geographic_access import geographic_read_profile, geographic_predicate, require_geographic_coverage
 
 DEFAULT_SPECIES_SEED = [
     {
@@ -264,6 +265,7 @@ def health_check():
     tags=["Advisories"]
 )
 def get_nearest_advisories(
+    request: Request,
     lat: Optional[float] = Query(None, ge=-90, le=90, description="Latitude of user/vessel"),
     lon: Optional[float] = Query(None, ge=-180, le=180, description="Longitude of user/vessel"),
     user_id: Optional[uuid.UUID] = Query(None, description="Registered User UUID in Supabase"),
@@ -272,6 +274,9 @@ def get_nearest_advisories(
     limit: int = Query(5, ge=1, le=20),
     db: Session = Depends(get_db)
 ):
+    geographic_profile = geographic_read_profile(request)
+    if geographic_profile and user_id is not None and str(user_id) != geographic_profile:
+        raise HTTPException(403, detail={'code': 'geographic_owner_mismatch'})
     if user_id is not None:
         coords = db.execute(
             text("SELECT ST_Y(home_port_geom) AS lat, ST_X(home_port_geom) AS lon FROM public.users WHERE id = :uid"),
@@ -285,7 +290,9 @@ def get_nearest_advisories(
     else:
         raise HTTPException(status_code=400, detail="Must specify either (lat, lon) OR user_id.")
 
-    sql_query = text("""
+    require_geographic_coverage(db, geographic_profile, prediction_date, min_probability)
+    geographic_filter = geographic_predicate('g.centroid_geom') if geographic_profile else ''
+    sql_query = text(f"""
         SELECT 
             g.id AS grid_id,
             g.catch_probability,
@@ -323,6 +330,7 @@ def get_nearest_advisories(
         FROM public.daily_grid_predictions g
         WHERE g.prediction_date = :p_date
           AND g.catch_probability >= :p_prob
+          {geographic_filter}
         ORDER BY g.centroid_geom <-> ST_SetSRID(ST_MakePoint(:lon, :lat), 4326)
         LIMIT :limit
     """)
@@ -332,7 +340,8 @@ def get_nearest_advisories(
         "lon": query_lon,
         "p_date": prediction_date,
         "p_prob": min_probability,
-        "limit": limit
+        "limit": limit,
+        "geo_profile_id": geographic_profile
     }).fetchall()
 
     hotspots = [
@@ -556,12 +565,14 @@ def get_all_species(db: Session = Depends(get_db)):
     tags=["Species Predictions"]
 )
 def get_species_predictions(
+    request: Request,
     species: str = Query(..., min_length=1, max_length=100, description="Exact catalog ID or alias, e.g. pelagic:1 or Tamban"),
     prediction_date: Optional[date_type] = Query(None, description="Prediction date (defaults to latest available date)"),
     min_probability: float = Query(0.10, ge=0.0, le=1.0, description="Minimum unchanged habitat-model score; not species presence"),
     limit: int = Query(50, ge=1, le=500),
     db: Session = Depends(get_db)
 ):
+    geographic_profile = geographic_read_profile(request)
     profile = find_species_profile(db, species)
     if not profile:
         raise HTTPException(
@@ -571,13 +582,17 @@ def get_species_predictions(
 
     target_date = prediction_date
     if not target_date:
-        latest_row = db.execute(text("SELECT MAX(prediction_date) FROM public.daily_grid_predictions")).fetchone()
+        latest_row = db.execute(text("""SELECT MAX(prediction_date) FROM public.daily_grid_predictions
+            WHERE prediction_date <= :today AND model_type = :habitat"""),
+            {'today': manila_today(), 'habitat': profile['category']}).fetchone()
         if latest_row and latest_row[0]:
             target_date = latest_row[0]
         else:
             target_date = manila_today()
 
-    sql_query = text("""
+    require_geographic_coverage(db, geographic_profile, target_date, min_probability, profile['category'])
+    geographic_filter = geographic_predicate('centroid_geom') if geographic_profile else ''
+    sql_query = text(f"""
         SELECT 
             id AS grid_id,
             prediction_date,
@@ -591,11 +606,13 @@ def get_species_predictions(
         FROM public.daily_grid_predictions
         WHERE prediction_date = :p_date AND model_type = :habitat
           AND catch_probability >= :minimum
+          {geographic_filter}
         ORDER BY catch_probability DESC, id
         LIMIT :limit
     """)
 
-    rows = db.execute(sql_query, {"p_date": target_date, "habitat": profile["category"], "minimum": min_probability, "limit": limit}).fetchall()
+    rows = db.execute(sql_query, {"p_date": target_date, "habitat": profile["category"], "minimum": min_probability, "limit": limit,
+                                 "geo_profile_id": geographic_profile}).fetchall()
 
     results = []
     sp_name = profile.get("species_name") if isinstance(profile, dict) else getattr(profile, "species_name", species)
