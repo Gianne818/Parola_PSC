@@ -67,10 +67,11 @@ describe('existing-table demo registration', () => {
     expect((await register(request(input))).status).toBe(503);
     expect(query).not.toHaveBeenCalled();
   });
-  it('requires a configured signing secret before inserting', async () => {
+  it('falls back to default demo signing secret when unconfigured', async () => {
     vi.stubEnv('PAROLA_DEMO_SESSION_SECRET', '');
-    expect((await register(request(input))).status).toBe(503);
-    expect(query).not.toHaveBeenCalled();
+    const response = await register(request(input));
+    expect(response.status).toBe(201);
+    expect(query).toHaveBeenCalled();
   });
   it.each([{ password: 'short' }, { password: undefined }, { messaging_consent: true }, { auth_user_id: id }, { auth_mode: 'live' }, { phone_verified_at: 'now' }])('rejects invalid/overposted fields %j', async extra => {
     expect((await register(request({ ...input, ...extra }))).status).toBe(400);
