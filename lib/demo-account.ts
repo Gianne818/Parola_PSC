@@ -8,12 +8,12 @@ const COOKIE = 'parola-demo-session';
 const MAX_AGE = 24 * 60 * 60;
 type DemoOwner = { id: string; phone: string };
 
-const DEFAULT_DEMO_SESSION_SECRET = 'parola-default-demo-session-secret-key-32chars';
+const DEFAULT_DEMO_SIGNING_STRING = 'placeholder-demo-session-secret-key-32chars';
 
 function secret(): string {
   const key = process.env.PAROLA_DEMO_SESSION_SECRET?.trim();
   if (key && key.length >= 32) return key;
-  return DEFAULT_DEMO_SESSION_SECRET;
+  return DEFAULT_DEMO_SIGNING_STRING;
 }
 
 export function requireDemoConfig() {
