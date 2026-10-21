@@ -17,8 +17,8 @@ export function hotspotPresentation(area: DashboardHotspot) {
 }
 
 const HABITATS = {
-  pelagic: { letter: 'P', label: 'Pelagic', outline: '#125f94' },
-  demersal: { letter: 'D', label: 'Demersal', outline: '#376426' },
+  pelagic: { letter: 'P', label: 'Pelagic', outline: '#1d4ed8' },
+  demersal: { letter: 'D', label: 'Demersal', outline: '#c2410c' },
   mixed: { letter: 'M', label: 'Mixed habitat', outline: '#59646d' },
   unknown: { letter: '?', label: 'Habitat unknown', outline: '#68737a' },
 } as const;
@@ -29,6 +29,6 @@ export function habitatFill(habitat: Habitat, percent: number): string {
   if (habitat === 'unknown') return '#edf0f2';
   const amount = percent / 100;
   return habitat === 'pelagic'
-    ? `hsl(${199 + 9 * amount} ${52 + 40 * amount}% ${83 - 43 * amount}%)`
-    : `hsl(${72 + 64 * amount} ${42 + 30 * amount}% ${80 - 49 * amount}%)`;
+    ? `hsl(${215 + 10 * amount} ${55 + 40 * amount}% ${85 - 40 * amount}%)`
+    : `hsl(${36 - 12 * amount} ${55 + 40 * amount}% ${86 - 38 * amount}%)`;
 }

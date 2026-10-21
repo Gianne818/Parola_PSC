@@ -36,10 +36,10 @@ All packages remain unchecked: reorganization is not implementation evidence. **
 - [ ] **TOBY-02 | P0 | Delivery: needs verification | Integration: needs verification**
 - **Covers:** [DATA-03-TOBY](toby-history.md#data-03-toby), [MAP-03-TOBY](toby-history.md#map-03-toby).
 - **Allowed files:** SCIENCE, INFERENCE, HSI above, limited by the exact shared ownership map.
-- **Work:** Use real environmental/reef/bottom inputs, 2D gradients and aligned training/inference; remove forced scores and unrelated species fallback.
+- **Work:** Use real environmental/reef/bottom inputs, 2D gradients and aligned training/inference; remove forced scores and unrelated species fallback. Persist and export Copernicus ocean current vectors (`uo`, `vo` velocity/heading) alongside SST and chlorophyll to identify up-current feeding zones. Differentiate spatial footprints: 9 km Copernicus ocean physics grid for Pelagic vs. 3 km localized reef structure footprint for Demersal.
 - **Start / prerequisites:** Versioned local fixtures now. Request dependencies from Son; no installs or invented observations.
-- **Acceptance:** Units/gradients/missingness and pelagic/demersal semantics verified; no random inputs or arbitrary universal depth; calibration needs evidence.
-- **Integration handoff:** SON-04 receives units/fields/score limits; TIER-02 consumes supported values (C01).
+- **Acceptance:** Units/gradients/missingness and pelagic/demersal semantics verified; no random inputs or arbitrary universal depth; calibration needs evidence. Current vectors carry valid m/s units and degrees heading.
+- **Integration handoff:** SON-04 receives units/fields/score limits plus current vector schema; TIER-02 consumes supported values and renders directional flow arrows (C01).
 
 <a id="toby-03"></a>
 ### TOBY-03: Run integrity, provenance and pipeline robustness
@@ -118,6 +118,15 @@ Each original assignment maps once below. Historical labels do not establish cur
 
 ### Urgent task: minimum hotspot score of 50% — October 17, 2026
 
+### Ocean current vectors (`uo`, `vo`), frontal sweet spots, and Demersal 3 km radius refinement — October 21, 2026
+
+- **Demersal vs Pelagic footprint refinement:** Identified and corrected the model radius discrepancy: Pelagic retains the 9 km Copernicus ocean physics cell (`PREDICTION_RADIUS_KM = 9`), while Demersal is refined to a localized 3 km reef zone (`DEMERSAL_RADIUS_KM = 3`) matching the PostGIS `0.02°` bounding envelope (`run_daily_predictions.py#L362`), Allen Coral Atlas reef crests, and benthic home ranges. Visual integration delivered in `MapComponent.tsx` and `MapInner.tsx`.
+- **Copernicus current vectors (`uo`, `vo`) and sweet-spot modeling:**
+  In `backend/aws-inference/run_daily_predictions.py`, Copernicus `uo` and `vo` horizontal ocean current velocities are ingested and used for inference, but were omitted from the database write. Tasked Toby with:
+  1) Persisting `uo` and `vo` (or computed current speed in m/s and current heading in degrees) into `public.daily_grid_predictions` when inserting hotspot rows.
+  2) Handoff to Son to update database migration and API serialization in `app/api/advisories/nearest/route.ts`.
+  3) Handoff to Tier to render an ocean current drift vector arrow on the selected hotspot circle showing the flow direction and up-current feeding side.
+
 - **Latest user-requested daily pipeline deployment & 25% threshold slider (October 17, 2026):**
   Toby explicitly authorized integrating and deploying the updated Pelagic +
   Demersal daily hotspot prediction pipeline from
@@ -172,5 +181,7 @@ Log selected portions with package/legacy IDs, changed files, automated/manual e
 | From package / portion | Producer → consumer | Missing interface and example | Integration status / evidence |
 | --- | --- | --- |
 | Urgent 50% refresh: future daily operation | Toby's real-input producer + Son's shared-runtime coordination → AWS scorer/publication job | Schedule generation and publication of `inputs/real-pelagic/YYYY-MM-DD/features.csv` plus its validated manifest, using the current provider runtime. The existing scorer requires this exact dated input and fails when missing. Coordinate any shared dependency changes; no such manifest changes were made in this task. | October 17 pelagic integration verified; subsequent-day automation remains unimplemented. See the run report for the concrete producer/consumer example. |
+| TOBY-02: ocean current vectors and heading | Toby's inference publisher → Son's database migration and API serializer | Schema and insert payload containing `current_u DOUBLE PRECISION, current_v DOUBLE PRECISION` (or `current_speed_mps`, `current_heading_deg`) for each hotspot row in `public.daily_grid_predictions` and `/api/advisories/nearest`. | Pending Son coordination. |
+| TOBY-02: current flow visualization | Toby/Son current vector data → Tier's map circle visualization | Flow heading angle (degrees) and speed (m/s) to draw a directional current drift arrow inside the selected 9 km / 3 km hotspot zone. | Pending upstream API handoff. |
 
 Historical requests remain preserved in the archive. Add each still-applicable interface here once with its producer/consumer and acceptance evidence. Do not copy blanket gates onto every package.
