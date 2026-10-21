@@ -102,6 +102,10 @@ export interface Hotspot {
   catchProbability?: number;
   sst?: number;
   chlA?: number;
+  currentU?: number;
+  currentV?: number;
+  currentSpeed?: number;
+  currentHeading?: number;
   waveHeight?: number; // meters
   windSpeed?: number; // km/h
   stormSignal?: number;

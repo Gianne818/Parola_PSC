@@ -1,8 +1,8 @@
 'use client';
 
-import { ChevronRight, Compass, Fish } from 'lucide-react';
+import { ChevronRight, Compass, Fish, Waves } from 'lucide-react';
 import type { ReactNode } from 'react';
-import { manilaDate, predictionPercent, type FishingArea } from '@/lib/dashboard';
+import { evaluateCurrentDrift, manilaDate, predictionPercent, type FishingArea } from '@/lib/dashboard';
 import type { DashboardCopy } from './dashboard-copy';
 import styles from './dashboard.module.css';
 import PredictionProvenance from './PredictionProvenance';
@@ -10,6 +10,14 @@ import { predictionDayLabel } from '@/lib/frontend/prediction-presentation';
 
 export function AreaDetails({ area, copy, weather }: { area: FishingArea; copy: DashboardCopy; weather?: ReactNode }) {
   const percent = area.source === 'model' ? predictionPercent(area.catchProbability) : null;
+  const rawSpeed = area.currentSpeed ?? (area as any).current_speed;
+  const rawHeading = area.currentHeading ?? (area as any).current_heading;
+  const currentSpeed = typeof rawSpeed === 'number' && Number.isFinite(rawSpeed) ? rawSpeed : null;
+  const currentHeading = typeof rawHeading === 'number' && Number.isFinite(rawHeading) ? rawHeading : null;
+  const drift = (currentSpeed != null && currentHeading != null)
+    ? evaluateCurrentDrift(currentSpeed, currentHeading, area.type)
+    : null;
+
   return <div className={styles.areaDetails}>
     <div className={styles.areaDistance}><Compass size={22} aria-hidden="true" /><strong>{area.distanceKm.toFixed(1)} km</strong><span>{area.compassBearing}</span></div>
     {area.source === 'sample' && <p className={styles.notice}>{copy.sample}</p>}
@@ -22,6 +30,45 @@ export function AreaDetails({ area, copy, weather }: { area: FishingArea; copy: 
     <p className={styles.panelDescription}>{copy.estimateNote}</p>
     {area.speciesAdjusted && <p className={styles.panelDescription}>{copy.speciesNote}</p>}
     {weather}
+    {drift && (
+      <div className={styles.driftCard}>
+        <div className={styles.driftHeader}>
+          <div className={styles.driftTitle}>
+            <Waves size={18} aria-hidden="true" className={styles.driftIcon} />
+            <span>🌊 Ocean Current & Drift Advisory</span>
+          </div>
+          <span className={`${styles.driftBadge} ${styles[`driftBadge_${drift.currentStrength}`]}`}>
+            {drift.currentStrength === 'optimal' ? 'Optimal Feeding Flow' : drift.currentStrength === 'strong' ? 'Strong Current' : 'Slack Current'}
+          </span>
+        </div>
+        <dl className={styles.driftMetrics}>
+          <div>
+            <dt>{copy.flowSpeed}</dt>
+            <dd>{drift.speedMps.toFixed(2)} m/s ({drift.speedKnots} kts)</dd>
+          </div>
+          <div>
+            <dt>{copy.driftPath}</dt>
+            <dd>{drift.flowHeading}° {drift.flowDirection}</dd>
+          </div>
+        </dl>
+        <div className={styles.driftTacticalGrid}>
+          <div className={styles.driftTacticalBox}>
+            <span className={styles.driftTacticalLabel}>
+              <span aria-hidden="true">🎯</span> Up-Current Entry ({copy.feedEdge}):
+            </span>
+            <strong className={styles.driftTacticalValue}>{drift.upstreamDirection} Boundary</strong>
+            <small className={styles.driftTacticalSubtitle}>Predatory fish face into oncoming flow here.</small>
+          </div>
+          <div className={styles.driftTacticalBox}>
+            <span className={styles.driftTacticalLabel}>
+              <span aria-hidden="true">🧭</span> Recommended Drift:
+            </span>
+            <strong className={styles.driftTacticalValue}>Drift {drift.flowDirection} across the zone</strong>
+          </div>
+        </div>
+        <p className={styles.driftAdviceText}>{drift.tacticalAdvice}</p>
+      </div>
+    )}
     <PredictionProvenance area={area} />
   </div>;
 }

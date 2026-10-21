@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { advisoryState, manilaDate, maskedPhone, nearbyAreas, predictionPercent, retainWeather, reusableAreaWeather, smsOutcome, type DashboardWeather, type FishingArea } from './dashboard';
+import { advisoryState, evaluateCurrentDrift, manilaDate, maskedPhone, nearbyAreas, predictionPercent, retainWeather, reusableAreaWeather, smsOutcome, type DashboardWeather, type FishingArea } from './dashboard';
 import { PHILIPPINE_REGIONS } from '@/data/philippineRegions';
 import { DASHBOARD_COPY } from '@/components/dashboard/dashboard-copy';
 
@@ -108,5 +108,68 @@ describe('SMS results and language support', () => {
   it.each(['tl', 'ceb', 'hil'] as const)('provides all dashboard copy in %s', language => {
     expect(Object.keys(DASHBOARD_COPY[language]).sort()).toEqual(Object.keys(DASHBOARD_COPY.en).sort());
     expect(Object.values(DASHBOARD_COPY[language]).every(value => value.length > 0)).toBe(true);
+  });
+});
+
+describe('ocean current drift evaluation', () => {
+  it('returns null when speed or heading is missing or not finite', () => {
+    expect(evaluateCurrentDrift(null, 90)).toBeNull();
+    expect(evaluateCurrentDrift(undefined, 90)).toBeNull();
+    expect(evaluateCurrentDrift(0.4, null)).toBeNull();
+    expect(evaluateCurrentDrift(0.4, undefined)).toBeNull();
+    expect(evaluateCurrentDrift(NaN, 90)).toBeNull();
+    expect(evaluateCurrentDrift(0.4, NaN)).toBeNull();
+    expect(evaluateCurrentDrift(Infinity, 90)).toBeNull();
+    expect(evaluateCurrentDrift(0.4, -Infinity)).toBeNull();
+  });
+
+  it.each([
+    { heading: 0, flowDir: 'N', upHeading: 180, upDir: 'S' },
+    { heading: 45, flowDir: 'NE', upHeading: 225, upDir: 'SW' },
+    { heading: 90, flowDir: 'E', upHeading: 270, upDir: 'W' },
+    { heading: 135, flowDir: 'SE', upHeading: 315, upDir: 'NW' },
+    { heading: 180, flowDir: 'S', upHeading: 0, upDir: 'N' },
+    { heading: 225, flowDir: 'SW', upHeading: 45, upDir: 'NE' },
+    { heading: 270, flowDir: 'W', upHeading: 90, upDir: 'E' },
+    { heading: 315, flowDir: 'NW', upHeading: 135, upDir: 'SE' },
+    { heading: 360, flowDir: 'N', upHeading: 180, upDir: 'S' },
+    { heading: -90, flowDir: 'W', upHeading: 90, upDir: 'E' },
+  ])('calculates cardinal/ordinal headings and upstream vectors for heading $heading', ({ heading, flowDir, upHeading, upDir }) => {
+    const evalResult = evaluateCurrentDrift(0.35, heading);
+    expect(evalResult).not.toBeNull();
+    expect(evalResult!.flowDirection).toBe(flowDir);
+    expect(evalResult!.upstreamHeading).toBe(upHeading);
+    expect(evalResult!.upstreamDirection).toBe(upDir);
+  });
+
+  it.each([
+    { speedMps: 0.10, expectedKnots: 0.2, strength: 'slack', label: 'Slack / Weak Current (< 0.3 kts)' },
+    { speedMps: 0.14, expectedKnots: 0.3, strength: 'slack', label: 'Slack / Weak Current (< 0.3 kts)' },
+    { speedMps: 0.15, expectedKnots: 0.3, strength: 'optimal', label: 'Moderate / Optimal Feeding Flow (0.3–1.2 kts)' },
+    { speedMps: 0.40, expectedKnots: 0.8, strength: 'optimal', label: 'Moderate / Optimal Feeding Flow (0.3–1.2 kts)' },
+    { speedMps: 0.60, expectedKnots: 1.2, strength: 'optimal', label: 'Moderate / Optimal Feeding Flow (0.3–1.2 kts)' },
+    { speedMps: 0.61, expectedKnots: 1.2, strength: 'strong', label: 'Strong Drift Current (> 1.2 kts)' },
+    { speedMps: 1.00, expectedKnots: 1.9, strength: 'strong', label: 'Strong Drift Current (> 1.2 kts)' },
+  ])('categorizes flow speed $speedMps m/s correctly', ({ speedMps, expectedKnots, strength, label }) => {
+    const result = evaluateCurrentDrift(speedMps, 90);
+    expect(result).not.toBeNull();
+    expect(result!.speedKnots).toBe(expectedKnots);
+    expect(result!.currentStrength).toBe(strength);
+    expect(result!.strengthLabel).toBe(label);
+  });
+
+  it('generates tactical advice tailored to pelagic and demersal habitats', () => {
+    const pelagic = evaluateCurrentDrift(0.35, 90, 'pelagic');
+    expect(pelagic!.tacticalAdvice).toBe(
+      'Current flows E across the zone. Predatory pelagics face into oncoming current along the W rim. Enter on the W edge (Prime Feeding Line) and drift E with your lines.'
+    );
+
+    const demersal = evaluateCurrentDrift(0.35, 90, 'demersal');
+    expect(demersal!.tacticalAdvice).toBe(
+      'Current sweeps E into the reef slope. Fish or anchor along the up-current (W) face where incoming flow pushes bait and nutrients against the reef wall.'
+    );
+
+    const defaultHabitat = evaluateCurrentDrift(0.35, 90);
+    expect(defaultHabitat!.tacticalAdvice).toBe(pelagic!.tacticalAdvice);
   });
 });

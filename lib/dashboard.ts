@@ -125,3 +125,68 @@ export function smsOutcome(responseOk: boolean, data: { success?: boolean; mode?
   if (data.mode === 'LIVE_DISPATCH') return 'accepted';
   throw new Error('SMS response could not be confirmed.');
 }
+
+export interface CurrentDriftEvaluation {
+  speedMps: number;
+  speedKnots: number;
+  flowHeading: number;
+  flowDirection: string;
+  upstreamHeading: number;
+  upstreamDirection: string;
+  currentStrength: 'slack' | 'optimal' | 'strong';
+  strengthLabel: string;
+  tacticalAdvice: string;
+}
+
+export function compassDirection16(degrees: number): string {
+  const directions = ['N', 'NNE', 'NE', 'ENE', 'E', 'ESE', 'SE', 'SSE', 'S', 'SSW', 'SW', 'WSW', 'W', 'WNW', 'NW', 'NNW'];
+  const index = Math.round(((degrees % 360) + 360) % 360 / 22.5) % 16;
+  return directions[index];
+}
+
+export function evaluateCurrentDrift(
+  speedMps?: number | null,
+  headingDeg?: number | null,
+  habitat: 'pelagic' | 'demersal' | 'both' = 'pelagic'
+): CurrentDriftEvaluation | null {
+  if (speedMps == null || headingDeg == null || !Number.isFinite(speedMps) || !Number.isFinite(headingDeg)) {
+    return null;
+  }
+
+  const speedKnots = Number((speedMps * 1.94384).toFixed(1));
+  const flowHeading = Math.round(((headingDeg % 360) + 360) % 360);
+  const upstreamHeading = (flowHeading + 180) % 360;
+
+  const flowDirection = compassDirection16(flowHeading);
+  const upstreamDirection = compassDirection16(upstreamHeading);
+
+  let currentStrength: 'slack' | 'optimal' | 'strong';
+  let strengthLabel: string;
+
+  if (speedMps < 0.15) {
+    currentStrength = 'slack';
+    strengthLabel = 'Slack / Weak Current (< 0.3 kts)';
+  } else if (speedMps <= 0.60) {
+    currentStrength = 'optimal';
+    strengthLabel = 'Moderate / Optimal Feeding Flow (0.3–1.2 kts)';
+  } else {
+    currentStrength = 'strong';
+    strengthLabel = 'Strong Drift Current (> 1.2 kts)';
+  }
+
+  const tacticalAdvice = habitat === 'demersal'
+    ? `Current sweeps ${flowDirection} into the reef slope. Fish or anchor along the up-current (${upstreamDirection}) face where incoming flow pushes bait and nutrients against the reef wall.`
+    : `Current flows ${flowDirection} across the zone. Predatory pelagics face into oncoming current along the ${upstreamDirection} rim. Enter on the ${upstreamDirection} edge (Prime Feeding Line) and drift ${flowDirection} with your lines.`;
+
+  return {
+    speedMps,
+    speedKnots,
+    flowHeading,
+    flowDirection,
+    upstreamHeading,
+    upstreamDirection,
+    currentStrength,
+    strengthLabel,
+    tacticalAdvice,
+  };
+}

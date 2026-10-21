@@ -78,17 +78,35 @@ def clean_database_url(db_url):
     return urlunsplit((parts.scheme, parts.netloc, parts.path, urlencode(filtered), parts.fragment))
 
 
+def compute_current_vector(u, v):
+    """Calculate current speed (m/s) and oceanographic heading (degrees toward which water flows from True North)."""
+    u_f = float(u)
+    v_f = float(v)
+    speed = float(np.sqrt(u_f**2 + v_f**2))
+    heading = float((np.degrees(np.arctan2(u_f, v_f)) + 360) % 360)
+    return speed, heading
+
+
 
 def get_target_date(dataset_id, requested_date):
     """Return requested_date if within dataset bounds, else the latest available date."""
-    ds = copernicusmarine.open_dataset(dataset_id=dataset_id, variables=["thetao"])
-    times = pd.to_datetime(ds.time.values)
-    req_dt = pd.to_datetime(requested_date)
-    if req_dt < times.min() or req_dt > times.max():
-        latest = times.max().strftime("%Y-%m-%d")
-        print(f"Note: Requested date {requested_date} is outside dataset range ({times.min().strftime('%Y-%m-%d')} to {latest}). Using latest available date: {latest}")
-        return latest
-    return requested_date
+    try:
+        ds = copernicusmarine.open_dataset(
+            dataset_id=dataset_id,
+            variables=["thetao"],
+            minimum_longitude=120.0, maximum_longitude=121.0,
+            minimum_latitude=12.0, maximum_latitude=13.0
+        )
+        times = pd.to_datetime(ds.time.values)
+        req_dt = pd.to_datetime(requested_date)
+        if req_dt < times.min() or req_dt > times.max():
+            latest = times.max().strftime("%Y-%m-%d")
+            print(f"Note: Requested date {requested_date} is outside dataset range ({times.min().strftime('%Y-%m-%d')} to {latest}). Using latest available date: {latest}")
+            return latest
+        return requested_date
+    except Exception as e:
+        print(f"Note: Could not check date bounds ({e}). Using requested date: {requested_date}")
+        return requested_date
 
 
 def compute_monthly_climatology(current_month, target_lat, target_lon):
@@ -336,6 +354,8 @@ def run_pipeline(requested_today=None, force=False, event_enabled=None):
     live_matched = df_today.iloc[idx_live].reset_index(drop=True)
     dem_unique["thetao_live"] = live_matched["thetao"].values
     dem_unique["chl_live"] = live_matched["chl"].values
+    dem_unique["uo_live"] = live_matched["uo"].values
+    dem_unique["vo_live"] = live_matched["vo"].values
 
     dem_candidates = dem_unique[dem_unique["catch_probability"] >= MINIMUM_CATCH_PROBABILITY].copy()
     dem_offshore = filter_offshore(dem_candidates, "decimalLatitude", "decimalLongitude", 1.2, ph_land, ph_boundary)
@@ -348,30 +368,42 @@ def run_pipeline(requested_today=None, force=False, event_enabled=None):
         rows_to_insert = []
         for _, r in pel_peaks.iterrows():
             lat, lon = float(r["grid_lat"]), float(r["grid_lon"])
+            u = float(r["uo"])
+            v = float(r["vo"])
+            speed = float(np.sqrt(u**2 + v**2))
+            heading = float((np.degrees(np.arctan2(u, v)) + 360) % 360)
             rows_to_insert.append((
                 requested_today, "pelagic",
                 lon - half, lat - half, lon + half, lat + half,
                 lon, lat,
                 float(r["catch_probability"]), int(r["dbscan_cluster_id"]),
-                float(r["thetao"]), float(r["chl"])
+                float(r["thetao"]), float(r["chl"]),
+                u, v, speed, heading
             ))
         for idx_d, r in dem_peaks.iterrows():
             lat, lon = float(r["decimalLatitude"]), float(r["decimalLongitude"])
+            u = float(r["uo_live"])
+            v = float(r["vo_live"])
+            speed = float(np.sqrt(u**2 + v**2))
+            heading = float((np.degrees(np.arctan2(u, v)) + 360) % 360)
             rows_to_insert.append((
                 requested_today, "demersal",
                 lon - 0.02, lat - 0.02, lon + 0.02, lat + 0.02,
                 lon, lat,
                 float(r["catch_probability"]), int(idx_d + 1),
-                float(r["thetao_live"]), float(r["chl_live"])
+                float(r["thetao_live"]), float(r["chl_live"]),
+                u, v, speed, heading
             ))
         insert_sql = """
             INSERT INTO public.daily_grid_predictions (
                 prediction_date, model_type, grid_cell_geom, centroid_geom,
-                catch_probability, dbscan_cluster_id, sst, chl_a
+                catch_probability, dbscan_cluster_id, sst, chl_a,
+                current_u, current_v, current_speed, current_heading
             ) VALUES (
                 %s, %s,
                 ST_MakeEnvelope(%s, %s, %s, %s, 4326),
                 ST_SetSRID(ST_MakePoint(%s, %s), 4326),
+                %s, %s, %s, %s,
                 %s, %s, %s, %s
             )
         """

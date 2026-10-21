@@ -246,4 +246,21 @@ describe('regional area API', () => {
     expect((await GET(request())).status).toBe(401);
     expect(getDbPool).not.toHaveBeenCalled();
   });
+  it('serializes current vector attributes when present', async () => {
+    const query = vi.fn().mockResolvedValue(stored([{
+      ...row,
+      current_u: 0.15,
+      current_v: -0.22,
+      current_speed: 0.27,
+      current_heading: 145.7,
+    }]));
+    vi.mocked(getDbPool).mockReturnValue({ query } as never);
+    const body = await (await GET(request())).json();
+    expect(body.hotspots[0]).toMatchObject({
+      current_u: 0.15,
+      current_v: -0.22,
+      current_speed: 0.27,
+      current_heading: 145.7,
+    });
+  });
 });
