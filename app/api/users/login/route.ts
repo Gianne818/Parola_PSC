@@ -60,7 +60,7 @@ export async function POST(request: Request) {
     const timeout = setTimeout(() => controller.abort(), 8000);
     let response: Response;
     try {
-      response = await fetch(`${apiUrl}/api/users/login`, {
+      response = await fetch(new URL('/api/users/login', apiUrl), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({

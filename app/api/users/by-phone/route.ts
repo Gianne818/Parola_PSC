@@ -43,13 +43,14 @@ export async function GET(request: Request) {
       }
     }
 
-    // 2. Fallback to external backend server if configured
     const apiUrl = process.env.PAROLA_API_URL || 'http://localhost:8000';
     try {
       const controller = new AbortController();
       const timeout = setTimeout(() => controller.abort(), 8000);
       const backendApiKey = process.env.PAROLA_API_KEY || '';
-      const response = await fetch(`${apiUrl}/api/users/by-phone?phone_number=${encodeURIComponent(cleanedPhone)}`, {
+      const targetUrl = new URL('/api/users/by-phone', apiUrl);
+      targetUrl.searchParams.set('phone_number', cleanedPhone);
+      const response = await fetch(targetUrl, {
         method: 'GET',
         headers: {
           'Content-Type': 'application/json',
