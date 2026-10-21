@@ -72,6 +72,10 @@ threshold at `>= 50%` and adding a user-adjustable minimum threshold slider
 and associated tests) so municipalities without `>= 50%` hotspots can access
 lower-threshold predictions down to 25%.
 
+### User-authorized hotspot marker styling exception — October 21, 2026
+
+The user explicitly identified as Toby and authorized Toby to update the briefing map hotspot markers in `components/features/hotspots/MapInner.tsx` (and related test fixtures) to remove the inner white background and 'D'/'P' text badges, adopt the maritime radar beacon styling with Royal Blue/Warm Coral contrast palettes, and display the transparent 9 km prediction radius circle when a hotspot is selected.
+
 Most-specific path wins. New files use the matching scope; any unlisted/ambiguous integration path needs Son to record its owner before edits. Ownership grants no authority beyond the selected assignment. Existing user changes must be preserved.
 
 | Owner | Owned paths / exceptions |

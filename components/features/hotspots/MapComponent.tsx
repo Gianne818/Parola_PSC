@@ -9,9 +9,11 @@ import { Anchor, Compass, Info, Navigation, ShieldCheck, MapPin } from "lucide-r
 import { ALL_SPECIES_CONFIGS, GENERAL_PELAGIC_COLOR, GENERAL_DEMERSAL_COLOR, GENERAL_PELAGIC_SHADES, GENERAL_DEMERSAL_SHADES, getSpeciesConfig } from "../../../utils/speciesColors";
 import { isClientCoordinate, isClientTargetCoordinate } from '@/lib/frontend/coordinates';
 
-/** Prediction radius the ML model was trained on: 9 km */
+/** Prediction radius the ML model was trained on: 9 km for pelagic ocean cells, 3 km for demersal reef zones */
 export const PREDICTION_RADIUS_KM = 9;
 export const PREDICTION_RADIUS_METERS = PREDICTION_RADIUS_KM * 1000;
+export const DEMERSAL_RADIUS_KM = 3;
+export const DEMERSAL_RADIUS_METERS = DEMERSAL_RADIUS_KM * 1000;
 export type MapViewMode = 'auto' | 'port' | 'region';
 
 // Dynamically import the real Leaflet map component with SSR disabled

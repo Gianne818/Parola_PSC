@@ -154,7 +154,7 @@ export async function POST(request: Request) {
     const timeout = setTimeout(() => controller.abort(), 8000);
     let response: Response;
     try {
-      response = await fetch(`${apiUrl}/api/feedback/submit`, {
+      response = await fetch(new URL('/api/feedback/submit', apiUrl), {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

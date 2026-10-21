@@ -9,7 +9,7 @@ import { isWithinPhilippineGeofence } from "../../../utils/spatial";
 import { getSpeciesColor, getSpeciesConfig, getHotspotDisplayColor, GENERAL_PELAGIC_COLOR, GENERAL_DEMERSAL_COLOR } from "../../../utils/speciesColors";
 import { PHILIPPINE_REGIONS, detectPhilippineRegion, isCoordinateInRegion } from "../../../data/philippineRegions";
 
-import { PREDICTION_RADIUS_KM, PREDICTION_RADIUS_METERS, type MapViewMode } from "./MapComponent";
+import { PREDICTION_RADIUS_KM, PREDICTION_RADIUS_METERS, DEMERSAL_RADIUS_KM, DEMERSAL_RADIUS_METERS, type MapViewMode } from "./MapComponent";
 import { isClientCoordinate } from '@/lib/frontend/coordinates';
 import { hotspotPresentation } from '@/lib/frontend/hotspot-presentation';
 
@@ -647,6 +647,10 @@ export default function MapInner({
           const species = spot.species || [spot.family || ""];
           const depth = Number.isFinite(spot.depth) ? spot.depth : null;
 
+          const isDemersal = type === "demersal";
+          const spotRadiusMeters = isDemersal ? DEMERSAL_RADIUS_METERS : PREDICTION_RADIUS_METERS;
+          const spotRadiusKm = isDemersal ? DEMERSAL_RADIUS_KM : PREDICTION_RADIUS_KM;
+
           const isUnsafe = !isBriefing && (manualOverrideHold || spot.isUnsafe);
           const isSelected = selectedHotspot?.id === spot.id;
 
@@ -656,7 +660,7 @@ export default function MapInner({
 
           const markerIcon = dashboardMarker ? L.divIcon({
             className: 'dashboard-hotspot-marker',
-            html: `<div aria-hidden="true" style="box-sizing:border-box;width:28px;height:28px;background:${dashboardMarker.fill};border:3px ${dashboardMarker.unavailable ? 'dashed' : 'solid'} ${dashboardMarker.outline};border-radius:50%;display:flex;align-items:center;justify-content:center;${isSelected ? 'box-shadow:0 0 0 2px #fff,0 0 0 5px #12211e;' : ''}"><span style="display:flex;align-items:center;justify-content:center;width:16px;height:16px;border-radius:50%;background:#fff;color:#12211e;font:700 11px/1 sans-serif;">${dashboardMarker.letter}</span></div>`,
+            html: `<div aria-hidden="true" style="box-sizing:border-box;width:28px;height:28px;background:${dashboardMarker.fill};border:2.5px ${dashboardMarker.unavailable ? 'dashed' : 'solid'} ${dashboardMarker.outline};border-radius:50%;display:flex;align-items:center;justify-content:center;position:relative;${isSelected ? 'box-shadow:0 0 0 2px #fff,0 0 0 5px #12211e;' : `box-shadow:0 2px 8px rgba(0,0,0,0.3), 0 0 10px ${dashboardMarker.outline}44;`}"><div style="position:absolute;inset:0;border-radius:50%;background:radial-gradient(circle, rgba(255,255,255,0.4) 0%, transparent 70%);pointer-events:none;"></div><div style="width:10px;height:10px;border-radius:50%;background:${dashboardMarker.unavailable ? '#ffffff' : dashboardMarker.outline};border:2px solid #ffffff;box-shadow:0 1px 4px rgba(0,0,0,0.45);position:relative;z-index:2;"></div></div>`,
             iconSize: [28, 28], iconAnchor: [14, 14],
           }) : isUnsafe
             ? unsafeHotspotIcon
@@ -673,16 +677,16 @@ export default function MapInner({
 
           return (
             <React.Fragment key={isBriefing ? spot.id : `${spot.id}-${speciesColor}-${isSelected ? "sel" : "nor"}`}>
-              {/* Single 9 km prediction radius circle (was double-drawn). Leaflet Circle uses real-world meters so it auto-scales with zoom. */}
-              {showPredictionRadius && (
+              {/* Prediction/reef radius circle: displayed on active selection or when enabled */}
+              {(isSelected || showPredictionRadius) && (
               <Circle
                 center={[lat, lng]}
-                radius={PREDICTION_RADIUS_METERS}
+                radius={spotRadiusMeters}
                 pathOptions={{
-                  color: speciesColor,
-                  fillColor: speciesColor,
-                  fillOpacity: isSelected ? 0.22 : 0.07,
-                  weight: isSelected ? 2 : 1,
+                  color: dashboardMarker ? dashboardMarker.outline : speciesColor,
+                  fillColor: dashboardMarker ? dashboardMarker.fill : speciesColor,
+                  fillOpacity: isSelected ? 0.12 : 0.05,
+                  weight: isSelected ? 1.5 : 1,
                   dashArray: isSelected ? "4, 4" : "2, 4",
                 }}
               />
@@ -724,7 +728,7 @@ export default function MapInner({
                         {isUnsafe ? "UNSAFE BEACON" : type}
                       </div>
                       <span className="text-[9px] font-bold text-gray-500 bg-slate-100 px-2 py-0.5 rounded-full border border-slate-200">
-                        📍 9 km Prediction Radius
+                        📍 {spotRadiusKm} km {isDemersal ? 'Reef Zone' : 'Prediction Radius'}
                       </span>
                     </div>
                   <div className="text-[10px] font-bold text-gray-500 space-y-1">
