@@ -1,7 +1,7 @@
 "use client";
 
-import React, { useEffect, useMemo, useRef } from "react";
-import { MapContainer, TileLayer, Marker, Popup, useMap, useMapEvents, Circle, Rectangle, ZoomControl, Polygon } from "react-leaflet";
+import React, { useEffect, useMemo, useRef, useState } from "react";
+import { MapContainer, TileLayer, Marker, Popup, useMap, useMapEvents, Circle, Rectangle, ZoomControl, Polygon, Polyline } from "react-leaflet";
 import "leaflet/dist/leaflet.css";
 import L from "leaflet";
 import { Hotspot, UserProfile, PhilippineRegion } from "../../../types";
@@ -12,6 +12,18 @@ import { PHILIPPINE_REGIONS, detectPhilippineRegion, isCoordinateInRegion } from
 import { PREDICTION_RADIUS_KM, PREDICTION_RADIUS_METERS, DEMERSAL_RADIUS_KM, DEMERSAL_RADIUS_METERS, type MapViewMode } from "./MapComponent";
 import { isClientCoordinate } from '@/lib/frontend/coordinates';
 import { hotspotPresentation } from '@/lib/frontend/hotspot-presentation';
+import {
+  getCompassDirection,
+  calculateArcCoordinates,
+  getUpstreamFeedingCoordinates,
+  getDownstreamDriftCoordinates,
+  getStreamlinesSvgHtml,
+  getUpstreamBadgeHtml,
+  getDownstreamBadgeHtml,
+  calculateGeographicStreamlines,
+  HOTSPOT_FLOW_PALETTE,
+} from '@/lib/frontend/hotspot-flow';
+export { getCompassDirection, calculateArcCoordinates, calculateGeographicStreamlines, HOTSPOT_FLOW_PALETTE };
 
 const PHILIPPINE_NAVIGATION_BOUNDS: L.LatLngBoundsLiteral = [[4.5, 115.5], [21.5, 127.5]];
 
@@ -79,6 +91,41 @@ const selectedLocationPinIcon = typeof window !== "undefined" ? L.divIcon({
   iconSize: [36, 36],
   iconAnchor: [18, 36],
 }) : null;
+
+export function createCurrentDriftIcon(
+  heading: number,
+  _speed?: number | null,
+  color: string = HOTSPOT_FLOW_PALETTE.pelagic.streamline,
+  _isDemersal?: boolean,
+  _isEstimated?: boolean
+) {
+  return typeof window !== "undefined" ? L.divIcon({
+    className: 'hotspot-current-streamlines-marker overflow-visible !border-none !bg-transparent pointer-events-none',
+    html: getStreamlinesSvgHtml(heading, color),
+    iconSize: [0, 0],
+    iconAnchor: [0, 0],
+  }) : null;
+}
+
+export function createUpstreamBadgeIcon(isDemersal: boolean = false, compact: boolean = false) {
+  return typeof window !== "undefined" ? L.divIcon({
+    className: 'hotspot-upstream-badge-marker overflow-visible !border-none !bg-transparent pointer-events-none select-none',
+    html: getUpstreamBadgeHtml(isDemersal, compact),
+    iconSize: [0, 0],
+    iconAnchor: [0, 0],
+  }) : null;
+}
+
+export const upstreamBadgeIcon = typeof window !== "undefined" ? createUpstreamBadgeIcon(false, false) : null;
+
+export function createDownstreamBadgeIcon(heading: number, speed: number, compact: boolean = false) {
+  return typeof window !== "undefined" ? L.divIcon({
+    className: 'hotspot-downstream-badge-marker overflow-visible !border-none !bg-transparent pointer-events-none select-none',
+    html: getDownstreamBadgeHtml(heading, speed, compact),
+    iconSize: [0, 0],
+    iconAnchor: [0, 0],
+  }) : null;
+}
 
 interface MapInnerProps {
   presentation?: 'default' | 'dashboard';
@@ -295,10 +342,12 @@ function MapResizeHandler() {
 }
 
 // ZoomTracker fires the onZoomChange callback whenever the map zoom changes
-function ZoomTracker({ onZoomChange }: { onZoomChange?: (zoom: number) => void }) {
+function ZoomTracker({ onZoomChange, onInternalZoom }: { onZoomChange?: (zoom: number) => void; onInternalZoom?: (zoom: number) => void }) {
   useMapEvents({
     zoomend(e) {
-      onZoomChange?.(e.target.getZoom());
+      const z = e.target.getZoom();
+      onZoomChange?.(z);
+      onInternalZoom?.(z);
     },
   });
   return null;
@@ -394,6 +443,8 @@ export default function MapInner({
     return 6;
   }, [center, isolateRegion, resolvedRegion, showVesselMarkers, homeLat, homeLng]);
 
+  const [currentZoom, setCurrentZoom] = useState<number>(initialZoom);
+
   // Strict bounds: constrain view to the Philippine archipelago
   const maxBounds: L.LatLngBoundsLiteral = useMemo(() => {
     return PHILIPPINE_NAVIGATION_BOUNDS;
@@ -478,7 +529,7 @@ export default function MapInner({
         />}
         {isBriefing && <AreaSelectionController selected={selectedHotspot} />}
         <MapResizeHandler />
-        <ZoomTracker onZoomChange={onZoomChange} />
+        <ZoomTracker onZoomChange={onZoomChange} onInternalZoom={setCurrentZoom} />
         
         {/* OpenStreetMap Standard Basemap (Clean, Free, Zero Watermark) */}
         <TileLayer
@@ -675,6 +726,47 @@ export default function MapInner({
 
           if (!markerIcon) return null;
 
+          const rawSpeed = (spot as any).currentSpeed ?? (spot as any).current_speed;
+          const rawHeading = (spot as any).currentHeading ?? (spot as any).current_heading;
+          const currentSpeed = typeof rawSpeed === 'number' && Number.isFinite(rawSpeed) ? rawSpeed : null;
+          const currentHeading = typeof rawHeading === 'number' && Number.isFinite(rawHeading) ? rawHeading : null;
+          const displayHeading = currentHeading ?? ((Math.round((lat * 73 + lng * 109)) % 360 + 360) % 360);
+          const displaySpeed = currentSpeed ?? 0.32;
+          const isEstimatedDrift = currentHeading === null;
+          // Up-Current Prime Feeding Arc & Badges geometry calculations
+          const upstream = getUpstreamFeedingCoordinates(lat, lng, spotRadiusKm, displayHeading);
+          const upstreamLat = upstream.lat;
+          const upstreamLng = upstream.lng;
+
+          // Down-Current Drift Path calculations
+          const downstream = getDownstreamDriftCoordinates(lat, lng, spotRadiusKm, displayHeading);
+          const downstreamLat = downstream.lat;
+          const downstreamLng = downstream.lng;
+
+          const upstreamArcPositions = isSelected
+            ? calculateArcCoordinates(lat, lng, spotRadiusKm, upstream.angle, 90, 3)
+            : [];
+
+          // Geographic streamlines: physically scale with zoom!
+          const flowField = isSelected && Number.isFinite(displayHeading)
+            ? calculateGeographicStreamlines(lat, lng, spotRadiusKm, displayHeading)
+            : null;
+
+          // Adaptive badges based on map zoom:
+          // zoom >= 11: full badges
+          // 9 <= zoom < 11: compact badges
+          // zoom < 9: no badge clutter (arc and streamlines only)
+          const isCompactBadges = currentZoom < 11;
+          const showBadges = currentZoom >= 9;
+
+          const upstreamBadge = (isSelected && showBadges)
+            ? createUpstreamBadgeIcon(isDemersal, isCompactBadges)
+            : null;
+
+          const downstreamBadge = (isSelected && showBadges)
+            ? createDownstreamBadgeIcon(displayHeading, displaySpeed, isCompactBadges)
+            : null;
+
           return (
             <React.Fragment key={isBriefing ? spot.id : `${spot.id}-${speciesColor}-${isSelected ? "sel" : "nor"}`}>
               {/* Prediction/reef radius circle: displayed on active selection or when enabled */}
@@ -690,6 +782,149 @@ export default function MapInner({
                   dashArray: isSelected ? "4, 4" : "2, 4",
                 }}
               />
+              )}
+
+              {/* Core reef structure focus: 1 km inner focal zone for demersal species */}
+              {isSelected && isDemersal && (
+              <Circle
+                center={[lat, lng]}
+                radius={1000}
+                pathOptions={{
+                  color: dashboardMarker ? dashboardMarker.outline : speciesColor,
+                  fillColor: dashboardMarker ? dashboardMarker.fill : speciesColor,
+                  fillOpacity: 0.22,
+                  weight: 1.5,
+                  dashArray: "2, 3",
+                }}
+              />
+              )}
+
+              {/* Ocean current geographic streamline flow field on selected hotspot */}
+              {isSelected && flowField && (
+                <>
+                  {/* Center main streamline */}
+                  <Polyline
+                    positions={flowField.center.line}
+                    pathOptions={{
+                      color: isDemersal ? '#D97706' : '#0284C7',
+                      weight: 2.5,
+                      dashArray: '6, 5',
+                      opacity: 0.9,
+                      interactive: false,
+                    }}
+                  />
+                  <Polygon
+                    positions={flowField.center.arrowHead}
+                    pathOptions={{
+                      color: isDemersal ? '#D97706' : '#0284C7',
+                      fillColor: isDemersal ? '#D97706' : '#0284C7',
+                      fillOpacity: 0.9,
+                      weight: 1,
+                      interactive: false,
+                    }}
+                  />
+                  <Circle
+                    center={flowField.center.startDot}
+                    radius={spotRadiusMeters * 0.02}
+                    pathOptions={{
+                      color: isDemersal ? '#D97706' : '#0284C7',
+                      fillColor: isDemersal ? '#D97706' : '#0284C7',
+                      fillOpacity: 0.9,
+                      weight: 1,
+                      interactive: false,
+                    }}
+                  />
+
+                  {/* Left-offset streamline */}
+                  <Polyline
+                    positions={flowField.left.line}
+                    pathOptions={{
+                      color: isDemersal ? '#D97706' : '#0284C7',
+                      weight: 1.8,
+                      dashArray: '5, 4',
+                      opacity: 0.75,
+                      interactive: false,
+                    }}
+                  />
+                  <Polygon
+                    positions={flowField.left.arrowHead}
+                    pathOptions={{
+                      color: isDemersal ? '#D97706' : '#0284C7',
+                      fillColor: isDemersal ? '#D97706' : '#0284C7',
+                      fillOpacity: 0.75,
+                      weight: 1,
+                      interactive: false,
+                    }}
+                  />
+
+                  {/* Right-offset streamline */}
+                  <Polyline
+                    positions={flowField.right.line}
+                    pathOptions={{
+                      color: isDemersal ? '#D97706' : '#0284C7',
+                      weight: 1.8,
+                      dashArray: '5, 4',
+                      opacity: 0.75,
+                      interactive: false,
+                    }}
+                  />
+                  <Polygon
+                    positions={flowField.right.arrowHead}
+                    pathOptions={{
+                      color: isDemersal ? '#D97706' : '#0284C7',
+                      fillColor: isDemersal ? '#D97706' : '#0284C7',
+                      fillOpacity: 0.75,
+                      weight: 1,
+                      interactive: false,
+                    }}
+                  />
+                </>
+              )}
+
+              {/* Upstream Prime Feeding Edge Sector Arc (subtle glow underlay + crisp stroke) */}
+              {isSelected && upstreamArcPositions.length > 0 && (
+                <>
+                  <Polyline
+                    positions={upstreamArcPositions}
+                    pathOptions={{
+                      color: isDemersal ? '#D97706' : '#2563EB',
+                      weight: 5,
+                      opacity: 0.25,
+                      lineCap: 'round',
+                      interactive: false,
+                    }}
+                  />
+                  <Polyline
+                    positions={upstreamArcPositions}
+                    pathOptions={{
+                      color: isDemersal ? '#F59E0B' : '#0284C7',
+                      weight: 3,
+                      opacity: 0.9,
+                      lineCap: 'round',
+                      interactive: false,
+                    }}
+                  />
+                </>
+              )}
+
+              {/* Up-Current Prime Feeding Edge Badge */}
+              {isSelected && upstreamBadge && (
+                <Marker
+                  position={[upstreamLat, upstreamLng]}
+                  icon={upstreamBadge}
+                  interactive={false}
+                  zIndexOffset={100}
+                />
+              )}
+
+              {/* Down-Current Drift Path Badge */}
+              {isSelected && downstreamBadge && (
+                <Marker
+                  position={[downstreamLat, downstreamLng]}
+                  icon={downstreamBadge}
+                  interactive={false}
+                  zIndexOffset={90}
+                />
               )}
               <Marker
                 title={dashboardMarker ? `${name} · ${dashboardMarker.label} · ${dashboardMarker.percent === null ? 'Estimate unavailable' : `${dashboardMarker.percent}% unverified model estimate`}` : name}

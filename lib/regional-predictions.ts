@@ -14,6 +14,10 @@ export interface PredictionRow {
   created_at?: string | null;
   target_lat: number | string | null;
   target_lon: number | string | null;
+  current_u?: number | string | null;
+  current_v?: number | string | null;
+  current_speed?: number | string | null;
+  current_heading?: number | string | null;
 }
 
 type Habitat = 'pelagic' | 'demersal';
@@ -64,6 +68,7 @@ function predictionQuery(geographic: boolean): string { return `
   ), selected AS (
     SELECT id, prediction_date, model_type, catch_probability, dbscan_cluster_id,
       sst, chl_a, created_at, ST_Y(centroid_geom) AS target_lat, ST_X(centroid_geom) AS target_lon,
+      current_u, current_v, current_speed, current_heading,
       ST_DistanceSphere(centroid_geom, ST_SetSRID(ST_MakePoint($2, $3), 4326)) AS distance_m
     FROM areas
     ORDER BY distance_m NULLS LAST, id

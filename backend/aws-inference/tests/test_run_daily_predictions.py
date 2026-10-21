@@ -67,6 +67,52 @@ class DailyPredictionsPipelineChecks(unittest.TestCase):
     def test_minimum_catch_probability_is_25_percent(self):
         self.assertEqual(module.MINIMUM_CATCH_PROBABILITY, 0.25)
 
+    def test_compute_current_vector_cardinal_directions(self):
+        # Current flowing North (u=0, v=1)
+        speed, heading = module.compute_current_vector(0.0, 1.0)
+        self.assertAlmostEqual(speed, 1.0)
+        self.assertAlmostEqual(heading, 0.0)
+
+        # Current flowing East (u=1, v=0)
+        speed, heading = module.compute_current_vector(1.0, 0.0)
+        self.assertAlmostEqual(speed, 1.0)
+        self.assertAlmostEqual(heading, 90.0)
+
+        # Current flowing South (u=0, v=-1)
+        speed, heading = module.compute_current_vector(0.0, -1.0)
+        self.assertAlmostEqual(speed, 1.0)
+        self.assertAlmostEqual(heading, 180.0)
+
+        # Current flowing West (u=-1, v=0)
+        speed, heading = module.compute_current_vector(-1.0, 0.0)
+        self.assertAlmostEqual(speed, 1.0)
+        self.assertAlmostEqual(heading, 270.0)
+
+        # Current flowing North-East (u=1, v=1)
+        speed, heading = module.compute_current_vector(1.0, 1.0)
+        self.assertAlmostEqual(speed, np.sqrt(2.0))
+        self.assertAlmostEqual(heading, 45.0)
+
+        # Current flowing North-West (u=-1, v=1)
+        speed, heading = module.compute_current_vector(-1.0, 1.0)
+        self.assertAlmostEqual(speed, np.sqrt(2.0))
+        self.assertAlmostEqual(heading, 315.0)
+
+        # Current flowing South-East (u=1, v=-1)
+        speed, heading = module.compute_current_vector(1.0, -1.0)
+        self.assertAlmostEqual(speed, np.sqrt(2.0))
+        self.assertAlmostEqual(heading, 135.0)
+
+        # Current flowing South-West (u=-1, v=-1)
+        speed, heading = module.compute_current_vector(-1.0, -1.0)
+        self.assertAlmostEqual(speed, np.sqrt(2.0))
+        self.assertAlmostEqual(heading, 225.0)
+
+        # Zero velocity
+        speed, heading = module.compute_current_vector(0.0, 0.0)
+        self.assertAlmostEqual(speed, 0.0)
+        self.assertAlmostEqual(heading, 0.0)
+
 
 if __name__ == '__main__':
     unittest.main()

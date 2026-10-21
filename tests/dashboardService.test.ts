@@ -72,4 +72,30 @@ describe('dashboard area loading', () => {
       expect(area.species).toEqual([]);
     }
   });
+  it('maps ocean current telemetry when valid numbers are provided', async () => {
+    vi.stubGlobal('fetch', vi.fn(async () => Response.json({
+      hotspots: [
+        {
+          grid_id: 42, target_lat: 10.4, target_lon: 123.9, model_type: 'pelagic',
+          current_speed: 0.45, current_heading: 135.2, current_u: 0.32, current_v: -0.31,
+        },
+        {
+          grid_id: 43, target_lat: 10.5, target_lon: 123.9, model_type: 'demersal',
+          current_speed: null, current_heading: 'invalid', current_u: NaN, current_v: Infinity,
+        },
+      ],
+    })));
+    const { areas } = await loadFishingAreaResult(10.3, 123.8, '', signal);
+    const valid = areas.find(a => a.id === '42');
+    expect(valid?.currentSpeed).toBe(0.45);
+    expect(valid?.currentHeading).toBe(135.2);
+    expect(valid?.currentU).toBe(0.32);
+    expect(valid?.currentV).toBe(-0.31);
+
+    const invalid = areas.find(a => a.id === '43');
+    expect(invalid?.currentSpeed).toBeUndefined();
+    expect(invalid?.currentHeading).toBeUndefined();
+    expect(invalid?.currentU).toBeUndefined();
+    expect(invalid?.currentV).toBeUndefined();
+  });
 });

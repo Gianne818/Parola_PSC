@@ -76,6 +76,13 @@ lower-threshold predictions down to 25%.
 
 The user explicitly identified as Toby and authorized Toby to update the briefing map hotspot markers in `components/features/hotspots/MapInner.tsx` (and related test fixtures) to remove the inner white background and 'D'/'P' text badges, adopt the maritime radar beacon styling with Royal Blue/Warm Coral contrast palettes, and display the transparent 9 km prediction radius circle when a hotspot is selected.
 
+### User-authorized current vector pipeline and map flow arrow exception — October 21, 2026
+
+The user explicitly authorized Toby to implement the end-to-end ocean current drift vector pipeline across roles:
+1. Export Copernicus ocean current vectors (`uo`, `vo`, `current_speed`, `current_heading`) in `backend/aws-inference/run_daily_predictions.py`.
+2. Add the migration in `backend/migrations/` and serialize current vectors in `app/api/advisories/nearest/route.ts`.
+3. Render the directional current drift flow arrow and up-current feeding indicator inside the selected hotspot radius circle on the dashboard map in `components/features/hotspots/MapInner.tsx`.
+
 Most-specific path wins. New files use the matching scope; any unlisted/ambiguous integration path needs Son to record its owner before edits. Ownership grants no authority beyond the selected assignment. Existing user changes must be preserved.
 
 | Owner | Owned paths / exceptions |

@@ -232,6 +232,23 @@
 .areaDetails > dl dd { font-size: .9375em; font-weight: 600; margin: 3px 0 0; overflow-wrap: anywhere; font-variant-numeric: tabular-nums; }
 .estimateRow { grid-column: 1 / -1; padding-bottom: 10px; border-bottom: 1px solid var(--line); }
 .estimateValue { font: 800 1.5em/1.15 var(--font-display) !important; color: var(--green); }
+.driftCard { margin: 12px 0; padding: 14px; background: #f8fafc; border: 1px solid #bae6fd; border-radius: 14px; display: flex; flex-direction: column; gap: 10px; box-shadow: 0 1px 4px rgba(2, 132, 199, 0.06); }
+.driftHeader { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 8px; }
+.driftTitle { display: flex; align-items: center; gap: 7px; font-size: .875em; font-weight: 700; color: #0c4a6e; letter-spacing: -.01em; }
+.driftIcon { color: #0284c7; }
+.driftBadge { display: inline-flex; align-items: center; padding: 2px 8px; border-radius: 999px; font-size: .75em; font-weight: 650; line-height: 1.4; white-space: nowrap; }
+.driftBadge_optimal { background: #e0f2fe; color: #0369a1; border: 1px solid #7dd3fc; }
+.driftBadge_slack { background: #f1f5f9; color: #475569; border: 1px solid #cbd5e1; }
+.driftBadge_strong { background: #fef3c7; color: #b45309; border: 1px solid #fcd34d; }
+.driftMetrics { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; margin: 0; padding: 8px 10px; background: #ffffff; border: 1px solid #e2e8f0; border-radius: 9px; }
+.driftMetrics dt { font-size: .75em; font-weight: 600; color: #64748b; }
+.driftMetrics dd { margin: 2px 0 0; font-size: .9375em; font-weight: 700; color: #0f172a; font-variant-numeric: tabular-nums; }
+.driftTacticalGrid { display: grid; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); gap: 8px; }
+.driftTacticalBox { display: flex; flex-direction: column; gap: 2px; padding: 8px 10px; background: #ffffff; border: 1px solid #bae6fd; border-radius: 9px; }
+.driftTacticalLabel { display: flex; align-items: center; gap: 4px; font-size: .75em; font-weight: 600; color: #0369a1; }
+.driftTacticalValue { font-size: .875em; font-weight: 700; color: #0f172a; }
+.driftTacticalSubtitle { margin-top: 1px; font-size: .6875em; color: #64748b; line-height: 1.35; font-style: italic; }
+.driftAdviceText { margin: 0; padding: 7px 10px; font-size: .8125em; line-height: 1.45; color: #0c4a6e; background: #f0f9ff; border-left: 3px solid #0284c7; border-radius: 0 6px 6px 0; font-style: italic; }
 .sourceList { margin: 14px 0; display: grid; gap: 10px; }
 .sourceList > div { padding: 12px 14px; background: var(--paper); border: 1px solid var(--line); border-radius: 12px; }
 .holdSummaryItem[data-active='true'] { background: var(--hold-surface); border-color: var(--hold-line); }

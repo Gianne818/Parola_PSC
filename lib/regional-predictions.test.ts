@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from 'vitest';
-import { isPredictionDate, loadPredictions } from './regional-predictions';
+import { isPredictionDate, loadPredictions, PREDICTION_QUERY_SQL } from './regional-predictions';
 
 describe('prediction date input', () => {
   it.each(['2024-02-29', '2026-10-18', '0001-01-01', '9999-12-31'])('accepts real ISO dates: %s', value => {
@@ -36,5 +36,9 @@ describe('prediction selection availability', () => {
       geographicProfileId: '11111111-1111-4111-8111-111111111111' });
     expect(result.selection.geography.status).toBe('unavailable');
     expect(result.selection.operational_eligible).toBe(false);
+  });
+
+  it('selects current drift vector columns in prediction queries', () => {
+    expect(PREDICTION_QUERY_SQL).toContain('current_u, current_v, current_speed, current_heading');
   });
 });

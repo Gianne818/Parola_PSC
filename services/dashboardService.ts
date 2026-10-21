@@ -68,6 +68,10 @@ interface Prediction {
   chl_a?: number;
   environment_provenance?: unknown;
   dbscan_cluster_id?: unknown;
+  current_speed?: number;
+  current_heading?: number;
+  current_u?: number;
+  current_v?: number;
 }
 
 function isPrediction(value: unknown): value is Prediction {
@@ -124,6 +128,10 @@ export async function loadFishingAreaResult(lat: number, lng: number, species: s
       habitatKnown: item.model_type_known !== false && ['pelagic', 'demersal', 'both'].includes(item.model_type),
       sst: typeof item.sst === 'number' && Number.isFinite(item.sst) ? item.sst : undefined,
       chlA: typeof item.chl_a === 'number' && Number.isFinite(item.chl_a) ? item.chl_a : undefined,
+      currentSpeed: typeof item.current_speed === 'number' && Number.isFinite(item.current_speed) ? item.current_speed : undefined,
+      currentHeading: typeof item.current_heading === 'number' && Number.isFinite(item.current_heading) ? item.current_heading : undefined,
+      currentU: typeof item.current_u === 'number' && Number.isFinite(item.current_u) ? item.current_u : undefined,
+      currentV: typeof item.current_v === 'number' && Number.isFinite(item.current_v) ? item.current_v : undefined,
       evidence: { responseSource: label(data.source), provenance: label(data.provenance), environmentProvenance: label(item.environment_provenance),
         clusterId: typeof item.dbscan_cluster_id === 'number' && Number.isInteger(item.dbscan_cluster_id) ? String(item.dbscan_cluster_id) : null },
       distanceKm: 0, compassBearing: '',
