@@ -3,7 +3,7 @@
 import { useState, type ReactNode } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { Anchor, Bell, BookOpen, ChevronLeft, ChevronRight, Globe, LayoutDashboard, LogOut, Menu, Settings, ShieldAlert, Ship, UserRound } from 'lucide-react';
+import { Anchor, Bell, BookOpen, ChevronLeft, ChevronRight, ClipboardList, Globe, LayoutDashboard, LogOut, Menu, Settings, ShieldAlert, Ship, UserRound } from 'lucide-react';
 import { useApp } from '@/context/AppContext';
 import { ParolaLogo } from '@/components/ui/ParolaLogo';
 import { getBaseFontSize } from '@/utils/fontScale';
@@ -23,11 +23,12 @@ export default function DashboardShell({ children, collapsed, toggleSidebar, con
   const viewport = useWorkspaceViewport();
   const [navigationOpen, setNavigationOpen] = useState(false);
   const unread = notifications.filter(item => isVerifiedUpdate(item) && !item.read).length;
-  const title = pathname === '/alerts' ? copy.advisories : pathname === '/notifications' ? copy.updates : pathname === '/settings' ? copy.settings : pathname === '/resources/guide' ? APPLICATION_COPY[language].guideTitle : pathname === '/resources/pricing' ? copy.pricing : pathname === '/resources/about' ? copy.about : pathname === '/resources' ? copy.resources : copy.dashboard;
+  const title = pathname === '/alerts' ? copy.advisories : pathname === '/notifications' ? copy.updates : pathname === '/reports' ? copy.reports : pathname === '/settings' ? copy.settings : pathname === '/resources/guide' ? APPLICATION_COPY[language].guideTitle : pathname === '/resources/pricing' ? copy.pricing : pathname === '/resources/about' ? copy.about : pathname === '/resources' ? copy.resources : copy.dashboard;
   const navigation = [
     { href: '/dashboard', label: copy.dashboard, icon: LayoutDashboard },
     { href: '/alerts', label: copy.advisories, icon: ShieldAlert },
     { href: '/notifications', label: copy.updates, icon: Bell },
+    { href: '/reports', label: copy.reports, icon: ClipboardList },
     { href: '/settings', label: copy.settings, icon: Settings },
   ];
   const resources = [
@@ -36,7 +37,7 @@ export default function DashboardShell({ children, collapsed, toggleSidebar, con
     { href: '/resources/about', label: copy.about, icon: Anchor },
   ];
   const sidebarLinks = (items: typeof navigation) => items.map(({ href, label, icon: Icon }) =>
-    <Link key={href} href={href} title={label} aria-label={label} aria-current={pathname === href ? 'page' : undefined}
+    <Link key={href} href={href} title={label} aria-label={label} lang={href === '/reports' ? 'en' : undefined} aria-current={pathname === href ? 'page' : undefined}
       className={styles.navLink} onClick={() => setNavigationOpen(false)}>
       <Icon size={20} aria-hidden="true" /><span className={styles.navLabel}>{label}</span>
       {href === '/notifications' && unread > 0 && <span className={styles.unread}>{unread}</span>}
@@ -61,7 +62,7 @@ export default function DashboardShell({ children, collapsed, toggleSidebar, con
     <div className={styles.mainFrame}>
       <header className={styles.header}>
         {viewport === 'mobile' && <button type="button" className={styles.iconButton} aria-label={copy.navigation} aria-expanded={navigationOpen} onClick={() => setNavigationOpen(true)}><Menu size={21} aria-hidden="true" /></button>}
-        <div className={styles.headerIdentity}><h1>{title}</h1><p title={userProfile.port}><Anchor size={14} aria-hidden="true" /><span>{userProfile.port || copy.portMissing}</span></p></div>
+        <div className={styles.headerIdentity}><h1 lang={pathname === '/reports' ? 'en' : undefined}>{title}</h1><p title={userProfile.port}><Anchor size={14} aria-hidden="true" /><span>{userProfile.port || copy.portMissing}</span></p></div>
         <div className={styles.headerActions}>
           <Link href="/onboarding?from=profile" className={styles.changePort} title={copy.changePort} aria-label={copy.changePort}><Anchor size={16} aria-hidden="true" /><span>{copy.changePort}</span></Link>
           <label className={styles.language}><Globe size={16} aria-hidden="true" /><span className={styles.srOnly}>{copy.language}</span>
