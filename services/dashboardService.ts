@@ -2,6 +2,8 @@ import type { DashboardWeather, FishingArea, FishingAreaResult, FishingAreaMetad
 import { isClientCoordinate, isClientTargetCoordinate } from '@/lib/frontend/coordinates';
 import { predictionDay, recordTimestamp } from '@/lib/frontend/timestamps';
 import { AreaLoadError } from '@/lib/frontend/prediction-presentation';
+import { readGeographicCoverage } from '@/lib/frontend/geographic-access';
+import { authHeaders } from '@/utils/auth-fetch';
 
 function isReading(value: unknown): boolean {
   if (!value || typeof value !== 'object') return false;
@@ -102,11 +104,15 @@ export async function loadFishingAreaResult(lat: number, lng: number, species: s
   const params = new URLSearchParams({ lat: String(lat), lon: String(lng), limit: '1000' });
   if (regionId) params.set('region', regionId);
   if (species) params.set('species', species);
-  const response = await fetch(`/api/advisories/nearest?${params}`, { signal, cache: 'no-store' });
+  const headers = await authHeaders();
+  signal.throwIfAborted();
+  const response = await fetch(`/api/advisories/nearest?${params}`, { signal, headers, credentials: 'same-origin', cache: 'no-store' });
   const payload = await response.json();
   if (!response.ok || !payload || typeof payload !== 'object' || payload.error) {
     const code = payload?.code;
-    throw new AreaLoadError(code === 'species_unsupported' || code === 'species_catalog_unavailable' ? code : 'unavailable');
+    throw new AreaLoadError(response.status === 401 ? 'authentication' : response.status === 403 ? 'denied'
+      : code === 'geographic_data_unavailable' ? 'geography_unavailable'
+        : code === 'species_unsupported' || code === 'species_catalog_unavailable' ? code : 'unavailable', readGeographicCoverage(payload?.selection?.geography));
   }
   const data = payload as Record<string, unknown>;
   if (!Array.isArray(data.hotspots)) throw new Error('Fishing-area response could not be read.');
@@ -143,6 +149,7 @@ export async function loadFishingAreaResult(lat: number, lng: number, species: s
     && Array.isArray(metadata.predictionDates) && metadata.predictionDates.every(date => predictionDay(date) !== null)
     && typeof metadata.capped === 'boolean' && metadata.capped === (metadata.eligibleCount! > metadata.returnedCount!) ? metadata as FishingAreaMetadata : null,
     coverage: { receivedCount: data.hotspots.length, rejectedCount: data.hotspots.length - valid.length, duplicateCount: valid.length - areas.length,
+      geography: readGeographicCoverage(data.selection && typeof data.selection === 'object' ? (data.selection as Record<string, unknown>).geography : null),
       speciesStatus: data.species_status === 'resolved' || data.species_status === 'not_requested' ? data.species_status : 'unknown',
       speciesAdjustment: adjusted ? 'applied' : data.species_hsi_status === 'unavailable' ? 'unavailable' : !species ? 'not_requested' : 'unknown' } };
 }

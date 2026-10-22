@@ -1,6 +1,6 @@
 'use client';
 
-import { ChevronRight, Compass, Fish, Waves } from 'lucide-react';
+import { ChevronRight, Compass, Fish, Target, Waves } from 'lucide-react';
 import type { ReactNode } from 'react';
 import { evaluateCurrentDrift, manilaDate, predictionPercent, type FishingArea } from '@/lib/dashboard';
 import type { DashboardCopy } from './dashboard-copy';
@@ -33,10 +33,10 @@ export function AreaDetails({ area, copy, weather }: { area: FishingArea; copy: 
     {drift && (
       <div className={styles.driftCard}>
         <div className={styles.driftHeader}>
-          <div className={styles.driftTitle}>
+          <h3 className={styles.driftTitle}>
             <Waves size={18} aria-hidden="true" className={styles.driftIcon} />
-            <span>🌊 Ocean Current & Drift Advisory</span>
-          </div>
+            <span>Ocean Current & Drift Advisory</span>
+          </h3>
           <span className={`${styles.driftBadge} ${styles[`driftBadge_${drift.currentStrength}`]}`}>
             {drift.currentStrength === 'optimal' ? 'Optimal Feeding Flow' : drift.currentStrength === 'strong' ? 'Strong Current' : 'Slack Current'}
           </span>
@@ -54,14 +54,14 @@ export function AreaDetails({ area, copy, weather }: { area: FishingArea; copy: 
         <div className={styles.driftTacticalGrid}>
           <div className={styles.driftTacticalBox}>
             <span className={styles.driftTacticalLabel}>
-              <span aria-hidden="true">🎯</span> Up-Current Entry ({copy.feedEdge}):
+              <Target size={14} aria-hidden="true" /> Up-Current Entry ({copy.feedEdge}):
             </span>
             <strong className={styles.driftTacticalValue}>{drift.upstreamDirection} Boundary</strong>
             <small className={styles.driftTacticalSubtitle}>Predatory fish face into oncoming flow here.</small>
           </div>
           <div className={styles.driftTacticalBox}>
             <span className={styles.driftTacticalLabel}>
-              <span aria-hidden="true">🧭</span> Recommended Drift:
+              <Compass size={14} aria-hidden="true" /> Recommended Drift:
             </span>
             <strong className={styles.driftTacticalValue}>Drift {drift.flowDirection} across the zone</strong>
           </div>

@@ -1,5 +1,6 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { loadFishingAreas, loadFishingAreaResult, loadDashboardWeather } from '@/services/dashboardService';
+vi.mock('@/utils/auth-fetch', () => ({ authHeaders: async () => ({}) }));
 afterEach(() => vi.unstubAllGlobals());
 const signal = new AbortController().signal;
 describe('dashboard area loading', () => {

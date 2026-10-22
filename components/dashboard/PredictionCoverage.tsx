@@ -18,6 +18,6 @@ export default function PredictionCoverage({ metadata, coverage, displayed, rece
     {species && <p>Requested fish: {species}. Catalog resolution: {coverage?.speciesStatus === 'resolved' ? 'resolved by server' : 'unavailable'}.
       {' '}Species adjustment: {coverage?.speciesAdjustment === 'applied' ? 'reported by server; not evidence of fish presence' : 'unavailable; returned values remain habitat model scores'}.</p>}
     <p>Ordered by distance from your home port. Highest-score ranking, combined ranking and next-best rotation are unavailable. These counts do not measure fishing pressure or vessel activity.</p>
-    <p>Ocean-mask validation, geographic coverage, input quality, run health and publication status are unavailable. An empty list does not establish that no fish are present or that waters are safe or permitted.</p>
+    <p>Geographic selection coverage is shown separately. Ocean-mask validation, input quality, run health and publication status are unavailable. An empty list does not establish that no fish are present or that waters are safe or permitted.</p>
   </details>;
 }
