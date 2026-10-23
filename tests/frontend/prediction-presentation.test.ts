@@ -8,6 +8,7 @@ import { AreaLoadError, areasOnDay, availablePredictionDays, predictionDayLabel 
 import PredictionCoverage from '@/components/dashboard/PredictionCoverage';
 import { AreaDetails } from '@/components/dashboard/FishingAreas';
 import { DASHBOARD_COPY } from '@/components/dashboard/dashboard-copy';
+vi.mock('@/utils/auth-fetch', () => ({ authHeaders: async () => ({}) }));
 
 const signal = new AbortController().signal;
 const row = { grid_id: 1, target_lat: 14.1, target_lon: 123.1, model_type: 'pelagic', prediction_date: '2026-10-15' };

@@ -232,6 +232,11 @@ export function getStreamlinesSvgHtml(heading: number, color: string = HOTSPOT_F
   `.trim();
 }
 
+// Lucide Target and Compass outlines (ISC), serialized for Leaflet HTML labels.
+// Decorative icons inherit the existing label color and font size.
+const feedingEdgeIcon = '<svg xmlns="http://www.w3.org/2000/svg" width="1em" height="1em" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false" style="flex-shrink:0"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="6"/><circle cx="12" cy="12" r="2"/></svg>';
+const driftDirectionIcon = '<svg xmlns="http://www.w3.org/2000/svg" width="1em" height="1em" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false" style="flex-shrink:0"><path d="m16.24 7.76-1.804 5.411a2 2 0 0 1-1.265 1.265L7.76 16.24l1.804-5.411a2 2 0 0 1 1.265-1.265z"/><circle cx="12" cy="12" r="10"/></svg>';
+
 /**
  * Generates the upright HTML markup for the Up-Current Prime Feeding Edge badge.
  * Uses high-contrast dark nautical pill container with vivid zone accents.
@@ -239,12 +244,12 @@ export function getStreamlinesSvgHtml(heading: number, color: string = HOTSPOT_F
 export function getUpstreamBadgeHtml(isDemersal: boolean = false, compact: boolean = false): string {
   const accent = isDemersal ? HOTSPOT_FLOW_PALETTE.demersal.badgeAccent : HOTSPOT_FLOW_PALETTE.pelagic.badgeAccent;
   const label = compact
-    ? (isDemersal ? '🎯 Reef Face' : '🎯 Feeding Edge')
-    : (isDemersal ? '🎯 Up-Current Reef Face (Feeding Slope)' : '🎯 Prime Feeding Edge (Up-Current)');
+    ? (isDemersal ? 'Reef Face' : 'Feeding Edge')
+    : (isDemersal ? 'Up-Current Reef Face (Feeding Slope)' : 'Prime Feeding Edge (Up-Current)');
   const padding = compact ? '3px 8px' : '4px 11px';
   const font = compact ? '700 10px system-ui, -apple-system, sans-serif' : '700 11px system-ui, -apple-system, sans-serif';
 
-  return `<div style="transform:translate(-50%, -50%);background:rgba(15, 23, 42, 0.92);color:#FFFFFF;border:1.5px solid ${accent};border-radius:999px;padding:${padding};font:${font};box-shadow:0 3px 10px rgba(0,0,0,0.45);display:inline-flex;align-items:center;gap:6px;white-space:nowrap;pointer-events:none;">${label}</div>`;
+  return `<div style="transform:translate(-50%, -50%);background:rgba(15, 23, 42, 0.92);color:#FFFFFF;border:1.5px solid ${accent};border-radius:999px;padding:${padding};font:${font};box-shadow:0 3px 10px rgba(0,0,0,0.45);display:inline-flex;align-items:center;gap:6px;white-space:nowrap;pointer-events:none;">${feedingEdgeIcon}${label}</div>`;
 }
 
 /**
@@ -256,8 +261,8 @@ export function getDownstreamBadgeHtml(heading: number, speed: number, compact: 
   const padding = compact ? '3px 8px' : '4px 11px';
   const font = compact ? '700 10px system-ui, -apple-system, sans-serif' : '700 11px system-ui, -apple-system, sans-serif';
   const label = compact
-    ? `🧭 ${Math.round(heading)}° ${dir}`
-    : `🧭 Drift Path · ${Math.round(heading)}° ${dir} (${speed.toFixed(2)} m/s)`;
+    ? `${Math.round(heading)}° ${dir}`
+    : `Drift Path · ${Math.round(heading)}° ${dir} (${speed.toFixed(2)} m/s)`;
 
-  return `<div style="transform:translate(-50%, -50%);background:rgba(15, 23, 42, 0.92);color:#E2E8F0;border:1px solid #475569;border-radius:999px;padding:${padding};font:${font};box-shadow:0 3px 10px rgba(0,0,0,0.45);display:inline-flex;align-items:center;gap:6px;white-space:nowrap;pointer-events:none;">${label}</div>`;
+  return `<div style="transform:translate(-50%, -50%);background:rgba(15, 23, 42, 0.92);color:#E2E8F0;border:1px solid #475569;border-radius:999px;padding:${padding};font:${font};box-shadow:0 3px 10px rgba(0,0,0,0.45);display:inline-flex;align-items:center;gap:6px;white-space:nowrap;pointer-events:none;">${driftDirectionIcon}${label}</div>`;
 }

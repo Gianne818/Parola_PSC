@@ -1,0 +1,78 @@
+.page, .workspace {
+  --ws-ink: var(--ink, #12211e);
+  --ws-muted: var(--muted, #56665e);
+  --ws-green: var(--green, #087f5b);
+  --ws-green-hover: var(--green-hover, #066b4c);
+  --ws-paper: var(--paper, #fafbf8);
+  --ws-white: var(--surface, #fff);
+  --ws-line: var(--line, #d5dfd8);
+  --ws-soft: var(--coast, #eaf1ec);
+  --ws-error: var(--hold, #a12b26);
+  --ws-action-radius: 9px;
+  color: var(--ws-ink);
+  font-family: var(--font-sans);
+  line-height: 1.65;
+  overflow-wrap: anywhere;
+}
+.page { min-height: 100svh; background: var(--ws-paper); }
+.page *, .workspace * { box-sizing: border-box; }
+.page :is(a, button, input):focus-visible, .workspace :is(a, button):focus-visible { outline: 3px solid var(--ws-green); outline-offset: 4px; }
+.page a, .workspace a { color: var(--ws-green); text-underline-offset: 4px; }
+.flowHeader { padding: 20px 32px; display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: 16px; border-bottom: 1px solid var(--ws-line); }
+.flowHeader > a { min-height: 44px; display: inline-flex; align-items: center; }
+.flowHeader .brand { display: flex; gap: 10px; color: var(--ws-ink); text-decoration: none; font: 900 1.25rem var(--font-display); text-transform: uppercase; }
+.flow { max-width: 1240px; margin-inline: auto; padding: 48px 32px 64px; }
+.eyebrow { display: flex; align-items: center; gap: 8px; color: var(--ws-green); font-size: .75em; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; }
+.steps { display: flex; flex-wrap: wrap; gap: 12px 26px; padding: 0; list-style-position: inside; margin: 18px 0 28px; color: var(--ws-muted); font-size: .8125em; }
+.steps [aria-current] { color: var(--ws-green); font-weight: 700; }
+.flow h1 { max-width: 760px; margin: 12px 0 18px; font: 650 2rem/1.15 var(--font-display); letter-spacing: -.025em; text-wrap: balance; }
+.welcome h2 { margin: 12px 0 16px; font: 800 1.5em/1.2 var(--font-display); letter-spacing: -.025em; text-wrap: balance; }
+.flow h1:focus { outline: none; }
+.lead { max-width: 740px; color: var(--ws-muted); font-size: 1.0625em; margin-bottom: 24px; }
+.storageNote, .billing { color: var(--ws-muted); font-size: .8125em; }
+.plans { margin: 28px 0 20px; display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); border-top: 1px solid var(--ws-line); border-left: 1px solid var(--ws-line); }
+.plan { min-width: 0; padding: 24px 20px; border-right: 1px solid var(--ws-line); border-bottom: 1px solid var(--ws-line); display: flex; flex-direction: column; background: var(--ws-white); }
+.plan h2 { margin: 14px 0 8px; font: 650 1.5em/1.2 var(--font-display); }
+.plan > p { margin: 0 0 12px; }
+.plan > button { margin-top: auto; }
+.price { color: var(--ws-ink); font: 650 1.75em/1.4 var(--font-display); }
+.price .billing { font: 400 .5em/1.5 var(--font-sans); }
+.primary, .secondary, .textButton { min-height: 48px; padding: 10px 18px; display: inline-flex; justify-content: center; align-items: center; gap: 8px; border: 1px solid var(--ws-line); border-radius: var(--ws-action-radius); background: var(--ws-white); font: 700 .875em/1.5 var(--font-sans); cursor: pointer; text-decoration: none; }
+.page .primary, .workspace .primary { background: var(--ws-green); color: var(--ws-white); border-color: var(--ws-green); }
+.secondary { color: var(--ws-green); }
+.textButton { color: var(--ws-muted); background: transparent; border-color: transparent; text-decoration: underline; }
+.page .primary:hover, .workspace .primary:hover { background: var(--ws-green-hover); }
+.secondary:hover { background: var(--ws-soft); }
+.secondary:disabled { opacity: .6; cursor: wait; }
+.nickname { max-width: 600px; }
+.nickname label { display: block; font-weight: 600; margin-bottom: 8px; }
+.nickname label span { color: var(--ws-muted); font-weight: 400; }
+.nickname input { width: 100%; min-height: 54px; padding: 12px 14px; font: inherit; border: 1px solid var(--ws-line); border-radius: var(--control-radius, 9px); background: var(--ws-white); color: var(--ws-ink); }
+.nickname input[aria-invalid='true'] { border-color: var(--ws-error); }
+.nickname > p { color: var(--ws-muted); font-size: .875em; }
+.nickname .error { color: var(--ws-error); }
+.actions { display: flex; flex-wrap: wrap; gap: 12px; }
+.notice { padding: 16px; margin-block: 20px; border: 1px solid var(--ws-line); background: var(--ws-soft); border-radius: 8px; }
+.notice p { margin: 0 0 10px; }
+.workspace { --ws-action-radius: 999px; max-width: 1400px; margin: 0 auto; display: flex; flex-direction: column; gap: 24px; }
+.welcome { border-bottom: 1px solid var(--ws-line); padding: 12px 0 28px; }
+.workspaceTabs { display: flex; gap: 8px; flex-wrap: wrap; }
+.workspaceTabs a { padding: 10px 16px; min-height: 44px; border: 1px solid var(--ws-line); border-radius: var(--ws-action-radius); text-decoration: none; }
+.workspaceTabs a[aria-current] { background: var(--ws-green); color: var(--ws-white); border-color: var(--ws-green); }
+.overview { display: grid; grid-template-columns: 1.25fr 1fr; gap: 24px; }
+.scope { min-width: 0; padding: var(--card-padding, 24px); border: 1px solid var(--ws-line); background: var(--ws-white); border-radius: var(--panel-radius, 12px); box-shadow: var(--surface-shadow, none); }
+.scope h3, .data h3 { margin: 10px 0 12px; font: 800 1.25em/1.25 var(--font-display); letter-spacing: -.025em; }
+.scope p { margin: 12px 0; }
+.scope a { display: inline-flex; align-items: center; gap: 8px; min-height: 44px; }
+.data { padding-block: 12px; }
+.sectionTitle { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 12px; }
+@media (max-width: 1050px) { .plans { grid-template-columns: repeat(2, minmax(0, 1fr)); } .overview { grid-template-columns: minmax(0, 1fr); } }
+@media (max-width: 580px) {
+  .flowHeader { padding: 16px 20px; }
+  .flow { padding: 28px 20px 40px; }
+  .plans { grid-template-columns: minmax(0, 1fr); }
+  .plan { padding: 24px; }
+  .scope { padding: 20px; }
+  .actions { flex-direction: column; align-items: stretch; }
+  .workspaceTabs a { flex: 1 0 40%; text-align: center; }
+}

@@ -1,0 +1,21 @@
+.access, .export { color: var(--ink); font: inherit; min-width: 0; overflow-wrap: anywhere; }
+.access { padding-bottom: 8px; margin: 12px 0; border-bottom: 1px solid var(--line); }
+.access p, .export p { font-size: .8125em; line-height: 1.65; margin: 8px 0; }
+.access .statusTitle { font-size: .875em; font-weight: 600; margin-top: 0; }
+.muted, .sampleNote { color: var(--muted); }
+.export { border-top: 1px solid var(--line); margin-top: 12px; }
+.access summary, .export summary { min-height: 44px; padding-block: 10px; font-size: .8125em; font-weight: 600; line-height: 1.65; color: var(--ink); cursor: pointer; }
+.exportBody { padding-bottom: 8px; }
+.access summary:focus-visible, .export :is(button, summary, a):focus-visible { outline: 3px solid var(--green); outline-offset: 3px; }
+.supportingDetails { color: var(--muted); }
+.metadata { font-size: .8125em; line-height: 1.65; margin: 8px 0 12px; }
+.metadata > div { margin: 8px 0; }
+.metadata dt { font-weight: 600; }
+.metadata dd { color: var(--ink); margin: 2px 0 0; }
+.download { display: inline-flex; align-items: center; justify-content: center; gap: 8px; min-height: 44px; max-width: 100%; margin-block: 4px; padding: 10px 14px; font: 700 .875em/1.5 var(--font-sans); white-space: normal; border: 1px solid var(--green); border-radius: var(--control-radius); background: var(--green); color: var(--surface); cursor: pointer; }
+.download:hover:enabled { background: var(--green-hover); }
+.download:disabled { background: var(--coast); color: var(--muted); border-color: var(--line); cursor: not-allowed; }
+.result[data-state='error'] { color: var(--hold); }
+.artifactSummary { font-weight: 600; }
+.sampleNote a { color: var(--green); text-decoration: underline; text-underline-offset: 3px; }
+@media (max-width: 390px) { .download { width: 100%; } }

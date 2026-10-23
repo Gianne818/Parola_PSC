@@ -132,7 +132,10 @@ describe('Map Geospatial & Ocean Current Flow Visualization', () => {
 
     it('getUpstreamBadgeHtml formats upright prime feeding edge badge with dark nautical pill and cyan accent', () => {
       const html = getUpstreamBadgeHtml();
-      expect(html).toContain('🎯 Prime Feeding Edge (Up-Current)');
+      expect(html).toContain('Prime Feeding Edge (Up-Current)');
+      expect(html).not.toContain('🎯');
+      expect(html).toContain('stroke="currentColor"');
+      expect(html).toContain('aria-hidden="true" focusable="false"');
       expect(html).toContain('background:rgba(15, 23, 42, 0.92)');
       expect(html).toContain('color:#FFFFFF');
       expect(html).toContain('border:1.5px solid #38BDF8');
@@ -142,27 +145,30 @@ describe('Map Geospatial & Ocean Current Flow Visualization', () => {
 
       // Demersal variant with warm amber accent and simplified clear label
       const demHtml = getUpstreamBadgeHtml(true, false);
-      expect(demHtml).toContain('🎯 Up-Current Reef Face (Feeding Slope)');
+      expect(demHtml).toContain('Up-Current Reef Face (Feeding Slope)');
       expect(demHtml).toContain('border:1.5px solid #FBBF24');
       expect(demHtml).toContain('color:#FFFFFF');
       expect(demHtml).not.toContain('#78350F');
 
       // Pelagic compact variant
       const compactHtml = getUpstreamBadgeHtml(false, true);
-      expect(compactHtml).toContain('🎯 Feeding Edge');
+      expect(compactHtml).toContain('Feeding Edge');
       expect(compactHtml).not.toContain('(Up-Current)');
       expect(compactHtml).toContain('border:1.5px solid #38BDF8');
 
       // Demersal compact variant
       const demCompactHtml = getUpstreamBadgeHtml(true, true);
-      expect(demCompactHtml).toContain('🎯 Reef Face');
+      expect(demCompactHtml).toContain('Reef Face');
       expect(demCompactHtml).not.toContain('Feeding Slope');
       expect(demCompactHtml).toContain('border:1.5px solid #FBBF24');
     });
 
     it('getDownstreamBadgeHtml formats upright drift path telemetry badge with dark pill and light text', () => {
       const html = getDownstreamBadgeHtml(85, 0.42);
-      expect(html).toContain('🧭 Drift Path · 85° E (0.42 m/s)');
+      expect(html).toContain('Drift Path · 85° E (0.42 m/s)');
+      expect(html).not.toContain('🧭');
+      expect(html).toContain('stroke="currentColor"');
+      expect(html).toContain('aria-hidden="true" focusable="false"');
       expect(html).toContain('background:rgba(15, 23, 42, 0.92)');
       expect(html).toContain('color:#E2E8F0');
       expect(html).toContain('border:1px solid #475569');
@@ -170,7 +176,7 @@ describe('Map Geospatial & Ocean Current Flow Visualization', () => {
 
       // Compact variant
       const compactHtml = getDownstreamBadgeHtml(85, 0.42, true);
-      expect(compactHtml).toContain('🧭 85° E');
+      expect(compactHtml).toContain('85° E');
       expect(compactHtml).not.toContain('Drift Path');
       expect(compactHtml).toContain('border:1px solid #475569');
     });

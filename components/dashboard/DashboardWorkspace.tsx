@@ -30,6 +30,8 @@ import { predictionDay } from '@/lib/frontend/timestamps';
 import { AreaLoadError, areasOnDay, availablePredictionDays, type PredictionCoverage as Coverage } from '@/lib/frontend/prediction-presentation';
 import PredictionCoverage from './PredictionCoverage';
 import HotspotLegend from './HotspotLegend';
+import GeographicAccessStatus from '@/components/predictions/GeographicAccessStatus';
+import CurrentPredictionExport from '@/components/predictions/CurrentPredictionExport';
 
 const DashboardMap = dynamic(() => import('./DashboardMap'), { ssr: false, loading: () => <div className={styles.mapLoading} aria-busy="true" /> });
 
@@ -149,8 +151,7 @@ export default function DashboardWorkspace(props: WorkspaceProps) {
           {props.loadError instanceof AreaLoadError && <p className={styles.notice} role="status" lang="en">{props.loadError.message}
             {species && <button type="button" className={styles.textButton} onClick={() => updateFilters(habitat, '')}>Clear fish filter</button>}</p>}
           {selected && (loading || failed) && <p className={styles.notice} role="status">{loading ? copy.loadingAreas : `${copy.areasFailed} ${copy.lastAvailable}`}</p>}
-          <PredictionCoverage metadata={props.areaMetadata} coverage={props.coverage} displayed={displayedAreas.length}
-            received={props.coverage ? props.coverage.receivedCount - props.coverage.rejectedCount - props.coverage.duplicateCount : areas.length || null} species={species} />
+          <GeographicAccessStatus coverage={failed && props.loadError instanceof AreaLoadError ? props.loadError.geography : props.coverage?.geography} loading={loading} failed={failed} />
         </>}
         {showWeather ? <WeatherDetails data={weather} state={state} copy={copy} language={language} />
           : selected ? <>{state === 'hold' && <p className={styles.notice}>{copy.reference}</p>}
@@ -162,6 +163,11 @@ export default function DashboardWorkspace(props: WorkspaceProps) {
               <FishingAreas areas={displayedAreas} loading={loading} failed={failed} retry={retry} limit={limit} showMore={() => setLimit(previous => previous === 3 ? 10 : previous + 10)}
                 select={select} filtered={filtered} clearFilters={clearAllFilters} hold={state === 'hold'} speciesUnavailable={Boolean(species && areas.length && !areas.some(area => area.speciesAdjusted))} copy={copy} />
             </>}
+        {!showWeather && <>
+          <PredictionCoverage metadata={props.areaMetadata} coverage={props.coverage} displayed={displayedAreas.length}
+            received={props.coverage ? props.coverage.receivedCount - props.coverage.rejectedCount - props.coverage.duplicateCount : areas.length || null} species={species} />
+          <CurrentPredictionExport query={{ lat, lng, regionId: region.id, habitat, species }} regionName={region.name} />
+        </>}
       </div>
     </div>
     <div className={styles.panelFooter}>

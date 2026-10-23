@@ -10,9 +10,10 @@ import { DASHBOARD_COPY } from '@/components/dashboard/dashboard-copy';
 import { APPLICATION_COPY } from '@/components/application/application-copy';
 import type { Language } from '@/types';
 import AdvisoryPreferencesEditor from '@/components/settings/AdvisoryPreferencesEditor';
+import WorkspaceSettings from '@/components/workspace/WorkspaceSettings';
 import styles from '@/components/application/application.module.css';
 
-const anchorSections: Record<string, string> = { profile: 'profile', port: 'profile', vessel: 'profile', advisories: 'advisory-preferences', readability: 'preferences', preferences: 'preferences' };
+const anchorSections: Record<string, string> = { profile: 'profile', port: 'profile', vessel: 'profile', advisories: 'advisory-preferences', readability: 'preferences', preferences: 'preferences', workspace: 'workspace-preferences' };
 
 export default function SettingsPage() {
   const { userProfile, advisorySchedule, saveAdvisoryPreferences, reloadProfile, language, changeLanguage, fontScale, changeFontScale, isInitialized, isAuthenticated } = useApp();
@@ -48,6 +49,7 @@ export default function SettingsPage() {
         </div><div className={styles.preview}><span className={styles.small}>{text.preview}</span><p>{text.previewText}</p></div>
       </section>
       <section id="sms" className={styles.settingsSection} aria-labelledby="sms-heading"><div className={styles.panelHeading}><h2 id="sms-heading">{text.smsAccess}</h2></div><p className={styles.muted}>{text.smsManual}</p><dl className={styles.details}><div><dt>{text.registeredPhone}</dt><dd>{userProfile.phone?.trim() || text.notProvided}</dd></div></dl><Link href="/alerts" className={styles.link}>{copy.readAdvisory}</Link></section>
+      {isInitialized && isAuthenticated && userProfile.id && <WorkspaceSettings key={`workspace-${userProfile.id}`} />}
       </div>
     </div>
   </AuthLayout>;

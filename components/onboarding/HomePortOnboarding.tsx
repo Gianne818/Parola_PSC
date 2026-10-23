@@ -212,7 +212,7 @@ function PortSelectionContent({ fromProfile }: { fromProfile: boolean }) {
         // The server-confirmed profile remains authoritative if the device cache is full.
         showToast('Home port saved. This device could not cache the location.', 'info');
       }
-      router.push(fromProfile ? '/profile' : '/dashboard');
+      router.push(fromProfile ? '/profile' : '/onboarding/welcome');
       saved = true;
     } catch {
       if (mounted.current) setError('Your home port could not be saved. Please try again.');

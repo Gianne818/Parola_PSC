@@ -62,7 +62,7 @@ export default function DashboardShell({ children, collapsed, toggleSidebar, con
     <div className={styles.mainFrame}>
       <header className={styles.header}>
         {viewport === 'mobile' && <button type="button" className={styles.iconButton} aria-label={copy.navigation} aria-expanded={navigationOpen} onClick={() => setNavigationOpen(true)}><Menu size={21} aria-hidden="true" /></button>}
-        <div className={styles.headerIdentity}><h1 lang={pathname === '/reports' ? 'en' : undefined}>{title}</h1><p title={userProfile.port}><Anchor size={14} aria-hidden="true" /><span>{userProfile.port || copy.portMissing}</span></p></div>
+        <div className={styles.headerIdentity}><h1 lang={pathname === '/reports' || pathname.startsWith('/workspace') ? 'en' : undefined}>{pathname.startsWith('/workspace') ? 'My workspace' : title}</h1><p title={userProfile.port}><Anchor size={14} aria-hidden="true" /><span>{userProfile.port || copy.portMissing}</span></p></div>
         <div className={styles.headerActions}>
           <Link href="/onboarding?from=profile" className={styles.changePort} title={copy.changePort} aria-label={copy.changePort}><Anchor size={16} aria-hidden="true" /><span>{copy.changePort}</span></Link>
           <label className={styles.language}><Globe size={16} aria-hidden="true" /><span className={styles.srOnly}>{copy.language}</span>
